@@ -20,8 +20,6 @@
 #include "rumble.h"
 #include "database.h"
 
-#define NUMCON 10
-
 #ifndef COMM_H
 #define	COMM_H
 

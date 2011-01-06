@@ -12,16 +12,14 @@ void *get_in_addr(struct sockaddr *sa)
 
 socketHandle comm_init(const char* port)
 {
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	int sockfd;  // our socket! yaaay.
 	struct addrinfo hints, *servinfo, *p;
-	socklen_t sin_size;
-	struct sigaction sa;
 	int yes=1;
 	char s[INET6_ADDRSTRLEN];
 	int rv;
 
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = rumble_config_int("forceipv4") ? AF_INET : AF_UNSPEC;
+	hints.ai_family = rumble_config_int("forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
 
@@ -30,7 +28,7 @@ socketHandle comm_init(const char* port)
 		return 0;
 	}
 
-	// loop through all the results and bind to the first we can
+	// Loop through all the results and bind to the first we can
 	for(p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype,
 				p->ai_protocol)) == -1) {
@@ -60,41 +58,29 @@ socketHandle comm_init(const char* port)
 
 	freeaddrinfo(servinfo); // all done with this structure
 
-	if (listen(sockfd, NUMCON) == -1) {
+	if (listen(sockfd, 10) == -1) {
 		perror("listen");
 		exit(0);
 	}
-/*
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
-*/
-	//printf("server: waiting for connections...%u\n", sockfd);
         return sockfd;
 }
-
 
 clientHandle* comm_accept(socketHandle sock) {
     clientHandle* client = (clientHandle*) malloc(sizeof(clientHandle));
     socklen_t sin_size = sizeof client->client_info;
-	while(1) {  // loop through accept() till we get something worth passing along.
-		client->socket = accept(sock, (struct sockaddr *)&(client->client_info), &sin_size);
-		if (client->socket == -1) {
-			perror("Error while attempting accept()");
-			break;
-		}
+    while(1) {  // loop through accept() till we get something worth passing along.
+            client->socket = accept(sock, (struct sockaddr *)&(client->client_info), &sin_size);
+            if (client->socket == -1) {
+                    perror("Error while attempting accept()");
+                    break;
+            }
 
-		inet_ntop(client->client_info.ss_family,
-			get_in_addr((struct sockaddr *)&client->client_info),
-			client->addr, sizeof client->addr);
-		// printf("server: got connection from %s\n", client->addr);
-                break;
-	}
-	return (clientHandle*) client;
+            inet_ntop(client->client_info.ss_family,
+                    get_in_addr((struct sockaddr *)&client->client_info),
+                    client->addr, sizeof client->addr);
+            break;
+    }
+    return (clientHandle*) client;
 }
 
 

@@ -6,7 +6,7 @@
 
 extern masterHandle* master_ext_copy;
 
-void  rumble_strlower(char* d) {
+void  rumble_string_lower(char* d) {
     int a,b;
     b = strlen(d);
     for (a = 0; a < b; a++) {
@@ -14,7 +14,7 @@ void  rumble_strlower(char* d) {
     }
 }
 
-void  rumble_strupper(char* d) {
+void  rumble_string_upper(char* d) {
     int a,b;
     b = strlen(d);
     for (a = 0; a < b; a++) {
@@ -37,7 +37,7 @@ void rumble_config_load(masterHandle* master) {
                 char* value = calloc(1, 512);
                 sscanf(buffer, "%511[^# \t]%*[ \t]%511[^\r\n]", variable, value );
                 if ( strlen(variable) ) {
-                    rumble_strlower(variable);
+                    rumble_string_lower(variable);
                     configElement* el = malloc(sizeof(configElement));
                     el->key = variable;
                     el->value = value;

@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     struct {
         cvector*        conf;
-        pthread_t       workers[10];
+        cvector*       workers;
     }               readOnly;
     struct {
         socketHandle    socket;
@@ -106,13 +106,14 @@ void rumble_hook_on_imap_cmd(masterHandle* master, unsigned char cue, ssize_t (*
 void rumble_hook_on_smtp_accept(masterHandle* master, ssize_t (*func)(sessionHandle*) );
 
 // Public tool-set
-char* rumble_sha160(const unsigned char* d);
-char* rumble_sha256(const unsigned char* d);
-void  rumble_strlower(char* d);
-void  rumble_strupper(char* d);
+char* rumble_sha160(const unsigned char* d); //SHA1 digest (40 byte hex string)
+char* rumble_sha256(const unsigned char* d); //SHA-256 digest (64 byte hex string)
+
+void  rumble_string_lower(char* d); // Converts <d> into lowercase.
+void  rumble_string_upper(char* d); // Converts <d> into uppercase.
 
 ssize_t rumble_comm_send(sessionHandle* session, const char* message);
-ssize_t rumble_comm_recv(sessionHandle* session, char* message_pointer);
+char* rumble_comm_read(sessionHandle* session);
 
 const char* rumble_config_str(const char* key);
 uint32_t rumble_config_int(const char* key);

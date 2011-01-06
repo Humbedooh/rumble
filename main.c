@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     //socketHandle smurf = comm_init("110");
     //struct clientHandle* client = comm_accept(smurf);
     //close(client->socket);
-
+    
     rumble_config_load(master);
     rumble_master_init(master);
     rumble_modules_load(master);
@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
         }
         printf("OK\n");
     }
-    if ( rumble_config_int("enablepop3") ) {
+ /*   if ( rumble_config_int("enablepop3") ) {
         printf("Launching POP3 service...");
         master->pop3.socket = comm_init((const char*) rumble_config_str("pop3port"));
         int n;
@@ -78,8 +78,8 @@ int main(int argc, char** argv) {
         cvector_add(master->readOnly.workers, t);
         pthread_create(t, NULL, rumble_worker_init, master);
     }
-    printf("OK\n");
-    pthread_t* t = (pthread_t*) cvector_first(master->readOnly.workers);
+    printf("OK\n");*/
+    pthread_t* t = (pthread_t*) cvector_first(master->smtp.threads);
     pthread_join(*t, NULL);
     return (EXIT_SUCCESS);
 }
