@@ -1,0 +1,1 @@
+Note: The grey-listing module uses SHA1/2, so it needs to be compiled with -lcrypto.

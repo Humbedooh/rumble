@@ -1,1 +1,8 @@
-Absolutely nothing to see here just yet!! >:C
+Rumble is a mail server for SMTP, POP3 and IMAP with an Apache-like approach to its structure.
+The server itself is quite small and - albeit ingenous and all that - rather basic.
+
+This is however made up for by the modular approach to services, which enables users to easilly 
+write their own plugins or simply use one or more of the existing plugins such as the 
+white/grey/black-listing modules, mailing list module, load balancing and so on and so forth.
+
+Obviously, you're not gonna download this piece of rubbish just yet, as it's far from done.
