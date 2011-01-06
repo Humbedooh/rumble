@@ -68,7 +68,7 @@ typedef struct {
 typedef struct {
     struct {
         cvector*        conf;
-        pthread_t       miscThreads[10];
+        pthread_t       workers[10];
     }               readOnly;
     struct {
         socketHandle    socket;
@@ -99,9 +99,9 @@ typedef struct {
 int rumble_module_on_server_init(masterHandle* master);
 
 
-void rumble_hook_on_smtp_cmd(masterHandle* master, const char* cmd, ssize_t (*func)(sessionHandle*) );
-void rumble_hook_on_pop3_cmd(masterHandle* master, const char* cmd, ssize_t (*func)(sessionHandle*) );
-void rumble_hook_on_imap_cmd(masterHandle* master, const char* cmd, ssize_t (*func)(sessionHandle*) );
+void rumble_hook_on_smtp_cmd(masterHandle* master, unsigned char cue, ssize_t (*func)(sessionHandle*) );
+void rumble_hook_on_pop3_cmd(masterHandle* master, unsigned char cued, ssize_t (*func)(sessionHandle*) );
+void rumble_hook_on_imap_cmd(masterHandle* master, unsigned char cue, ssize_t (*func)(sessionHandle*) );
 
 void rumble_hook_on_smtp_accept(masterHandle* master, ssize_t (*func)(sessionHandle*) );
 
