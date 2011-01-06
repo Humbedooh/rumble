@@ -8,7 +8,7 @@
  */
 
 #include <string.h>
-#include "../Rumble/rumble.h"
+#include "../../rumble.h"
 cvector* rumble_whiteList;
 
 

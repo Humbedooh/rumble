@@ -8,7 +8,7 @@
  */
 
 #include <string.h>
-#include "../Rumble/rumble.h"
+#include "../../rumble.h"
 #define GREYLIST_MAX_AGE 172800 // Grey-list records will linger for 48 hours.
 #define GREYLIST_MIN_AGE 900 // Put new triplets on hold for 15 minutes
 cvector rumble_greyList;
