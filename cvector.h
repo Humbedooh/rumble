@@ -37,7 +37,9 @@ struct _cvector {
     cvector_element* last;
     cvector_element* current;
     unsigned int     size;
+#ifdef CVECTOR_THREADED
     pthread_mutex_t  mutex;
+#endif
 };
 
 typedef struct _cvector cvector;
@@ -46,7 +48,9 @@ typedef struct _cvector cvector;
 
 #define cvector_element_init() calloc(1, sizeof(cvector_element))
 cvector* cvector_init();
+#ifdef CVECTOR_THREADED
 cvector* cvector_init_threaded();
+#endif
 void cvector_add(cvector* parent, void* object);
 void cvector_delete(cvector* parent);
 void cvector_delete_at(cvector* parent, cvector_element* el);

@@ -4,13 +4,13 @@ inline cvector* cvector_init() {
     return calloc(1, sizeof(cvector));
 }
 
+#ifdef CVECTOR_THREADED
 cvector* cvector_init_threaded() {
     cvector* c = calloc(1, sizeof(cvector));
-#ifdef CVECTOR_THREADED
     c->mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
     return c;
 }
+#endif
 
 void cvector_add(cvector* parent, void* object) {
     #ifdef CVECTOR_THREADED
