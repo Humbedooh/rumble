@@ -17,11 +17,18 @@ extern "C" {
 #endif
 
 // Cue definitions
-#define RUMBLE_CUE_HELO         1
-#define RUMBLE_CUE_RCPT         2
-#define RUMBLE_CUE_MAIL         3
-#define RUMBLE_CUE_DATA         4
-#define RUMBLE_CUE_QUIT         5
+#define RUMBLE_CUE_SMTP_HELO            1
+#define RUMBLE_CUE_SMTP_RCPT            2
+#define RUMBLE_CUE_SMTP_MAIL            3
+#define RUMBLE_CUE_SMTP_DATA            4
+#define RUMBLE_CUE_SMTP_QUIT            5
+    
+#define RUMBLE_CUE_POP3_HELO            1
+#define RUMBLE_CUE_POP3_QUIT            2
+#define RUMBLE_CUE_POP3_TOP             3
+#define RUMBLE_CUE_POP3_RETR            4
+#define RUMBLE_CUE_POP3_LIST            5
+#define RUMBLE_CUE_POP3_DELE            6
     
 // Flag definitions
 #define RUMBLE_SMTP_BADRFC        0x01000000   // Client is known to break RFC and requires leniency.
@@ -61,10 +68,6 @@ typedef struct {
 typedef struct {
     struct {
         cvector*        conf;
-        socketHandle    pop3;
-        socketHandle    imap;
-        pthread_t       pop3Threads[10];
-        pthread_t       imapThreads[10];
         pthread_t       miscThreads[10];
     }               readOnly;
     struct {
@@ -73,6 +76,18 @@ typedef struct {
         cvector*        init_hooks;
         cvector*        cue_hooks;
     } smtp;
+    struct {
+        socketHandle    socket;
+        cvector*        threads;
+        cvector*        init_hooks;
+        cvector*        cue_hooks;
+    } pop3;
+    struct {
+        socketHandle    socket;
+        cvector*        threads;
+        cvector*        init_hooks;
+        cvector*        cue_hooks;
+    } imap;
 } masterHandle;
 
 typedef struct {
