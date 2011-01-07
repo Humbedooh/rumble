@@ -63,6 +63,6 @@ ssize_t rumble_greylist(sessionHandle* session) {
 
 int rumble_module_init(masterHandle* master) {
     // Hook the module to the DATA command on the SMTP server.
-    rumble_hook_on_smtp_cmd(master, RUMBLE_CUE_SMTP_DATA, rumble_greylist);
+    rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_DATA, rumble_greylist);
     return EXIT_SUCCESS; // Tell rumble that the module loaded okay.
 }

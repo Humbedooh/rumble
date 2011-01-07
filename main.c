@@ -11,6 +11,7 @@
 #include "comm.h"
 #include "cvector.h"
 #include "reply_codes.h"
+#include "servers.h"
 
 #define RUMBLE_INITIAL_THREADS 10
 /*

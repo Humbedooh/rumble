@@ -6,22 +6,6 @@
 
 extern masterHandle* master_ext_copy;
 
-void  rumble_string_lower(char* d) {
-    int a,b;
-    b = strlen(d);
-    for (a = 0; a < b; a++) {
-        d[a] = ( d[a] >= 'A'  && d[a] <= 'Z' ) ? d[a] + 32 : d[a];
-    }
-}
-
-void  rumble_string_upper(char* d) {
-    int a,b;
-    b = strlen(d);
-    for (a = 0; a < b; a++) {
-        d[a] = ( d[a] >= 'a'  && d[a] <= 'z' ) ? d[a] - 32 : d[a];
-    }
-}
-
 void rumble_config_load(masterHandle* master) {
     master->readOnly.conf = cvector_init();
     FILE* config = fopen("config/rumble.conf", "r");
