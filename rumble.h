@@ -34,6 +34,7 @@ extern "C" {
 #define RUMBLE_HOOK_SMTP        0x00000010
 #define RUMBLE_HOOK_POP3        0x00000020
 #define RUMBLE_HOOK_IMAP        0x00000040
+#define RUMBLE_HOOK_ANY         0x00000070
 #define RUMBLE_HOOK_SVC_MASK    0x000000F0
     
 #define RUMBLE_HOOK_BEFORE      0x00000000
@@ -46,6 +47,7 @@ extern "C" {
 #define RUMBLE_CUE_SMTP_MAIL    0x00004000
 #define RUMBLE_CUE_SMTP_DATA    0x00008000
 #define RUMBLE_CUE_SMTP_QUIT    0x00010000
+#define RUMBLE_CUE_SMTP_RSET    0x00020000
     
 #define RUMBLE_CUE_POP3_HELO    0x00001000
 #define RUMBLE_CUE_POP3_QUIT    0x00002000
@@ -110,6 +112,8 @@ typedef struct {
         cvector*        init_hooks;
         cvector*        cue_hooks;
         cvector*        exit_hooks;
+        pthread_mutex_t mutex;
+        cvector*        handles;
     } smtp;
     struct {
         socketHandle    socket;
@@ -117,6 +121,8 @@ typedef struct {
         cvector*        init_hooks;
         cvector*        cue_hooks;
         cvector*        exit_hooks;
+        pthread_mutex_t mutex;
+        cvector*        handles;
     } pop3;
     struct {
         socketHandle    socket;
@@ -124,6 +130,8 @@ typedef struct {
         cvector*        init_hooks;
         cvector*        cue_hooks;
         cvector*        exit_hooks;
+        pthread_mutex_t mutex;
+        cvector*        handles;
     } imap;
 } masterHandle;
 

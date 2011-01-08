@@ -16,7 +16,6 @@ extern "C" {
 #endif
     
     // Connection handlers
-    clientHandle* comm_accept(socketHandle sock);
     void rumble_clean_session(sessionHandle* session);
     
     // SMTP handlers

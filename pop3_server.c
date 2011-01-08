@@ -4,12 +4,12 @@
 void* rumble_pop3_init(void* m) {
     masterHandle* master = (masterHandle*) m;
     printf(".");
+    // Initialize a session handle and wait for incoming connections.
+    sessionHandle session;
+    session.recipients = cvector_init();
+    session.client = (clientHandle*) malloc(sizeof(clientHandle));
     while (1) {
-        // Initialize a session handle and wait for incoming connections.
-        sessionHandle session;
-        session.client = (clientHandle*) comm_accept(master->pop3.socket);
-        session.flags = 0;
-        session.recipients = cvector_init();
+        comm_accept(master->smtp.socket, session.client);
         
         // Check for hooks on accept()
         ssize_t rc = EXIT_SUCCESS;

@@ -25,7 +25,7 @@
 
     void *get_in_addr(struct sockaddr *sa);
     socketHandle comm_init(const char* port);
-    clientHandle* comm_accept(socketHandle sock);
+    void comm_accept(socketHandle sock, clientHandle* client);
     void comm_mxLookup(const char* domain);
     
 

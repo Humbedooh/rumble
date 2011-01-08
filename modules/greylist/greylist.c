@@ -21,7 +21,7 @@ typedef struct {
 
 ssize_t rumble_greylist(sessionHandle* session) {
     // First, check if the client has been given permission to skip this check by any other modules.
-    if ( session->flags & RUMBLE_SMTP_FREEPASS ) return EXIT_SUCCESS;
+    if ( session->flags & RUMBLE_SMTP_FREEPASS ) return RUMBLE_RETURN_OKAY;
     // Create the SHA1 hash that corresponds to the triplet.
     address* recipient = (address*) cvector_last(session->recipients);
     if ( !recipient ) { printf("<greylist> No recipients found! (server bug?)\n"); return EXIT_SUCCESS; }
@@ -60,10 +60,10 @@ ssize_t rumble_greylist(sessionHandle* session) {
         sprintf(msg, "451 Grey-listed for %u seconds.\r\n", GREYLIST_MIN_AGE - n  );
         rumble_comm_send(session, msg);
         free(msg);
-        return EXIT_FAILURE; // Tell rumble to ignore the command quietly.
+        return RUMBLE_RETURN_IGNORE; // Tell rumble to ignore the command quietly.
     }
     // Otherwise, we just return with EXIT_SUCCESS and let the server continue.
-    return EXIT_SUCCESS;
+    return RUMBLE_RETURN_OKAY;
 }
 
 int rumble_module_init(masterHandle* master) {

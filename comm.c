@@ -65,22 +65,20 @@ socketHandle comm_init(const char* port)
         return sockfd;
 }
 
-clientHandle* comm_accept(socketHandle sock) {
-    clientHandle* client = (clientHandle*) malloc(sizeof(clientHandle));
+void comm_accept(socketHandle sock, clientHandle* client) {
     socklen_t sin_size = sizeof client->client_info;
     while(1) {  // loop through accept() till we get something worth passing along.
-            client->socket = accept(sock, (struct sockaddr *)&(client->client_info), &sin_size);
-            if (client->socket == -1) {
-                    perror("Error while attempting accept()");
-                    break;
-            }
+        client->socket = accept(sock, (struct sockaddr *)&(client->client_info), &sin_size);
+        if (client->socket == -1) {
+                perror("Error while attempting accept()");
+                break;
+        }
 
-            inet_ntop(client->client_info.ss_family,
-                    get_in_addr((struct sockaddr *)&client->client_info),
-                    client->addr, sizeof client->addr);
-            break;
+        inet_ntop(client->client_info.ss_family,
+                get_in_addr((struct sockaddr *)&client->client_info),
+                client->addr, sizeof client->addr);
+        break;
     }
-    return (clientHandle*) client;
 }
 
 

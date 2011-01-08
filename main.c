@@ -24,6 +24,20 @@ void rumble_master_init(masterHandle* master) {
     master->smtp.cue_hooks = cvector_init();
     master->smtp.init_hooks = cvector_init();
     master->smtp.threads = cvector_init();
+    master->smtp.handles = cvector_init();
+    pthread_mutex_init(&master->smtp.mutex,0);
+    
+    master->pop3.cue_hooks = cvector_init();
+    master->pop3.init_hooks = cvector_init();
+    master->pop3.threads = cvector_init();
+    master->pop3.handles = cvector_init();
+    pthread_mutex_init(&master->pop3.mutex,0);
+    
+    master->imap.cue_hooks = cvector_init();
+    master->imap.init_hooks = cvector_init();
+    master->imap.threads = cvector_init();
+    master->imap.handles = cvector_init();
+    pthread_mutex_init(&master->imap.mutex,0);
 }
 
 int main(int argc, char** argv) {

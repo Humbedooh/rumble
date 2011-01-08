@@ -10,8 +10,12 @@ void* rumble_smtp_init(void* m) {
     // Initialize a session handle and wait for incoming connections.
     sessionHandle session;
     session.recipients = cvector_init();
+    session.client = (clientHandle*) malloc(sizeof(clientHandle));
     while (1) {
-        session.client = (clientHandle*) comm_accept(master->smtp.socket);
+        comm_accept(master->smtp.socket, session.client);
+        pthread_mutex_lock(&master->smtp.mutex);
+        cvector_add(master->smtp.handles, &session);
+        pthread_mutex_unlock(&master->smtp.mutex);
         session.flags = 0;
         
         // Check for hooks on accept()
@@ -49,6 +53,14 @@ void* rumble_smtp_init(void* m) {
         free(arg);
         free(cmd);
         rumble_clean_session(&session);
+        
+        pthread_mutex_lock(&master->smtp.mutex);
+        cvector_element* el = master->smtp.handles->first;
+        while ( el != NULL ) {
+            if (el->object == &session) { cvector_delete_at(master->smtp.handles, el); break; }
+            el = el->next;
+        }
+        pthread_mutex_unlock(&master->smtp.mutex);
     }
     pthread_exit(0);
 }
@@ -81,7 +93,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
 
 ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, const char* argument) {
     // First, check for the right sequence of commands.
-    if ( !session->flags & RUMBLE_SMTP_HAS_MAIL ) return 503; 
+    if ( !(session->flags & RUMBLE_SMTP_HAS_MAIL) ) return 503; 
     
     // Allocate stuff and start parsing
     char* raw = calloc(1,1000);
@@ -97,13 +109,17 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     recipient->raw = raw;
     cvector_add(session->recipients, recipient);
     
+    ssize_t rc;
     // Fire events scheduled for pre-processing run
-    ssize_t rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     
     // Fire post-processing hooks.
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
+    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     
-    session->flags |= RUMBLE_SMTP_HAS_RCPT;
+    // If everything went fine, set the RCPT flag and return with code 200.
+    session->flags = session->flags | RUMBLE_SMTP_HAS_RCPT;
     return 200;
 }
 
@@ -111,14 +127,36 @@ ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, co
     
 }
 ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, const char* argument) {
-    
+    // First, check for the right sequence of commands.
+    if ( !(session->flags & RUMBLE_SMTP_HAS_RCPT) ) return 503; 
+    return RUMBLE_RETURN_IGNORE;
 }
 ssize_t rumble_server_smtp_rset(masterHandle* master, sessionHandle* session, const char* argument) {
+    ssize_t rc;
+    // Fire events scheduled for pre-processing run
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     
+    // Reset the session handle
+    session->flags = 0;
+    rumble_clean_session(session);
+    
+    // Fire post-processing hooks.
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
+    return 200;
 }
 ssize_t rumble_server_smtp_vrfy(masterHandle* master, sessionHandle* session, const char* argument) {
     
 }
 ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, const char* argument) {
-    
+    ssize_t rc;
+    // Fire events scheduled for pre-processing run
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
+    // Do...nothing    
+    // Fire post-processing hooks.
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
+    return 200;
 }
