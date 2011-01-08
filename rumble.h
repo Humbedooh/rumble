@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cvector.h"
+#include "reply_codes.h"
 
 #define RUMBLE_DEBUG // debug output
 
@@ -19,6 +20,11 @@
 extern "C" {
 #endif
 
+// Return codes for modules
+#define RUMBLE_RETURN_OKAY      1       // Everything went fine, keep going.
+#define RUMBLE_RETURN_FAILURE   2       // Something went really wrong, abort the connection!
+#define RUMBLE_RETURN_IGNORE    3       // Module handled the return code, skip to next command.
+    
 // Hook flags
 #define RUMBLE_HOOK_ACCEPT      0x00000001
 #define RUMBLE_HOOK_COMMAND     0x00000002
@@ -56,6 +62,12 @@ extern "C" {
 #define RUMBLE_SMTP_WHITELIST     0x02000000   // Client has been whitelisted by a module.
 #define RUMBLE_SMTP_AUTHED        0x04000000   // Client is authenticated and considered known.
 #define RUMBLE_SMTP_FREEPASS      0x07000000   // Mask that covers all three exceptions.
+    
+#define RUMBLE_SMTP_HAS_HELO      0x00010000    // Has valid HELO/EHLO
+#define RUMBLE_SMTP_HAS_MAIL      0x00020000    // Has valid MAIL FROM
+#define RUMBLE_SMTP_HAS_RCPT      0x00040000    // Has valid RCPT
+    
+#define RUMBLE_ROAD_MASK          0x00FF0000    // Command sequence mask
 
 // Structure definitions
 
