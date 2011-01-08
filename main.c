@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
         pthread_create(t, NULL, rumble_worker_init, master);
     }
     printf("OK\n");*/
-    pthread_t* t = (pthread_t*) cvector_first(master->smtp.threads);
+    pthread_t* t = (pthread_t*) cvector_last(master->smtp.threads);
     pthread_join(*t, NULL);
     return (EXIT_SUCCESS);
 }

@@ -62,6 +62,6 @@ int rumble_module_init(masterHandle* master) {
     }
     
     // Hook the module to new connections.
-    rumble_hook_function(master, rumble_whitelist);
+    rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, rumble_whitelist);
     return EXIT_SUCCESS; // Tell rumble that the module loaded okay.
 }

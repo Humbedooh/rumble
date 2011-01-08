@@ -22,10 +22,11 @@ typedef struct {
 ssize_t rumble_greylist(sessionHandle* session) {
     // First, check if the client has been given permission to skip this check by any other modules.
     if ( session->flags & RUMBLE_SMTP_FREEPASS ) return EXIT_SUCCESS;
-    
     // Create the SHA1 hash that corresponds to the triplet.
-    char* tmp = malloc(strlen(session->sender.raw) + strlen(session->recipient.raw) + strlen(session->client->addr) + 1);
-    sprintf(tmp, "%s%s%s", session->sender.raw, session->recipient.raw, session->client->addr);
+    address* recipient = (address*) cvector_last(session->recipients);
+    if ( !recipient ) { printf("<greylist> No recipients found! (server bug?)\n"); return EXIT_SUCCESS; }
+    char* tmp = calloc(1, strlen(session->sender.raw) + strlen(recipient->raw) + strlen(session->client->addr) + 1);
+    sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, session->client->addr);
     char* str = rumble_sha160(tmp);
     free(tmp);
     time_t n = -1;
@@ -50,12 +51,16 @@ ssize_t rumble_greylist(sessionHandle* session) {
         new->what = str;
         new->when = now;
         cvector_add(&rumble_greyList, new);
+        n = 0;
     }
     else free(str);
     // If the check failed, we tell the client to hold off for 15 minutes.
     if ( n < GREYLIST_MIN_AGE ) {
-        rumble_comm_send(session, "451 Grey-listed for 15 minutes.\r\n");
-        return EXIT_FAILURE; // Tell rumble to halt the transaction quietly.
+        char* msg = malloc(200);
+        sprintf(msg, "451 Grey-listed for %u seconds.\r\n", GREYLIST_MIN_AGE - n  );
+        rumble_comm_send(session, msg);
+        free(msg);
+        return EXIT_FAILURE; // Tell rumble to ignore the command quietly.
     }
     // Otherwise, we just return with EXIT_SUCCESS and let the server continue.
     return EXIT_SUCCESS;
@@ -63,6 +68,6 @@ ssize_t rumble_greylist(sessionHandle* session) {
 
 int rumble_module_init(masterHandle* master) {
     // Hook the module to the DATA command on the SMTP server.
-    rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_DATA, rumble_greylist);
+    rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_RCPT, rumble_greylist);
     return EXIT_SUCCESS; // Tell rumble that the module loaded okay.
 }

@@ -24,9 +24,10 @@ void rumble_modules_load(masterHandle* master) {
                 fprintf (stderr, "\n<modules> Warning: %s does not contain any known calls.\n", el->value, error);
             }
             if ( init ) { 
+                master->readOnly.currentSO = el->value;
                 int x = (*init)(master);
                 if ( x == EXIT_SUCCESS ) { printf("...OK.\n", el->value); }
-                else { fprintf(stderr, "\n<modules> Error: %s failed to load!\n"); dlclose(handle); exit(EXIT_FAILURE); }
+                else { fprintf(stderr, "\n<modules> Error: %s failed to load!\n", el->value); dlclose(handle); exit(EXIT_FAILURE); }
             }
             //dlclose(handle);
         }

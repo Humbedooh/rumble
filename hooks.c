@@ -5,6 +5,10 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
     hookHandle* hook = malloc(sizeof(hookHandle));
     hook->func = func;
     hook->flags = flags;
+    hook->module = ((masterHandle*) handle)->readOnly.currentSO;
+    #ifdef RUMBLE_DEBUG
+    printf("<hooks> Adding hook of type %#lx from %s\n", hook->flags, hook->module);
+    #endif
     switch ( flags && RUMBLE_HOOK_STATE_MASK ) {
         case RUMBLE_HOOK_ACCEPT:
             switch ( flags & RUMBLE_HOOK_SVC_MASK ) {
@@ -32,21 +36,27 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
 }
 
 
-ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, unsigned short flags) {
+ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint32_t flags) {
     int g = 0;
     ssize_t rc = EXIT_SUCCESS;
     hookHandle* el;
+    #ifdef RUMBLE_DEBUG
+    if ( cvector_size(hooks)) printf("<hooks> Running hooks of type %#lx\n", flags);
+    #endif
     for (el = (hookHandle*) cvector_first(hooks); el != NULL; el = (hookHandle*) cvector_next(hooks)) {
         if ( el->flags == flags ) {
             g++;
             ssize_t (*hookFunc)(sessionHandle*) = el->func;
+            #ifdef RUMBLE_DEBUG
+            printf("<hooks> Executing hook %#x from %s\n", hookFunc, el->module);
+            #endif
             rc = (*hookFunc)(session);
         }
     }
     return rc;
 }
 
-ssize_t rumble_server_schedule_hooks(masterHandle* handle, sessionHandle* session, unsigned short flags) {
+ssize_t rumble_server_schedule_hooks(masterHandle* handle, sessionHandle* session, uint32_t flags) {
     switch ( flags && RUMBLE_HOOK_STATE_MASK ) {
         case RUMBLE_HOOK_ACCEPT:
             switch ( flags & RUMBLE_HOOK_SVC_MASK ) {

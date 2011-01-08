@@ -13,6 +13,7 @@
 #include <string.h>
 #include "cvector.h"
 
+#define RUMBLE_DEBUG // debug output
 
 #ifdef	__cplusplus
 extern "C" {
@@ -29,8 +30,8 @@ extern "C" {
 #define RUMBLE_HOOK_IMAP        0x00000040
 #define RUMBLE_HOOK_SVC_MASK    0x000000F0
     
-#define RUMBLE_HOOK_BEFORE      0x00000100
-#define RUMBLE_HOOK_AFTER       0x00000200
+#define RUMBLE_HOOK_BEFORE      0x00000000
+#define RUMBLE_HOOK_AFTER       0x00000100
 #define RUMBLE_HOOK_TIMING_MASK 0x00000F00
 
 // Cue definitions
@@ -50,7 +51,7 @@ extern "C" {
 #define RUMBLE_CUE_MASK         0x000FF000
 
     
-// Flag definitions
+// Session flags
 #define RUMBLE_SMTP_BADRFC        0x01000000   // Client is known to break RFC and requires leniency.
 #define RUMBLE_SMTP_WHITELIST     0x02000000   // Client has been whitelisted by a module.
 #define RUMBLE_SMTP_AUTHED        0x04000000   // Client is authenticated and considered known.
@@ -81,13 +82,15 @@ typedef struct {
 typedef struct {
     unsigned short flags;
     ssize_t (*func)(sessionHandle*);
+    const char*    module;
 } hookHandle;
 
 
 typedef struct {
     struct {
         cvector*        conf;
-        cvector*       workers;
+        cvector*        workers;
+        const char*     currentSO;
     }               readOnly;
     struct {
         socketHandle    socket;
