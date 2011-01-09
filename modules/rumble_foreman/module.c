@@ -7,7 +7,6 @@
  * Created on January 3, 2011, 8:08 PM
  */
 
-#include <string.h>
 #include "../../rumble.h"
 #include "../../private.h"
 #include "pthread.h"
