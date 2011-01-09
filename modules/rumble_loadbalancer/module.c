@@ -12,7 +12,7 @@
 #include "../../private.h"
 #include "pthread.h"
 
-#define FOREMAN_MAX_JOBS        250 // Maximum amount of "jobs" each thread is allowed before it's destroyed
+#define FOREMAN_MAX_JOBS        2 // Maximum amount of "jobs" each thread is allowed before it's destroyed
 #define FOREMAN_FALLBACK        10 // Fall back to a minimum of 10 threads per service when idling
 #define FOREMAN_THREAD_BUFFER   5 // Create 5 new threads whenever there's a shortage
 
@@ -28,7 +28,7 @@ ssize_t smtp_hook(sessionHandle* session) {
         cvector_add(m->smtp.threads, t);
         pthread_mutex_unlock(&(m->smtp.mutex));
         pthread_create(t, NULL, rumble_smtp_init, m);
-        printf("killed a thread and made a new...I hope\n");
+        printf("killed a thread and made a new\n");
     }
     workers = workers;
     return RUMBLE_RETURN_OKAY;

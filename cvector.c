@@ -19,6 +19,7 @@ void cvector_add(cvector* parent, void* object) {
     cvector_element* el = cvector_element_init();
     el->object = object;
     el->previous = parent->last;
+    el->next = NULL;
     parent->last = el;
     parent->first = parent->first ? parent->first : el;
     if (el->previous) { el->previous->next = el; }
@@ -34,9 +35,12 @@ void cvector_delete(cvector* parent) {
     #endif
     cvector_element* this = parent->current;
     if (!this) return;
+    parent->first = (parent->first == this) ? this->next : parent->first;
+    parent->last = (parent->last == this) ? this->previous : parent->last;
     parent->current = this->previous ? this->previous : this->next;
     if ( this->previous ) this->previous->next = this->next;
     if ( this->next ) this->next->previous = this->previous;
+    this->object = NULL;
     free(this);
     parent->size--;
     #ifdef CVECTOR_THREADED

@@ -60,15 +60,13 @@ void* rumble_smtp_init(void* m) {
         free(cmd);
         rumble_clean_session(sessptr);
         pthread_mutex_lock(&(master->smtp.mutex));
-        cvector_element* el = master->smtp.handles->first;
         int x = 0;
         printf("Removing session %#x from cvector\n", (uintptr_t) sessptr);
         printf("cvector has %u elements\n", (uint32_t) cvector_size(master->smtp.handles));
-        while ( el != NULL ) {
-            sessionHandle* s = (sessionHandle*) el->object;
+        sessionHandle* s;
+        for (s = (sessionHandle*) cvector_first(master->smtp.handles); s != NULL; s = cvector_next(master->smtp.handles)) {
             printf("Found %#x in cvector\n", (uintptr_t) s);
-            if (s == sessptr) { cvector_delete_at(master->smtp.handles, el); x = 1; break; }
-            el = el->next;
+            if (s == sessptr) { cvector_delete(master->smtp.handles); x = 1; break; }
         }
         if ( !x ) printf("couldn't find session %#x in cvector :O\n", (uintptr_t) sessptr);
         // Check if we were told to go kill ourself :(

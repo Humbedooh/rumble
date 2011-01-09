@@ -46,7 +46,7 @@ typedef struct _cvector cvector;
 
 
 
-#define cvector_element_init() calloc(1, sizeof(cvector_element))
+#define cvector_element_init() malloc(sizeof(cvector_element))
 cvector* cvector_init();
 #ifdef CVECTOR_THREADED
 cvector* cvector_init_threaded();
