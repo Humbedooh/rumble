@@ -78,8 +78,12 @@ extern "C" {
 
     
 // Thread flags
-#define RUMBLE_THREAD_DIE         0x00010000    // Kill signal for threads
-
+#define RUMBLE_THREAD_DIE         0x00001000    // Kill signal for threads
+#define RUMBLE_THREAD_MISC        0x00010000    // Thread handles miscellaneous stuff
+#define RUMBLE_THREAD_SMTP        0x00020000    // Thread handles SMTP
+#define RUMBLE_THREAD_POP3        0x00040000    // Thread handles POP3
+#define RUMBLE_THREAD_IMAP        0x00080000    // Thread handles IMAP
+#define RUMBLE_THREAD_SVCMASK     0x000F0000
 // Structure definitions
 
 #define socketHandle int
@@ -116,7 +120,16 @@ typedef struct {
     rumble_module_info*         modinfo;
 } hookHandle;
 
-
+typedef struct {
+        socketHandle    socket;
+        cvector*        threads;
+        cvector*        init_hooks;
+        cvector*        cue_hooks;
+        cvector*        exit_hooks;
+        pthread_mutex_t mutex;
+        cvector*        handles;
+        void*           (*init)(void*);
+    } rumbleService;
 
 typedef struct {
     struct {
@@ -125,33 +138,9 @@ typedef struct {
         const char*             currentSO;
         cvector*                modules;
     }               readOnly;
-    struct {
-        socketHandle    socket;
-        cvector*        threads;
-        cvector*        init_hooks;
-        cvector*        cue_hooks;
-        cvector*        exit_hooks;
-        pthread_mutex_t mutex;
-        cvector*        handles;
-    } smtp;
-    struct {
-        socketHandle    socket;
-        cvector*        threads;
-        cvector*        init_hooks;
-        cvector*        cue_hooks;
-        cvector*        exit_hooks;
-        pthread_mutex_t mutex;
-        cvector*        handles;
-    } pop3;
-    struct {
-        socketHandle    socket;
-        cvector*        threads;
-        cvector*        init_hooks;
-        cvector*        cue_hooks;
-        cvector*        exit_hooks;
-        pthread_mutex_t mutex;
-        cvector*        handles;
-    } imap;
+    rumbleService       smtp;
+    rumbleService       pop3;
+    rumbleService       imap;
 } masterHandle;
 
 typedef struct {

@@ -26,18 +26,21 @@ void rumble_master_init(masterHandle* master) {
     master->smtp.init_hooks = cvector_init();
     master->smtp.threads = cvector_init();
     master->smtp.handles = cvector_init();
+    master->smtp.init = rumble_smtp_init;
     pthread_mutex_init(&master->smtp.mutex,0);
     
     master->pop3.cue_hooks = cvector_init();
     master->pop3.init_hooks = cvector_init();
     master->pop3.threads = cvector_init();
     master->pop3.handles = cvector_init();
+    master->pop3.init = rumble_pop3_init;
     pthread_mutex_init(&master->pop3.mutex,0);
     
     master->imap.cue_hooks = cvector_init();
     master->imap.init_hooks = cvector_init();
     master->imap.threads = cvector_init();
     master->imap.handles = cvector_init();
+    //master->imap.init = rumble_imap_init;
     pthread_mutex_init(&master->imap.mutex,0);
     
     master->readOnly.modules = cvector_init();
@@ -65,40 +68,11 @@ int main(int argc, char** argv) {
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             pthread_t* t = malloc(sizeof(pthread_t));
             cvector_add(master->smtp.threads, t);
-            pthread_create(t, NULL, rumble_smtp_init, master);
+            pthread_create(t, NULL, master->smtp.init, master);
         }
         printf("OK\n");
     }
- /*   if ( rumble_config_int("enablepop3") ) {
-        printf("Launching POP3 service...");
-        master->pop3.socket = comm_init((const char*) rumble_config_str("pop3port"));
-        int n;
-        for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
-            pthread_t* t = malloc(sizeof(pthread_t));
-            cvector_add(master->pop3.threads, t);
-            pthread_create(t, NULL, rumble_pop3_init, master);
-        }
-        printf("OK\n");
-    }
-    if ( rumble_config_int("enableimap") ) {
-        printf("Launching IMAP service...");
-        master->imap.socket = comm_init((const char*) rumble_config_str("imapport"));
-        int n;
-        for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
-            pthread_t* t = malloc(sizeof(pthread_t));
-            cvector_add(master->imap.threads, t);
-            pthread_create(t, NULL, rumble_imap_init, master);
-        }
-        printf("OK\n");
-    }
-   printf("Launching IMAP service...");
-   int n;
-    for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
-        pthread_t* t = malloc(sizeof(pthread_t));
-        cvector_add(master->readOnly.workers, t);
-        pthread_create(t, NULL, rumble_worker_init, master);
-    }
-    printf("OK\n");*/
+ 
     
     sleep(99999999);
     return (EXIT_SUCCESS);

@@ -1,7 +1,12 @@
 #include "cvector.h"
 
 inline cvector* cvector_init() {
-    return calloc(1, sizeof(cvector));
+    cvector* c = malloc(sizeof(cvector));
+    c->current = NULL;
+    c->first = NULL;
+    c->last = NULL;
+    c->size = 0;
+    return c;
 }
 
 #ifdef CVECTOR_THREADED
@@ -41,6 +46,8 @@ void cvector_delete(cvector* parent) {
     if ( this->previous ) this->previous->next = this->next;
     if ( this->next ) this->next->previous = this->previous;
     this->object = NULL;
+    this->previous = NULL;
+    this->next = NULL;
     free(this);
     parent->size--;
     #ifdef CVECTOR_THREADED
@@ -52,6 +59,7 @@ void cvector_delete_at(cvector* parent, cvector_element* el) {
     #ifdef CVECTOR_THREADED
     if (parent->mutex) pthread_mutex_lock(&parent->mutex);
     #endif
+    parent->first = ( parent->first == el ) ? el->next : parent->first;
     parent->last = ( parent->last == el ) ? el->previous : parent->last;
     if ( el->previous ) { el->previous->next = el->next; }
     if ( el->next ) {  el->next->previous = el->previous; }

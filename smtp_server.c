@@ -15,6 +15,7 @@ void* rumble_smtp_init(void* m) {
     sessionHandle* sessptr = &session;
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
+    session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
     while (1) {
         comm_accept(master->smtp.socket, session.client);
         pthread_mutex_lock(&master->smtp.mutex);
