@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include "rumble.h"
 #include <inttypes.h>
+#include <openssl/sha.h>
+#include <unistd.h>
+
 /*
  * This file contains public functions for rumble (usable by both server and modules
  */
@@ -57,7 +60,6 @@ char* rumble_sha256(const unsigned char* d) {
     unsigned char* md = malloc(33);
     char* ret = malloc(65);
     SHA256(d, strlen((const char*) d), md);
-    int p = 0;
     unsigned int* x = (unsigned int*) md;
     sprintf((char*) ret, "%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32, x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7]);
     memset(md, 0, 33); // Erase md, just in case.
@@ -77,7 +79,6 @@ char* rumble_sha160(const unsigned char* d) {
     unsigned char* md = malloc(21);
     char* ret = malloc(41);
     SHA1(d, strlen((const char*) d), md);
-    int p;
     unsigned int* x = (unsigned int*) md;
     sprintf((char*) ret, "%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32, x[0],x[1],x[2],x[3],x[4]);
     memset(md, 0, 21); // Erase md, just in case.

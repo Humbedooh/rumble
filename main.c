@@ -12,6 +12,7 @@
 #include "cvector.h"
 #include "reply_codes.h"
 #include "servers.h"
+#include "private.h"
 
 #define RUMBLE_INITIAL_THREADS 10
 /*
@@ -38,12 +39,16 @@ void rumble_master_init(masterHandle* master) {
     master->imap.threads = cvector_init();
     master->imap.handles = cvector_init();
     pthread_mutex_init(&master->imap.mutex,0);
+    
+    master->readOnly.modules = cvector_init();
+    master->readOnly.workers = cvector_init();
+    
 }
 
 int main(int argc, char** argv) {
     master = malloc(sizeof(masterHandle));
     master_ext_copy = master;
-    struct dbStruct db;
+    //struct dbStruct db;
     //rumble_database_init(&db) ? printf("moo") : printf("Database loaded...\n");
     //socketHandle smurf = comm_init("110");
     //struct clientHandle* client = comm_accept(smurf);
@@ -94,8 +99,8 @@ int main(int argc, char** argv) {
         pthread_create(t, NULL, rumble_worker_init, master);
     }
     printf("OK\n");*/
-    pthread_t* t = (pthread_t*) cvector_last(master->smtp.threads);
-    pthread_join(*t, NULL);
+    
+    sleep(99999999);
     return (EXIT_SUCCESS);
 }
 

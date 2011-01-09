@@ -1,5 +1,6 @@
 #include "rumble.h"
 #include "servers.h"
+#include "comm.h"
 
 void* rumble_pop3_init(void* m) {
     masterHandle* master = (masterHandle*) m;

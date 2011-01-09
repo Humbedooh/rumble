@@ -15,7 +15,6 @@ socketHandle comm_init(const char* port)
 	int sockfd;  // our socket! yaaay.
 	struct addrinfo hints, *servinfo, *p;
 	int yes=1;
-	char s[INET6_ADDRSTRLEN];
 	int rv;
 
 	memset(&hints, 0, sizeof hints);
@@ -85,11 +84,11 @@ void comm_accept(socketHandle sock, clientHandle* client) {
 
 void comm_mxLookup(const char* domain)
 { 
-    u_char nsbuf[4096];
-    char dispbuf[4096]; 
-    ns_msg msg; 
-    ns_rr rr; 
-    int i, j, l; 
+//    u_char nsbuf[4096];
+//    char dispbuf[4096]; 
+//    ns_msg msg; 
+//    ns_rr rr; 
+//    int i, j, l; 
     /*
     l = res_query (domain, ns_c_any, ns_t_mx, nsbuf, sizeof (nsbuf));
     if (l > 0) {

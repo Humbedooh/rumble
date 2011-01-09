@@ -22,6 +22,7 @@ extern "C" {
     ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_rset(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_vrfy(masterHandle* master, sessionHandle* session, const char* argument);

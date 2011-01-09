@@ -12,10 +12,10 @@ void rumble_config_load(masterHandle* master) {
     if ( config ) {
         char* buffer = malloc(512);
         int p = 0;
-        char byte;
         while (!feof(config)) {
             memset(buffer, 0, 512);
             fgets(buffer, 512,config);
+            p++;
             if ( !ferror(config) ) {
                 char* variable = calloc(1, 512);
                 char* value = calloc(1, 512);

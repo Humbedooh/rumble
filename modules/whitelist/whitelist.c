@@ -29,7 +29,9 @@ ssize_t rumble_whitelist(sessionHandle* session) {
     return EXIT_SUCCESS;
 }
 
-int rumble_module_init(masterHandle* master) {
+int rumble_module_init(void* master, rumble_module_info* modinfo) {
+    modinfo->title = "Whitelisting module";
+    modinfo->description = "Standard whitelisting module for rumble.";
     rumble_whiteList = cvector_init();
     FILE* config = fopen("config/whitelist.conf", "r");
     if ( config ) {

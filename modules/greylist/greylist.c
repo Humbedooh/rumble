@@ -66,7 +66,9 @@ ssize_t rumble_greylist(sessionHandle* session) {
     return RUMBLE_RETURN_OKAY;
 }
 
-int rumble_module_init(masterHandle* master) {
+int rumble_module_init(void* master, rumble_module_info* modinfo) {
+    modinfo->title = "Greylisting module";
+    modinfo->description = "Standard greylisting module for rumble.";
     // Hook the module to the DATA command on the SMTP server.
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_RCPT, rumble_greylist);
     return EXIT_SUCCESS; // Tell rumble that the module loaded okay.

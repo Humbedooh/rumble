@@ -6,8 +6,9 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
     hook->func = func;
     hook->flags = flags;
     hook->module = ((masterHandle*) handle)->readOnly.currentSO;
-    #ifdef RUMBLE_DEBUG
-    printf("<hook> Adding hook of type %#lx from %s\n", hook->flags, hook->module);
+    hook->modinfo = (rumble_module_info*) cvector_last(((masterHandle*) handle)->readOnly.modules);
+    #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+    printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
     #endif
     switch ( flags && RUMBLE_HOOK_STATE_MASK ) {
         case RUMBLE_HOOK_ACCEPT:
@@ -39,27 +40,28 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
 ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint32_t flags) {
     int g = 0;
     ssize_t rc = RUMBLE_RETURN_OKAY;
-    hookHandle* el;
-    #ifdef RUMBLE_DEBUG
-    if ( cvector_size(hooks)) printf("<hook> Running hooks of type %#lx\n", flags);
+    cvector_element* el;
+    #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+    if ( cvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
     #endif
-    for (el = (hookHandle*) cvector_first(hooks); el != NULL; el = (hookHandle*) cvector_next(hooks)) {
-        if ( el->flags == flags ) {
+    for (el = hooks->first; el != NULL; el = el->next) {
+        hookHandle* hook = (hookHandle*) el->object;
+        if ( hook->flags == flags ) {
             g++;
-            ssize_t (*hookFunc)(sessionHandle*) = el->func;
-            #ifdef RUMBLE_DEBUG
-            printf("<hook> Executing hook %#x from %s\n", hookFunc, el->module);
+            ssize_t (*hookFunc)(sessionHandle*) = hook->func;
+            #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+            printf("<debug :: hooks> Executing hook %p from %s\n", (void*) hookFunc, hook->module);
             #endif
             rc = (*hookFunc)(session);
             if ( rc == RUMBLE_RETURN_FAILURE ) {
-                #ifdef RUMBLE_DEBUG
-                printf("<hook> Hook %#x claimed failure, aborting connection!\n", hookFunc);
+                #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+                printf("<debug :: hooks> Hook %p claimed failure, aborting connection!\n", (void*) hookFunc);
                 #endif
                 return RUMBLE_RETURN_FAILURE;
             }
             if ( rc == RUMBLE_RETURN_IGNORE ) {
-                #ifdef RUMBLE_DEBUG
-                printf("<hook> Hook %#x took over, skipping to next command.\n", hookFunc);
+                #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+                printf("<debug :: hooks> Hook %p took over, skipping to next command.\n", (void*) hookFunc);
                 #endif
                 return RUMBLE_RETURN_IGNORE;
             }

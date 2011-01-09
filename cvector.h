@@ -7,7 +7,7 @@
 
 #ifndef CVECTOR_H
 #define	CVECTOR_H
-#define CVECTOR_THREADED // Comment out this line to disable threaded support.
+//#define CVECTOR_THREADED // Comment out this line to disable threaded support.
 
 #ifdef	__cplusplus
 extern "C" {

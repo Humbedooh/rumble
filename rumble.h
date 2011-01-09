@@ -11,10 +11,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "pthread.h"
 #include "cvector.h"
 #include "reply_codes.h"
 
-#define RUMBLE_DEBUG // debug output
+#define RUMBLE_DEBUG_HOOKS      0x01000000
+#define RUMBLE_DEBUG_THREADS    0x02000000
+#define RUMBLE_DEBUG            RUMBLE_DEBUG_THREADS // debug output flags
+
+
 
 #ifdef	__cplusplus
 extern "C" {
@@ -34,7 +39,6 @@ extern "C" {
 #define RUMBLE_HOOK_SMTP        0x00000010
 #define RUMBLE_HOOK_POP3        0x00000020
 #define RUMBLE_HOOK_IMAP        0x00000040
-#define RUMBLE_HOOK_ANY         0x00000070
 #define RUMBLE_HOOK_SVC_MASK    0x000000F0
     
 #define RUMBLE_HOOK_BEFORE      0x00000000
@@ -59,17 +63,22 @@ extern "C" {
 #define RUMBLE_CUE_MASK         0x000FF000
 
     
-// Session flags
-#define RUMBLE_SMTP_BADRFC        0x01000000   // Client is known to break RFC and requires leniency.
-#define RUMBLE_SMTP_WHITELIST     0x02000000   // Client has been whitelisted by a module.
-#define RUMBLE_SMTP_AUTHED        0x04000000   // Client is authenticated and considered known.
-#define RUMBLE_SMTP_FREEPASS      0x07000000   // Mask that covers all three exceptions.
+// SMTP session flags
+#define RUMBLE_SMTP_BADRFC        0x00000100   // Client is known to break RFC and requires leniency.
+#define RUMBLE_SMTP_WHITELIST     0x00000200   // Client has been whitelisted by a module.
+#define RUMBLE_SMTP_AUTHED        0x00000400   // Client is authenticated and considered known.
+#define RUMBLE_SMTP_FREEPASS      0x00000700   // Mask that covers all three exceptions.
     
-#define RUMBLE_SMTP_HAS_HELO      0x00010000    // Has valid HELO/EHLO
-#define RUMBLE_SMTP_HAS_MAIL      0x00020000    // Has valid MAIL FROM
-#define RUMBLE_SMTP_HAS_RCPT      0x00040000    // Has valid RCPT
+#define RUMBLE_SMTP_HAS_HELO      0x00000001    // Has valid HELO/EHLO
+#define RUMBLE_SMTP_HAS_MAIL      0x00000002    // Has valid MAIL FROM
+#define RUMBLE_SMTP_HAS_RCPT      0x00000004    // Has valid RCPT
+#define RUMBLE_SMTP_HAS_EHLO      0x00000009    // Has extended HELO
     
 #define RUMBLE_ROAD_MASK          0x00FF0000    // Command sequence mask
+
+    
+// Thread flags
+#define RUMBLE_THREAD_DIE         0x00010000    // Kill signal for threads
 
 // Structure definitions
 
@@ -91,20 +100,30 @@ typedef struct {
     address         sender;
     clientHandle*   client;
     uint32_t        flags;
+    uint32_t        _tflags;
 } sessionHandle;
 
 typedef struct {
-    unsigned short flags;
-    ssize_t (*func)(sessionHandle*);
-    const char*    module;
+    const char*         title;
+    const char*         description;
+    
+} rumble_module_info;
+
+typedef struct {
+    uint32_t                    flags;
+    ssize_t                     (*func)(sessionHandle*);
+    const char*                 module;
+    rumble_module_info*         modinfo;
 } hookHandle;
+
 
 
 typedef struct {
     struct {
-        cvector*        conf;
-        cvector*        workers;
-        const char*     currentSO;
+        cvector*                conf;
+        cvector*                workers;
+        const char*             currentSO;
+        cvector*                modules;
     }               readOnly;
     struct {
         socketHandle    socket;
