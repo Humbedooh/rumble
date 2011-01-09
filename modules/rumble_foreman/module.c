@@ -12,7 +12,7 @@
 #include "../../private.h"
 #include "pthread.h"
 
-#define FOREMAN_MAX_JOBS        2 // Maximum amount of "jobs" each worker is allowed before it's destroyed
+#define FOREMAN_MAX_JOBS        250 // Maximum amount of "jobs" each worker is allowed before it's destroyed
 #define FOREMAN_FALLBACK        10 // Fall back to a minimum of 10 workers per service when idling
 #define FOREMAN_THREAD_BUFFER   5 // Create 5 new workers whenever there is a shortage
 
