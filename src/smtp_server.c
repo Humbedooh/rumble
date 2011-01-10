@@ -15,6 +15,7 @@ void* rumble_smtp_init(void* m) {
     sessionHandle* sessptr = &session;
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
+    session.sender.flags = cvector_init();
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
     while (1) {
         comm_accept(master->smtp.socket, session.client);
@@ -93,13 +94,15 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     char* raw = calloc(1,1000);
     char* user = calloc(1,64);
     char* domain = calloc(1,128); // RFC says 64, but that was before i18n
+    char* flags = calloc(1,512); // esmtp flags
     sscanf(argument, "%*4c:%1000c", raw);
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-    sscanf(raw, "%*256[^<]<%64[^>@]@%128[^@>]", user, domain);
+    sscanf(raw, "%*256[^<]<%64[^>@]@%128[^@>] %500c", user, domain, flags);
     // Set the current values
     session->sender.raw = raw;
     session->sender.user = user;
     session->sender.domain = domain;
+    rumble_scan_flags(session->sender.flags, flags);
     // Fire events scheduled for pre-processing run
     ssize_t rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
     if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
@@ -135,6 +138,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     recipient->domain = domain;
     recipient->user = user;
     recipient->raw = raw;
+    recipient->flags = cvector_init();
     cvector_add(session->recipients, recipient);
     
     ssize_t rc;

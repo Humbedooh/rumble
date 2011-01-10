@@ -85,3 +85,37 @@ char* rumble_sha160(const unsigned char* d) {
     free(md);
     return ret;
 }
+
+
+void rumble_scan_flags(cvector* dict, const char* flags){
+    char* pch = strtok((char*) flags," ");
+    while ( pch != NULL ) {
+        if ( strlen(pch) >= 3 ) {
+            configElement* entry = malloc(sizeof(configElement));
+            entry->key = calloc(1, 100);
+            entry->value = calloc(1, 100);
+            sscanf(pch, "%100[^=]=%100c", (char*) entry->key, (char*) entry->value);
+            rumble_string_upper((char*) entry->key);
+            cvector_add(dict, entry);
+        }
+        pch = strtok(NULL, " ");
+    }
+}
+
+const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
+    configElement* el;
+    for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
+        if (!strcmp(flag, el->key)) return el->value;
+    }
+    return 0;
+}
+
+void rumble_flush_dictionary(cvector* dict) {
+    configElement* el;
+    for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
+        free((char*) el->key);
+        free((char*) el->value);
+        free(el);
+        cvector_delete(dict);
+    }
+}
