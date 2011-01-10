@@ -138,6 +138,7 @@ typedef struct {
         cvector*                workers;
         const char*             currentSO;
         cvector*                modules;
+        void*                   db;
     }               readOnly;
     rumbleService       smtp;
     rumbleService       pop3;
