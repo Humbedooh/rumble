@@ -6,7 +6,7 @@
 // Main loop
 void* rumble_smtp_init(void* m) {
     masterHandle* master = (masterHandle*) m;
-    #ifdef RUMBLE_DEBUG
+    #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
     printf("<smtp::threads> Initialized thread %#x\n", (uintptr_t) pthread_self());
     #endif
     
@@ -23,7 +23,7 @@ void* rumble_smtp_init(void* m) {
         pthread_mutex_unlock(&master->smtp.mutex);
         session.flags = 0;
         session._tflags += 0x00100000; // job count ( 0 through 4095)
-        printf("Added session %#x to cvector\n", (uintptr_t) sessptr);
+        
         // Check for hooks on accept()
         ssize_t rc = EXIT_SUCCESS;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP );
@@ -45,6 +45,7 @@ void* rumble_smtp_init(void* m) {
             else if (!strcmp(cmd, "MAIL")) rc = rumble_server_smtp_mail(master, &session, arg);
             else if (!strcmp(cmd, "RCPT")) rc = rumble_server_smtp_rcpt(master, &session, arg);
             else if (!strcmp(cmd, "HELO")) rc = rumble_server_smtp_helo(master, &session, arg);
+            else if (!strcmp(cmd, "EHLO")) rc = rumble_server_smtp_ehlo(master, &session, arg);
             else if (!strcmp(cmd, "NOOP")) rc = rumble_server_smtp_noop(master, &session, arg);
             else if (!strcmp(cmd, "DATA")) rc = rumble_server_smtp_data(master, &session, arg);
             else if (!strcmp(cmd, "VRFY")) rc = rumble_server_smtp_vrfy(master, &session, arg);
@@ -62,17 +63,15 @@ void* rumble_smtp_init(void* m) {
         rumble_clean_session(sessptr);
         pthread_mutex_lock(&(master->smtp.mutex));
         int x = 0;
-        printf("Removing session %#x from cvector\n", (uintptr_t) sessptr);
-        printf("cvector has %u elements\n", (uint32_t) cvector_size(master->smtp.handles));
         sessionHandle* s;
         for (s = (sessionHandle*) cvector_first(master->smtp.handles); s != NULL; s = cvector_next(master->smtp.handles)) {
-            printf("Found %#x in cvector\n", (uintptr_t) s);
             if (s == sessptr) { cvector_delete(master->smtp.handles); x = 1; break; }
         }
-        if ( !x ) printf("couldn't find session %#x in cvector :O\n", (uintptr_t) sessptr);
         // Check if we were told to go kill ourself :(
         if ( session._tflags & RUMBLE_THREAD_DIE ) {
-            printf("<smtp::threads>I was told to die :(\n");
+            #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
+            printf("<smtp::threads>I (%#x) was told to die :(\n", (uintptr_t) pthread_self());
+            #endif
             cvector_element* el = master->smtp.threads->first;
             while ( el != NULL ) {
                 pthread_t* t = (pthread_t*) el->object;
@@ -110,7 +109,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
         session->flags = session->flags ^ RUMBLE_SMTP_HAS_MAIL;
         return rc;
     }
-    // Validate address.
+    // Validate address and any following ESMTP flags.
     
     // Fire post-processing hooks.
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
@@ -160,7 +159,17 @@ ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, co
 }
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags = session->flags | RUMBLE_SMTP_HAS_EHLO;
-    return 250;
+    rumble_comm_send(session, "250-Extended commands follow\r\n");
+    rumble_comm_send(session, "250-EXPN\r\n");
+    rumble_comm_send(session, "250-VRFY\r\n");
+    rumble_comm_send(session, "250-PIPELINING\r\n");
+    rumble_comm_send(session, "250-8BITMIME\r\n");
+    rumble_comm_send(session, "250-AUTH CRAM-MD5 DIGEST-MD5 PLAIN\r\n");
+    rumble_comm_send(session, "250-DELIVERBY 900\r\n");
+    rumble_comm_send(session, "250-DSN\r\n");
+    rumble_comm_send(session, "250-SIZE\r\n");
+    rumble_comm_send(session, "250 XVERP\r\n");
+    return RUMBLE_RETURN_IGNORE;
 }
 ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, const char* argument) {
     // First, check for the right sequence of commands.

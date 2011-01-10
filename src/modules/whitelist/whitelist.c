@@ -21,7 +21,6 @@ ssize_t rumble_whitelist(sessionHandle* session) {
     for ( addr = (const char*) cvector_first(rumble_whiteList); addr != NULL; addr = (const char*) cvector_next(rumble_whiteList) ) {
         if ( !strncmp(addr, ip, strlen(addr))) {
             session->flags |= RUMBLE_SMTP_WHITELIST; // Set the whitelist flag if the client matches a range.
-            printf("%s is whitelisted!\n", session->client->addr);
             break;
         }
     }
