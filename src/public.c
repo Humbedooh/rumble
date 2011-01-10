@@ -107,7 +107,7 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
     for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
         if (!strcmp(flag, el->key)) return el->value;
     }
-    return 0;
+    return "";
 }
 
 void rumble_flush_dictionary(cvector* dict) {
@@ -118,4 +118,14 @@ void rumble_flush_dictionary(cvector* dict) {
         free(el);
         cvector_delete(dict);
     }
+}
+
+void rumble_free_address(address* a) {
+    if ( a->domain ) free(a->domain);
+    if ( a->raw ) free(a->raw);
+    if ( a->user ) free(a->user);
+    rumble_flush_dictionary(a->flags);
+    a->domain = 0;
+    a->user = 0;
+    a->raw = 0;
 }

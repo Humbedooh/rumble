@@ -6,3 +6,6 @@ write their own plugins or simply use one or more of the existing plugins such a
 white/grey/black-listing modules, mailing list module, load balancing and so on and so forth.
 
 Obviously, you're not gonna download this piece of rubbish just yet, as it's far from done.
+
+Rumble is compliant with both IPv4/IPv6 and most ESMTP extensions (EXPN, PIPELINING, 8BITMIME,
+AUTH (CRAM-MD5 DIGEST-MD5 PLAIN), DELIVERBY, DSN, SIZE, XVERP)

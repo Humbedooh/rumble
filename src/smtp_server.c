@@ -51,6 +51,7 @@ void* rumble_smtp_init(void* m) {
             else if (!strcmp(cmd, "DATA")) rc = rumble_server_smtp_data(master, &session, arg);
             else if (!strcmp(cmd, "VRFY")) rc = rumble_server_smtp_vrfy(master, &session, arg);
             else if (!strcmp(cmd, "RSET")) rc = rumble_server_smtp_rset(master, &session, arg);
+            else if (!strcmp(cmd, "AUTH")) rc = rumble_server_smtp_auth(master, &session, arg);
             if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
             else if ( rc == RUMBLE_RETURN_FAILURE ) break; // Abort!
             else rumble_comm_send(sessptr, rumble_smtp_reply_code(rc)); // Bad command thing.
@@ -91,6 +92,10 @@ void* rumble_smtp_init(void* m) {
 
 // Command specific routines
 ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, const char* argument) {
+    // First, check for the right sequence of commands.
+    if ( !(session->flags & RUMBLE_SMTP_HAS_HELO) ) return 503; 
+    if ( (session->flags & RUMBLE_SMTP_HAS_MAIL) ) return 503; 
+    
     char* raw = calloc(1,1000);
     char* user = calloc(1,64);
     char* domain = calloc(1,128); // RFC says 64, but that was before i18n
@@ -106,13 +111,19 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     // Fire events scheduled for pre-processing run
     ssize_t rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
     if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
-        free(session->sender.domain);
-        free(session->sender.user);
-        free(session->sender.raw);
+        rumble_free_address(&session->sender);
         session->flags = session->flags ^ RUMBLE_SMTP_HAS_MAIL;
         return rc;
     }
     // Validate address and any following ESMTP flags.
+    uint32_t max = rumble_config_int("messagesizelimit");
+    uint32_t size = atoi(rumble_get_dictionary_value(session->sender.flags, "SIZE"));
+    printf("max is %u, size is %u\n", max, size);
+    if ( max != 0 && size != 0 && size > max ) {
+        rumble_free_address(&session->sender);
+        session->flags = session->flags ^ RUMBLE_SMTP_HAS_MAIL;
+        return 552; // message too big.
+    }
     
     // Fire post-processing hooks.
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
@@ -207,5 +218,8 @@ ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, co
     // Fire post-processing hooks.
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
+    return 250;
+}
+ssize_t rumble_server_smtp_auth(masterHandle* master, sessionHandle* session, const char* argument) {
     return 250;
 }

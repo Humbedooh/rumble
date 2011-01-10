@@ -162,6 +162,7 @@ void  rumble_string_upper(char* d); // Converts <d> into uppercase.
 void rumble_scan_flags(cvector* dict, const char* flags);
 void rumble_flush_dictionary(cvector* dict);
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag);
+void rumble_free_address(address* a);
 
 const char* rumble_smtp_reply_code(unsigned int code);
 //const char* rumble_pop3_reply_code(unsigned int code);
