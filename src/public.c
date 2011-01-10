@@ -11,7 +11,7 @@
 #include <inttypes.h>
 #include <openssl/sha.h>
 #include <unistd.h>
-
+#include "sqlite3.h"
 /*
  * This file contains public functions for rumble (usable by both server and modules
  */
@@ -111,6 +111,7 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
 }
 
 void rumble_flush_dictionary(cvector* dict) {
+    if (!dict) return;
     configElement* el;
     for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
         free((char*) el->key);
@@ -128,4 +129,17 @@ void rumble_free_address(address* a) {
     a->domain = 0;
     a->user = 0;
     a->raw = 0;
+}
+
+uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
+    const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
+    char* clause = calloc(1, strlen(sql) + 200);
+    sprintf(clause, sql, domain, user);
+     masterHandle* master = (masterHandle*) session->_master;
+    int rc;
+    sqlite3_stmt* state;
+    sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
+    rc = sqlite3_step(state);
+    sqlite3_finalize(state);
+    return ( rc == SQLITE_ROW) ? 1 : 0;
 }

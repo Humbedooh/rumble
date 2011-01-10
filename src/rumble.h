@@ -106,6 +106,7 @@ typedef struct {
     clientHandle*   client;
     uint32_t        flags;
     uint32_t        _tflags;
+    void*           _master;
 } sessionHandle;
 
 typedef struct {
@@ -139,6 +140,7 @@ typedef struct {
         const char*             currentSO;
         cvector*                modules;
         void*                   db;
+        void*                   mail;
     }               readOnly;
     rumbleService       smtp;
     rumbleService       pop3;
@@ -173,6 +175,8 @@ char* rumble_comm_read(sessionHandle* session);
 
 const char* rumble_config_str(const char* key);
 uint32_t rumble_config_int(const char* key);
+
+uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
 
 #ifdef	__cplusplus
 }

@@ -16,6 +16,10 @@ void* rumble_smtp_init(void* m) {
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
     session.sender.flags = cvector_init();
+    session.sender.domain = 0;
+    session.sender.user = 0;
+    session.sender.raw = 0;
+    session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
     while (1) {
         comm_accept(master->smtp.socket, session.client);
@@ -38,7 +42,7 @@ void* rumble_smtp_init(void* m) {
             memset(arg, 0, 1024);
             char* line = rumble_comm_read(sessptr);
             if ( !line ) break;
-            sscanf(line, "%4[^\t ]%*[ \t]%1000c", cmd, arg);
+            sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg);
             free(line);
             rumble_string_upper(cmd);
             rc = 500; // default return code is "500 lolwut?"
@@ -102,7 +106,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     char* flags = calloc(1,512); // esmtp flags
     sscanf(argument, "%*4c:%1000c", raw);
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-    sscanf(raw, "%*256[^<]<%64[^>@]@%128[^@>] %500c", user, domain, flags);
+    sscanf(raw, "%*256[^<]<%64[^>@\"]@%128[^@\">] %500c", user, domain, flags);
     // Set the current values
     session->sender.raw = raw;
     session->sender.user = user;
@@ -118,12 +122,12 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     // Validate address and any following ESMTP flags.
     uint32_t max = rumble_config_int("messagesizelimit");
     uint32_t size = atoi(rumble_get_dictionary_value(session->sender.flags, "SIZE"));
-    printf("max is %u, size is %u\n", max, size);
     if ( max != 0 && size != 0 && size > max ) {
         rumble_free_address(&session->sender);
         session->flags = session->flags ^ RUMBLE_SMTP_HAS_MAIL;
         return 552; // message too big.
     }
+    
     
     // Fire post-processing hooks.
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
@@ -143,7 +147,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     char* domain = calloc(1,128); // RFC says 64, but that was before i18n
     sscanf(argument, "%*2c:%1000c", raw);
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-    sscanf(raw, "%*256[^<]<%64[^>@]@%128[^@>]", user, domain);
+    sscanf(raw, "%*256[^<]<%64[^\">@]@%128[^@\">]", user, domain);
     // Set the current values
     address* recipient = malloc(sizeof(address));
     recipient->domain = domain;
@@ -157,7 +161,9 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     
-    // Validate address...
+    
+    // Check if recipient is local
+    printf("Check for account returned: %u\n", rumble_account_exists(session,recipient->user, recipient->domain));
     
     // Fire post-processing hooks.
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
@@ -207,8 +213,12 @@ ssize_t rumble_server_smtp_rset(masterHandle* master, sessionHandle* session, co
     return 250;
 }
 ssize_t rumble_server_smtp_vrfy(masterHandle* master, sessionHandle* session, const char* argument) {
-    return 250;
+    char* user = calloc(1,128);
+    char* domain = calloc(1, 128);
+    sscanf(argument, "%128[^@\"]@%128[^\"]", user, domain);
+    return rumble_account_exists(session,user,domain) ? 250 : 550;
 }
+
 ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, const char* argument) {
     ssize_t rc;
     // Fire events scheduled for pre-processing run
