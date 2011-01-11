@@ -101,12 +101,12 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     if ( (session->flags & RUMBLE_SMTP_HAS_MAIL) ) return 503; 
     
     char* raw = calloc(1,1000);
-    char* user = calloc(1,64);
+    char* user = calloc(1,128);
     char* domain = calloc(1,128); // RFC says 64, but that was before i18n
     char* flags = calloc(1,512); // esmtp flags
     sscanf(argument, "%*4c:%1000c", raw);
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-    sscanf(raw, "%*256[^<]<%64[^>@\"]@%128[^@\">] %500c", user, domain, flags);
+    sscanf(raw, "%*256[^<]<%128[^>@\"]@%128[^@\">] %500c", user, domain, flags);
     // Set the current values
     session->sender.raw = raw;
     session->sender.user = user;
@@ -143,11 +143,11 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     
     // Allocate stuff and start parsing
     char* raw = calloc(1,1000);
-    char* user = calloc(1,64);
+    char* user = calloc(1,128);
     char* domain = calloc(1,128); // RFC says 64, but that was before i18n
     sscanf(argument, "%*2c:%1000c", raw);
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-    sscanf(raw, "%*256[^<]<%64[^\">@]@%128[^@\">]", user, domain);
+    sscanf(raw, "%*256[^<]<%128[^\">@]@%128[^@\">]", user, domain);
     // Set the current values
     address* recipient = malloc(sizeof(address));
     recipient->domain = domain;
@@ -158,26 +158,37 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     
     ssize_t rc;
     // Fire events scheduled for pre-processing run
-    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
+    rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     
     
     // Check if recipient is local
-    printf("Check for account returned: %u\n", rumble_account_exists(session,recipient->user, recipient->domain));
+    uint32_t isLocalDomain = rumble_domain_exists(session, recipient->domain);
+    uint32_t isLocalUser = isLocalDomain ? rumble_account_exists(session,recipient->user, recipient->domain) : 0;
     
-    // Fire post-processing hooks.
-    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
-    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
-    
-    // If everything went fine, set the RCPT flag and return with code 200.
-    session->flags = session->flags | RUMBLE_SMTP_HAS_RCPT;
-    return 250;
+    if ( isLocalUser )     {
+    // If everything went fine, set the RCPT flag and return with code 250.
+        session->flags |= RUMBLE_SMTP_HAS_RCPT;
+        return 250;
+    }
+    // If rec isn't local, check if client is allowed to relay
+    if ( !isLocalDomain ) {
+        if ( session->flags & RUMBLE_SMTP_CAN_RELAY ) {
+            session->flags |= RUMBLE_SMTP_HAS_RCPT;
+            return 251;
+        }
+        // Not local and no relaying allowed, return 530.
+        return 530;
+    }
+    // Domain is local but user doesn't exist, return 550
+    return 550;
 }
 
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags = session->flags | RUMBLE_SMTP_HAS_HELO;
     return 250;
 }
+
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags = session->flags | RUMBLE_SMTP_HAS_EHLO;
     rumble_comm_send(session, "250-Extended commands follow\r\n");
@@ -192,11 +203,51 @@ ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, co
     rumble_comm_send(session, "250 XVERP\r\n");
     return RUMBLE_RETURN_IGNORE;
 }
+
 ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, const char* argument) {
     // First, check for the right sequence of commands.
-    if ( !(session->flags & RUMBLE_SMTP_HAS_RCPT) ) return 503; 
-    return RUMBLE_RETURN_IGNORE;
+    if ( !(session->flags & RUMBLE_SMTP_HAS_RCPT) ) return 503;
+    
+    // Make a unique filename and try to open the storage folder for writing.
+    char* fid = calloc(1,25);
+    sprintf(fid, "%x%x%x", (uint32_t) pthread_self(), (uint32_t) time(0), (uint32_t) rand());
+    const char* sf = rumble_config_str("storagefolder");
+    char* filename = calloc(1, strlen(sf) + 26);
+    sprintf(filename, "%s/%s", sf, fid);
+    FILE* fp = fopen(filename, "w");
+#ifdef RUMBLE_DEBUG_STORAGE
+    printf("Writing to file %s...\n", filename);
+#endif
+    free(filename);
+    if ( !fp ) {
+#ifdef RUMBLE_DEBUG_STORAGE
+        perror("Couldn't open file for writing");
+#endif
+        free(fid);
+        return 451; // Couldn't open file for writing :/
+    }
+    rumble_comm_send(session, rumble_smtp_reply_code(354));
+    char* line;
+    // Save the message
+    while ( 1 ) {
+        line = rumble_comm_read(session);
+        // Check for broken connection
+        if ( !line ) {
+            fclose(fp);
+            free(fid);
+            return RUMBLE_RETURN_FAILURE;
+        }
+        if ( !strcmp(line, ".\r\n") ) break; // We're done here.
+        if ( fwrite(line, strlen(line), 1, fp) != 1 ) { // Writing failed?
+            fclose(fp);
+            free(fid);
+            return 452;
+        }
+    }
+    fclose(fp);
+    return 250;
 }
+
 ssize_t rumble_server_smtp_rset(masterHandle* master, sessionHandle* session, const char* argument) {
     ssize_t rc;
     // Fire events scheduled for pre-processing run
@@ -212,24 +263,31 @@ ssize_t rumble_server_smtp_rset(masterHandle* master, sessionHandle* session, co
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     return 250;
 }
+
 ssize_t rumble_server_smtp_vrfy(masterHandle* master, sessionHandle* session, const char* argument) {
     char* user = calloc(1,128);
     char* domain = calloc(1, 128);
     sscanf(argument, "%128[^@\"]@%128[^\"]", user, domain);
+    ssize_t rc;
+    // Fire events scheduled for pre-processing run
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_VRFY);
+    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
+    // Check if account exists
     return rumble_account_exists(session,user,domain) ? 250 : 550;
 }
 
 ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, const char* argument) {
     ssize_t rc;
     // Fire events scheduled for pre-processing run
-    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_NOOP);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     // Do...nothing    
     // Fire post-processing hooks.
-    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_NOOP);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     return 250;
 }
+
 ssize_t rumble_server_smtp_auth(masterHandle* master, sessionHandle* session, const char* argument) {
     return 250;
 }
