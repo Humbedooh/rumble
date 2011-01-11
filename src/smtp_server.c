@@ -186,11 +186,13 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags = session->flags | RUMBLE_SMTP_HAS_HELO;
+    rumble_add_dictionary_value(session->sender.flags, "helo", argument);
     return 250;
 }
 
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags = session->flags | RUMBLE_SMTP_HAS_EHLO;
+    rumble_add_dictionary_value(session->sender.flags, "helo", argument);
     rumble_comm_send(session, "250-Extended commands follow\r\n");
     rumble_comm_send(session, "250-EXPN\r\n");
     rumble_comm_send(session, "250-VRFY\r\n");
@@ -226,6 +228,11 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         free(fid);
         return 451; // Couldn't open file for writing :/
     }
+    char* log = calloc(1,1024);
+    char* now = rumble_mtime();
+    sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTP id %s; %s\r\n", rumble_get_dictionary_value(session->sender.flags, "helo"), session->client->addr, rumble_config_str("servername"), fid, now);
+    free(now);
+    fwrite(log, strlen(log), 1, fp);
     rumble_comm_send(session, rumble_smtp_reply_code(354));
     char* line;
     // Save the message

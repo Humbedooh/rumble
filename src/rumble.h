@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "pthread.h"
+#include <time.h>
 #include "cvector.h"
 #include "reply_codes.h"
 
@@ -171,11 +172,14 @@ char* rumble_sha256(const unsigned char* d); //SHA-256 digest (64 byte hex strin
 
 void  rumble_string_lower(char* d); // Converts <d> into lowercase.
 void  rumble_string_upper(char* d); // Converts <d> into uppercase.
+char* rumble_mtime(); // mail time
 
 void rumble_scan_flags(cvector* dict, const char* flags);
 void rumble_flush_dictionary(cvector* dict);
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag);
+void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value);
 void rumble_free_address(address* a);
+
 
 const char* rumble_smtp_reply_code(unsigned int code);
 //const char* rumble_pop3_reply_code(unsigned int code);

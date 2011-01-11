@@ -110,6 +110,17 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
     return "";
 }
 
+void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value) {
+    char* nkey = malloc(strlen(key));
+    char* nval = malloc(strlen(value));
+    strcpy(nval, value);
+    strcpy(nkey, key);
+    configElement* el = malloc(sizeof(configElement));
+    el->key = (const char*) nkey;
+    el->value = (const char*) nval;
+    cvector_add(dict, el);
+}
+
 void rumble_flush_dictionary(cvector* dict) {
     if (!dict) return;
     configElement* el;
@@ -157,4 +168,15 @@ uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
     sqlite3_finalize(state);
     free(clause);
     return ( rc == SQLITE_ROW) ? 1 : 0;
+}
+
+char* rumble_mtime() {
+    time_t rawtime;
+    struct tm * timeinfo;
+    time ( &rawtime );
+    timeinfo = gmtime ( &rawtime );
+    char* moo = calloc(1,128);
+    strftime(moo, 128, "%a, %d %b %Y %X +0000 (UTC)", timeinfo);
+    //free(timeinfo);
+    return moo;
 }
