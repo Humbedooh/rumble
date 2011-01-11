@@ -45,7 +45,7 @@ void* rumble_smtp_init(void* m) {
             sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg);
             free(line);
             rumble_string_upper(cmd);
-            rc = 500; // default return code is "500 lolwut?"
+            rc = 500; // default return code is "500 unknown command thing"
             if (!strcmp(cmd, "QUIT")) break; // bye!
             else if (!strcmp(cmd, "MAIL")) rc = rumble_server_smtp_mail(master, &session, arg);
             else if (!strcmp(cmd, "RCPT")) rc = rumble_server_smtp_rcpt(master, &session, arg);
@@ -168,6 +168,10 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     
     if ( isLocalUser )     {
     // If everything went fine, set the RCPT flag and return with code 250.
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<<
+        // Check if user has space in mailbox for this msg!
+        // >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         session->flags |= RUMBLE_SMTP_HAS_RCPT;
         return 250;
     }
@@ -252,6 +256,11 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         }
     }
     fclose(fp);
+    
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    // >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<<
+    // Add the message to the mail queue for further processing.
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     return 250;
 }
 
