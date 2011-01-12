@@ -25,10 +25,18 @@ ssize_t rumble_greylist(sessionHandle* session) {
     // Create the SHA1 hash that corresponds to the triplet.
     address* recipient = (address*) cvector_last(session->recipients);
     if ( !recipient ) { printf("<greylist> No recipients found! (server bug?)\n"); return EXIT_SUCCESS; }
-    char* tmp = calloc(1, strlen(session->sender.raw) + strlen(recipient->raw) + strlen(session->client->addr) + 1);
-    sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, session->client->addr);
+    // Cut off the last bit of the IP so we're left with a /24 block.
+    char* block = calloc(1,46);
+    if ( !strchr(session->client->addr, ':')) { // IPv4
+        unsigned int a,b,c;
+        sscanf(session->client->addr, "%3u.%3u.%3u",&a,&b,&c);
+        sprintf(block, "%03u.%03u.%03u", a, b, c);
+    }
+    char* tmp = calloc(1, strlen(session->sender.raw) + strlen(recipient->raw) + strlen(block) + 1);
+    sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, block); printf("%s\n", tmp);
     char* str = rumble_sha160(tmp);
     free(tmp);
+    free(block);
     time_t n = -1;
     time_t now = time(0);
     rumble_triplet* item;
