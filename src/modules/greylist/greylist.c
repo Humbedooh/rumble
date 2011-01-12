@@ -33,7 +33,7 @@ ssize_t rumble_greylist(sessionHandle* session) {
         sprintf(block, "%03u.%03u.%03u", a, b, c);
     }
     char* tmp = calloc(1, strlen(session->sender.raw) + strlen(recipient->raw) + strlen(block) + 1);
-    sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, block); printf("%s\n", tmp);
+    sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, block);
     char* str = rumble_sha160(tmp);
     free(tmp);
     free(block);
