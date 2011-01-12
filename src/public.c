@@ -142,33 +142,6 @@ void rumble_free_address(address* a) {
     a->raw = 0;
 }
 
-uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
-    const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
-    char* clause = calloc(1, strlen(sql) + 256);
-    sprintf(clause, sql, domain, user);
-     masterHandle* master = (masterHandle*) session->_master;
-    int rc;
-    sqlite3_stmt* state;
-    sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
-    rc = sqlite3_step(state);
-    sqlite3_finalize(state);
-    free(clause);
-    return ( rc == SQLITE_ROW) ? 1 : 0;
-}
-
-uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
-    const char* sql = "SELECT * FROM domains WHERE `domain` = \"%s\" LIMIT 1";
-    char* clause = calloc(1, strlen(sql) + 128);
-    sprintf(clause, sql, domain);
-     masterHandle* master = (masterHandle*) session->_master;
-    int rc;
-    sqlite3_stmt* state;
-    sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
-    rc = sqlite3_step(state);
-    sqlite3_finalize(state);
-    free(clause);
-    return ( rc == SQLITE_ROW) ? 1 : 0;
-}
 
 char* rumble_mtime() {
     time_t rawtime;

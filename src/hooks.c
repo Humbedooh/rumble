@@ -12,7 +12,7 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
     hook->flags = flags;
     hook->module = ((masterHandle*) handle)->readOnly.currentSO;
     hook->modinfo = (rumble_module_info*) cvector_last(((masterHandle*) handle)->readOnly.modules);
-    #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+    #if (RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS)
     printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
     #endif
     switch ( flags && RUMBLE_HOOK_STATE_MASK ) {
