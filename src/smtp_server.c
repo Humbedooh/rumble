@@ -29,6 +29,10 @@ void* rumble_smtp_init(void* m) {
         session.flags = 0;
         session._tflags += 0x00100000; // job count ( 0 through 4095)
         
+        #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
+        printf("<debug::comm> Accepted connection from %s on SMTP\n", session.client->addr);
+        #endif
+        
         // Check for hooks on accept()
         ssize_t rc = EXIT_SUCCESS;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP );
@@ -61,6 +65,9 @@ void* rumble_smtp_init(void* m) {
             else rumble_comm_send(sessptr, rumble_smtp_reply_code(rc)); // Bad command thing.
         }
         // Cleanup
+        #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
+        printf("<debug::comm> Closed connection from %s on SMTP\n", session.client->addr);
+        #endif
         rumble_comm_send(sessptr, rumble_smtp_reply_code(221)); // bye!
         shutdown(session.client->socket,0);
         close(session.client->socket);
@@ -105,6 +112,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     char* domain = calloc(1,128); // RFC says 64, but that was before i18n
     char* flags = calloc(1,512); // esmtp flags
     sscanf(argument, "%*4c:%1000c", raw);
+    
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
     sscanf(raw, "%*256[^<]<%128[^>@\"]@%128[^@\">] %500c", user, domain, flags);
     // Set the current values
@@ -116,15 +124,20 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     ssize_t rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
     if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
         rumble_free_address(&session->sender);
-        session->flags = session->flags ^ RUMBLE_SMTP_HAS_MAIL;
+        session->flags ~= RUMBLE_SMTP_HAS_MAIL;
         return rc;
     }
     // Validate address and any following ESMTP flags.
+    if ( !strlen(user) || !strlen(domain) ) {
+        rumble_free_address(&session->sender);
+        session->flags ~= RUMBLE_SMTP_HAS_MAIL;
+        return 501; // Syntax error in MAIL FROM parameter
+    }
     uint32_t max = rumble_config_int("messagesizelimit");
     uint32_t size = atoi(rumble_get_dictionary_value(session->sender.flags, "SIZE"));
     if ( max != 0 && size != 0 && size > max ) {
         rumble_free_address(&session->sender);
-        session->flags = session->flags ^ RUMBLE_SMTP_HAS_MAIL;
+        session->flags ~= RUMBLE_SMTP_HAS_MAIL;
         return 552; // message too big.
     }
     
@@ -133,7 +146,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
     if ( rc != RUMBLE_RETURN_OKAY ) return rc;
     
-    session->flags = session->flags | RUMBLE_SMTP_HAS_MAIL;
+    session->flags |= RUMBLE_SMTP_HAS_MAIL;
     return 250;
 }
 
@@ -189,13 +202,13 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
-    session->flags = session->flags | RUMBLE_SMTP_HAS_HELO;
+    session->flags |= RUMBLE_SMTP_HAS_HELO;
     rumble_add_dictionary_value(session->sender.flags, "helo", argument);
     return 250;
 }
 
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
-    session->flags = session->flags | RUMBLE_SMTP_HAS_EHLO;
+    session->flags |= RUMBLE_SMTP_HAS_EHLO;
     rumble_add_dictionary_value(session->sender.flags, "helo", argument);
     rumble_comm_send(session, "250-Extended commands follow\r\n");
     rumble_comm_send(session, "250-EXPN\r\n");
@@ -256,11 +269,17 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         }
     }
     fclose(fp);
-    
-    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    // >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<<
-    // Add the message to the mail queue for further processing.
-    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    char* sql = malloc(1024);
+    address* el;
+    for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
+        sprintf(sql, "INSERT INTO queue (fid, sender, user, domain) VALUES (\"%s\", \"%s\", \"%s\", \"%s\")", fid, session->sender.raw, el->user, el->domain);
+        sqlite3_stmt* state;
+        sqlite3_prepare_v2((sqlite3*) master->readOnly.db, sql, -1, &state, NULL);
+        sqlite3_step(state);
+        sqlite3_finalize(state);
+    }
+    free(sql);
+
     return 250;
 }
 
