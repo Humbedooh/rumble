@@ -24,17 +24,17 @@ ssize_t rumble_greylist(sessionHandle* session) {
     if ( session->flags & RUMBLE_SMTP_FREEPASS ) return RUMBLE_RETURN_OKAY;
     // Create the SHA1 hash that corresponds to the triplet.
     address* recipient = (address*) cvector_last(session->recipients);
-    if ( !recipient ) { printf("<greylist> No recipients found! (server bug?)\n"); return EXIT_SUCCESS; }
-    // Cut off the last bit of the IP so we're left with a /24 block.
+    if ( !recipient ) { printf("<greylist> No recipients found! (server bug?)\n"); return RUMBLE_RETURN_FAILURE; }
+    
+    // Truncate the IP address to either /24 for IPv4 or /64 for IPv6
     char* block = calloc(1,20);
     if ( !strchr(session->client->addr, ':')) { // IPv4
         unsigned int a,b,c;
         sscanf(session->client->addr, "%3u.%3u.%3u",&a,&b,&c);
         sprintf(block, "%03u.%03u.%03u", a, b, c);
     }
-    else { 
-        strncpy(block, session->client->addr, 19); // IPv6 - use the first 19 bytes only (abcd:abcd:abcd:abcd).
-    }
+    else strncpy(block, session->client->addr, 19); // IPv6
+    
     char* tmp = calloc(1, strlen(session->sender.raw) + strlen(recipient->raw) + strlen(block) + 1);
     sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, block);
     char* str = rumble_sha160(tmp);
