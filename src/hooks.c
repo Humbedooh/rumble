@@ -1,8 +1,13 @@
 #include "rumble.h"
 #include "servers.h"
 
+uint32_t rumble_module_check() {
+    return RUMBLE_VERSION;
+}
+
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) ) {
     hookHandle* hook = malloc(sizeof(hookHandle));
+    rumble_module_check();
     hook->func = func;
     hook->flags = flags;
     hook->module = ((masterHandle*) handle)->readOnly.currentSO;

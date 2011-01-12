@@ -20,7 +20,7 @@
 #define RUMBLE_DEBUG_THREADS            0x02000000
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG                    RUMBLE_DEBUG_THREADS | RUMBLE_DEBUG_STORAGE // debug output flags
-
+#define RUMBLE_VERSION                  0x00010800 // Internal version for module checks
 
 
 #ifdef	__cplusplus
