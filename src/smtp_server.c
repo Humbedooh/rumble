@@ -124,20 +124,17 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     ssize_t rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
     if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
         rumble_free_address(&session->sender);
-        session->flags ~= RUMBLE_SMTP_HAS_MAIL;
         return rc;
     }
     // Validate address and any following ESMTP flags.
     if ( !strlen(user) || !strlen(domain) ) {
         rumble_free_address(&session->sender);
-        session->flags ~= RUMBLE_SMTP_HAS_MAIL;
         return 501; // Syntax error in MAIL FROM parameter
     }
     uint32_t max = rumble_config_int("messagesizelimit");
     uint32_t size = atoi(rumble_get_dictionary_value(session->sender.flags, "SIZE"));
     if ( max != 0 && size != 0 && size > max ) {
         rumble_free_address(&session->sender);
-        session->flags ~= RUMBLE_SMTP_HAS_MAIL;
         return 552; // message too big.
     }
     
