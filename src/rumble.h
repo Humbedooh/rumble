@@ -175,6 +175,7 @@ void  rumble_string_lower(char* d); // Converts <d> into lowercase.
 void  rumble_string_upper(char* d); // Converts <d> into uppercase.
 char* rumble_mtime(); // mail time
 
+
 void rumble_scan_flags(cvector* dict, const char* flags);
 void rumble_flush_dictionary(cvector* dict);
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag);

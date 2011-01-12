@@ -266,17 +266,14 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         }
     }
     fclose(fp);
-    char* sql = malloc(1024);
     address* el;
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
-        sprintf(sql, "INSERT INTO queue (fid, sender, user, domain) VALUES (\"%s\", \"%s\", \"%s\", \"%s\")", fid, session->sender.raw, el->user, el->domain);
-        sqlite3_stmt* state;
-        sqlite3_prepare_v2((sqlite3*) master->readOnly.db, sql, -1, &state, NULL);
+        sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
+                "INSERT INTO queue (fid, sender, user, domain) VALUES (?,?,?,?)", \
+                fid, session->sender.raw, el->user, el->domain);
         sqlite3_step(state);
         sqlite3_finalize(state);
     }
-    free(sql);
-
     return 250;
 }
 
