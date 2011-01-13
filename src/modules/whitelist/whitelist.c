@@ -32,7 +32,10 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
     modinfo->title = "Whitelisting module";
     modinfo->description = "Standard whitelisting module for rumble.";
     rumble_whiteList = cvector_init();
-    FILE* config = fopen("config/whitelist.conf", "r");
+    char* cfgfile = calloc(1,1024);
+    sprintf(cfgfile, "%s/whitelist.conf", ((masterHandle*) master)->cfgdir);
+    FILE* config = fopen(cfgfile, "r");
+    free(cfgfile);
     if ( config ) {
         char* buffer = malloc(200);
         int p = 0;
