@@ -43,6 +43,7 @@ ssize_t rumble_blacklist_domains(sessionHandle* session) {
             el = el->next;
         }
     }
+    return RUMBLE_RETURN_OKAY;
 }
 
 ssize_t rumble_blacklist(sessionHandle* session) {
