@@ -15,6 +15,7 @@ cvector* blacklist_baddomains;
 cvector* blacklist_badhosts;
 cvector* blacklist_dnsbl;
 unsigned int blacklist_spf = 0;
+const char* blacklist_logfile = 0;
 
 ssize_t rumble_blacklist_domains(sessionHandle* session) {
     cvector_element* el;
@@ -28,11 +29,19 @@ ssize_t rumble_blacklist_domains(sessionHandle* session) {
                 printf("<blacklist> %s was blacklisted as a bad domain, aborting\n", badhost);
                 #endif
                 rumble_comm_send(session,"530 Sender domain has been blacklisted.\r\n");
+                if ( blacklist_logfile ) { 
+                    FILE* fp = fopen(blacklist_logfile, "w+");
+                    if (fp) {
+                        time_t rawtime;
+                        time(&rawtime);
+                        fprintf(fp, "<blacklist>[%s] %s: Attempt to use %s as sender domain.\r\n", ctime(&rawtime), session->client->addr, badhost);
+                        fclose(fp);
+                    }
+                }
                 return RUMBLE_RETURN_IGNORE;
             }
             el = el->next;
         }
-        
     }
 }
 
@@ -58,6 +67,15 @@ ssize_t rumble_blacklist(sessionHandle* session) {
                 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
                 printf("<blacklist> %s was blacklisted as a bad host name, aborting\n", addr);
                 #endif
+                if ( blacklist_logfile ) { 
+                    FILE* fp = fopen(blacklist_logfile, "w+");
+                    if (fp) {
+                        time_t rawtime;
+                        time(&rawtime);
+                        fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted as a bad host.\r\n",  ctime(&rawtime), session->client->addr, addr);
+                        fclose(fp);
+                    }
+                }
                 return RUMBLE_RETURN_FAILURE;
             }
             el = el->next;
@@ -80,6 +98,15 @@ ssize_t rumble_blacklist(sessionHandle* session) {
                     #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
                     printf("<blacklist> %s was blacklisted by %s, closing connection!\n", addr, dnshost);
                     #endif
+                    if ( blacklist_logfile ) { 
+                        FILE* fp = fopen(blacklist_logfile, "w+");
+                        if (fp) {
+                            time_t rawtime;
+                            time(&rawtime);
+                            fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n",  ctime(&rawtime), session->client->addr, addr, dnshost);
+                            fclose(fp);
+                        }
+                    }
                     free(dnsbl);
                     return RUMBLE_RETURN_FAILURE;
                 } // Blacklisted, abort the connection!
@@ -149,6 +176,10 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
                             pch = strtok(NULL, " ");
                         }
                     }
+                }
+                if ( !strcmp(key, "logfile")) {
+                    blacklist_logfile = calloc(1, strlen(val)+1);
+                    strcpy((char*)blacklist_logfile, val);
                 }
             }
             else {
