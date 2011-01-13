@@ -32,8 +32,7 @@ void rumble_modules_load(masterHandle* master) {
                 uint32_t ver = (*mcheck)();
                 if ( ver != RUMBLE_VERSION ) fprintf(stderr, "<modules> Warning: %s was compiled with librumble v%#x - current is %#x!\n<modules> Please recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
                 int x = (*init)(master, modinfo);
-                if ( x == EXIT_SUCCESS ) { printf("<modules> %s loaded OK.\n", el->value); }
-                else { fprintf(stderr, "<modules> Error: %s failed to load!\n", el->value); dlclose(handle); exit(EXIT_FAILURE); }
+                if ( x != EXIT_SUCCESS ) { fprintf(stderr, "<modules> Error: %s failed to load!\n", el->value); dlclose(handle); exit(EXIT_FAILURE); }
             }
             //dlclose(handle);
         }
