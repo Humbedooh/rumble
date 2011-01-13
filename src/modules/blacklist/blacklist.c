@@ -20,14 +20,14 @@ ssize_t rumble_blacklist_domains(sessionHandle* session) {
     cvector_element* el;
     // Check against pre-configured list of bad hosts
     if ( cvector_size(blacklist_baddomains)) {
-        el = blacklist_badhosts->first;
+        el = blacklist_baddomains->first;
         while ( el ) {
             char* badhost = (char*) el->object;
             if ( !strcmp(session->sender.domain, badhost) ) {
                 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
                 printf("<blacklist> %s was blacklisted as a bad domain, aborting\n", badhost);
                 #endif
-                rumble_comm_send(session,"503 Sender domain has been blacklisted.\r\n");
+                rumble_comm_send(session,"530 Sender domain has been blacklisted.\r\n");
                 return RUMBLE_RETURN_IGNORE;
             }
             el = el->next;
