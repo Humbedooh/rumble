@@ -34,14 +34,14 @@ void* rumble_smtp_init(void* m) {
         #endif
         
         // Check for hooks on accept()
-        ssize_t rc = EXIT_SUCCESS;
+        ssize_t rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP );
-        rumble_comm_send(sessptr, rumble_smtp_reply_code(220)); // Hello!
+        if ( rc == RUMBLE_RETURN_OKAY) rumble_comm_send(sessptr, rumble_smtp_reply_code(220)); // Hello!
         
         // Parse incoming commands
         char* cmd = malloc(5);
         char* arg = malloc(1024);
-        while ( rc != -1 ) {
+        while ( rc != RUMBLE_RETURN_FAILURE ) {
             memset(cmd, 0, 5);
             memset(arg, 0, 1024);
             char* line = rumble_comm_read(sessptr);
