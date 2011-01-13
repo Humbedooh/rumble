@@ -8,12 +8,9 @@
 #ifndef DATABASE_H
 #define	DATABASE_H
 
-    #include <stdlib.h>
-    #include <stdio.h>
-    #include <string.h>
+    #include "rumble.h"
     #include <sqlite3.h>
     #include <openssl/sha.h>
-    #include <inttypes.h>
 
     sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...);
 

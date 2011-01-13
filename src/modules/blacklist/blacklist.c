@@ -130,7 +130,9 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
     blacklist_badhosts = cvector_init();
     blacklist_baddomains = cvector_init();
     blacklist_dnsbl = cvector_init();
-    FILE* config = fopen("config/blacklist.conf", "r");
+    char* cfgfile = calloc(1,1024);
+    sprintf(cfgfile, "%s/blacklist.conf", ((masterHandle*) master)->cfgdir);
+    FILE* config = fopen(cfgfile, "r");
     if ( config ) {
         char* buffer = malloc(4096);
         int p = 0;
@@ -184,7 +186,7 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
                 }
             }
             else {
-                perror("<blacklist> Error: Could not read config/blacklist.conf");
+                fprintf(stderr, "<blacklist> Error: Could not read %s!\n", cfgfile);
                 return EXIT_FAILURE;
             }
         }
@@ -192,7 +194,7 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
         fclose(config);
     }
     else {
-        perror("<blacklist> Warning: Could not read config/blacklist.conf");
+        fprintf(stderr, "<blacklist> Error: Could not read %s!\n", cfgfile);
         //return EXIT_SUCCESS;
     }
     

@@ -20,6 +20,7 @@
  */
 masterHandle* master;
 masterHandle* master_ext_copy;
+cvector* args;
 
 void rumble_master_init(masterHandle* master) {
     master->smtp.cue_hooks = cvector_init();
@@ -51,12 +52,12 @@ void rumble_master_init(masterHandle* master) {
 int main(int argc, char** argv) {
     master = malloc(sizeof(masterHandle));
     master_ext_copy = master;
-    //struct dbStruct db;
-    //rumble_database_init(&db) ? printf("moo") : printf("Database loaded...\n");
-    //socketHandle smurf = comm_init("110");
-    //struct clientHandle* client = comm_accept(smurf);
-    //close(client->socket);
-    
+    args = cvector_init();
+    int x;
+    for (x = 0; x < argc; x++) {
+        rumble_scan_flags(args, argv[x]);
+    }
+
     rumble_config_load(master);
     rumble_master_init(master);
     rumble_database_load(master);

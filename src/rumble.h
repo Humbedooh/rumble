@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "pthread.h"
 #include <time.h>
 #include "cvector.h"
@@ -21,7 +22,7 @@
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00010400 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00010500 // Internal version for module checks
 
 
 #ifdef	__cplusplus
@@ -157,6 +158,7 @@ typedef struct {
     rumbleService       smtp;
     rumbleService       pop3;
     rumbleService       imap;
+    const char*         cfgdir;
 } masterHandle;
 
 typedef struct {

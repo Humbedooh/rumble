@@ -3,12 +3,37 @@
 #include <string.h>
 #include "cvector.h"
 #include "rumble.h"
-
 extern masterHandle* master_ext_copy;
+extern cvector* args;
 
 void rumble_config_load(masterHandle* master) {
     master->readOnly.conf = cvector_init();
-    FILE* config = fopen("config/rumble.conf", "r");
+    char* paths[] = { "config", "/var/rumble/config" };
+    char* cfgfile = calloc(1,1024);
+    if ( strlen(rumble_get_dictionary_value(args, "--CONFIG-DIR"))) {
+        configElement* el = malloc(sizeof(configElement));
+        el->key = "config-dir";
+        el->value = rumble_get_dictionary_value(args, "--CONFIG-DIR");
+        cvector_add(master->readOnly.conf, el);
+        sprintf(cfgfile, "%s/rumble.conf", el->value);
+    }
+    else {
+        int x = 0;
+        for ( x = 0; x < 2; x++ ) {
+            sprintf(cfgfile, "%s/rumble.conf", paths[x]);
+            FILE* config = fopen(cfgfile, "r");     
+            if ( config ) {
+                fclose(config);
+                configElement* el = malloc(sizeof(configElement));
+                el->key = "config-dir";
+                el->value = paths[x];
+                cvector_add(master->readOnly.conf, el);
+                master->cfgdir = el->value;
+                break;
+            }
+        }
+    }
+    FILE* config = fopen(cfgfile, "r");
     if ( config ) {
         char* buffer = malloc(512);
         int p = 0;
@@ -29,7 +54,7 @@ void rumble_config_load(masterHandle* master) {
                 }
             }
             else {
-                perror("<config> Error: Could not read rumble.conf");
+                fprintf(stderr, "<config> Error: Could not read %s!\n", cfgfile);
                 exit(EXIT_FAILURE);
             }
         }
@@ -37,7 +62,7 @@ void rumble_config_load(masterHandle* master) {
         fclose(config);
     }
     else {
-        perror("<config> Error: Could not read configuration file <rumble.conf>");
+        fprintf(stderr, "<config> Error: Could not read %s!\n", cfgfile);
         exit(EXIT_FAILURE);
     }
 }
