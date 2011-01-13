@@ -16,6 +16,7 @@ void rumble_config_load(masterHandle* master) {
         el->value = rumble_get_dictionary_value(args, "--CONFIG-DIR");
         cvector_add(master->readOnly.conf, el);
         sprintf(cfgfile, "%s/rumble.conf", el->value);
+        master->cfgdir = el->value;
     }
     else {
         int x = 0;
