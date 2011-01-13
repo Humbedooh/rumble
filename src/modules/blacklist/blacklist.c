@@ -16,6 +16,26 @@ cvector* blacklist_badhosts;
 cvector* blacklist_dnsbl;
 unsigned int blacklist_spf = 0;
 
+ssize_t rumble_blacklist_domains(sessionHandle* session) {
+    cvector_element* el;
+    // Check against pre-configured list of bad hosts
+    if ( cvector_size(blacklist_baddomains)) {
+        el = blacklist_badhosts->first;
+        while ( el ) {
+            char* badhost = (char*) el->object;
+            if ( !strcmp(session->sender.domain, badhost) ) {
+                #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
+                printf("<blacklist> %s was blacklisted as a bad domain, aborting\n", badhost);
+                #endif
+                rumble_comm_send(session,"503 Sender domain has been blacklisted.\r\n");
+                return RUMBLE_RETURN_IGNORE;
+            }
+            el = el->next;
+        }
+        
+    }
+}
+
 ssize_t rumble_blacklist(sessionHandle* session) {
     // First, check if the client has been given permission to skip this check by any other modules.
     if ( session->flags & RUMBLE_SMTP_FREEPASS ) return RUMBLE_RETURN_OKAY;
@@ -29,7 +49,7 @@ ssize_t rumble_blacklist(sessionHandle* session) {
     rumble_string_lower((char*) addr);
     
     cvector_element* el;
-    // Check against preconfigured list of bad hosts
+    // Check against pre-configured list of bad hosts
     if ( cvector_size(blacklist_badhosts)) {
         el = blacklist_badhosts->first;
         while ( el ) {
@@ -98,30 +118,36 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
                 if ( !strcmp(key, "dnsbl") ) {
                     char* pch = strtok((char*) val," ");
                     while ( pch != NULL ) {
-                        char* entry = calloc(1, strlen(pch)+1);
-                        strncpy(entry, pch, strlen(pch));
-                        cvector_add(blacklist_dnsbl, entry);
-                        pch = strtok(NULL, " ");
+                        if ( strlen(pch) >= 4) {
+                            char* entry = calloc(1, strlen(pch)+1);
+                            strncpy(entry, pch, strlen(pch));
+                            cvector_add(blacklist_dnsbl, entry);
+                            pch = strtok(NULL, " ");
+                        }
                     }
                 }
                 if ( !strcmp(key, "enablespf")) blacklist_spf = atoi(val);
                 if ( !strcmp(key, "blacklistbyhost")) {
                     char* pch = strtok((char*) val," ");
                     while ( pch != NULL ) {
-                        char* entry = calloc(1, strlen(pch)+1);
-                        strncpy(entry, pch, strlen(pch));
-                        rumble_string_lower(entry);
-                        cvector_add(blacklist_badhosts, entry);
-                        pch = strtok(NULL, " ");
+                        if ( strlen(pch) >= 4) {
+                            char* entry = calloc(1, strlen(pch)+1);
+                            strncpy(entry, pch, strlen(pch));
+                            rumble_string_lower(entry);
+                            cvector_add(blacklist_badhosts, entry);
+                            pch = strtok(NULL, " ");
+                        }
                     }
                 }
                 if ( !strcmp(key, "blacklistbymail")) {
                     char* pch = strtok((char*) val," ");
                     while ( pch != NULL ) {
-                        char* entry = calloc(1, strlen(pch)+1);
-                        strncpy(entry, pch, strlen(pch));
-                        cvector_add(blacklist_baddomains, entry);
-                        pch = strtok(NULL, " ");
+                        if ( strlen(pch) >= 4) {
+                            char* entry = calloc(1, strlen(pch)+1);
+                            strncpy(entry, pch, strlen(pch));
+                            cvector_add(blacklist_baddomains, entry);
+                            pch = strtok(NULL, " ");
+                        }
                     }
                 }
             }
@@ -140,5 +166,10 @@ int rumble_module_init(void* master, rumble_module_info* modinfo) {
     
     // Hook the module to new connections.
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, rumble_blacklist);
+    
+    // If fake domain check is enabled, hook that one too
+    if ( cvector_size(blacklist_baddomains)) {
+        rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_MAIL, rumble_blacklist_domains);
+    }
     return EXIT_SUCCESS; // Tell rumble that the module loaded okay.
 }
