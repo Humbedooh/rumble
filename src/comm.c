@@ -1,5 +1,6 @@
 #include "comm.h"
 #include "rumble.h"
+
 extern masterHandle* master;
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -80,25 +81,8 @@ void comm_accept(socketHandle sock, clientHandle* client) {
     }
 }
 
-
-
 void comm_mxLookup(const char* domain)
 { 
-//    u_char nsbuf[4096];
-//    char dispbuf[4096]; 
-//    ns_msg msg; 
-//    ns_rr rr; 
-//    int i, j, l; 
-    /*
-    l = res_query (domain, ns_c_any, ns_t_mx, nsbuf, sizeof (nsbuf));
-    if (l > 0) {
-        ns_initparse (nsbuf, l, &msg); 
-        printf ("%s :\n", domain); 
-        l = ns_msg_count (msg, ns_s_an); 
-        for (j = 0; j < l; j++) { 
-            ns_parserr (&msg, ns_s_an, j, &rr); 
-            ns_sprintrr (&msg, &rr, NULL, NULL, dispbuf, sizeof (dispbuf)); 
-            printf ("%s\n", dispbuf); 
-        } 
-    }*/
+// wtb a proper unix machine to develop on...oh wait, I got one...somewhere...
+    
  }
