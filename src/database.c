@@ -24,7 +24,7 @@ void rumble_database_load(masterHandle* master) {
 
 
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
-    const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
+    const char* sql = "SELECT 1 FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
     char* clause = calloc(1, strlen(sql) + 256);
     sprintf(clause, sql, domain, user);
      masterHandle* master = (masterHandle*) session->_master;
@@ -38,7 +38,7 @@ uint32_t rumble_account_exists(sessionHandle* session, const char* user, const c
 }
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
-    const char* sql = "SELECT * FROM domains WHERE `domain` = \"%s\" LIMIT 1";
+    const char* sql = "SELECT 1 FROM domains WHERE `domain` = \"%s\" LIMIT 1";
     char* clause = calloc(1, strlen(sql) + 128);
     sprintf(clause, sql, domain);
      masterHandle* master = (masterHandle*) session->_master;

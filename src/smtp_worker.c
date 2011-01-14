@@ -22,7 +22,6 @@ void* rumble_worker_process(void* m) {
         else {
             
         }
-        sleep(1);
     }
 }
 
@@ -73,13 +72,15 @@ void* rumble_worker_init(void* m) {
             
             sqlite3_finalize(state);
             char* sql = calloc(1,128);
-            sprintf(sql, "DELETE FROM queue WHERE id = %u LIMIT 1", mid);
-            sqlite3_exec(master->readOnly.db,sql, 0, &state, 0);
+            sprintf(sql, "DELETE FROM queue WHERE id=%u", mid);
+            char *zErrMsg = 0;
+            l = sqlite3_exec(master->readOnly.db,sql, 0, 0, &zErrMsg);
             free(sql);
             pthread_mutex_lock(&master->readOnly.workmutex);
             current = item;
             pthread_cond_signal(&master->readOnly.workcond);
             pthread_mutex_unlock(&master->readOnly.workmutex);
+            
         }
         else {
             sqlite3_finalize(state);
