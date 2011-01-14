@@ -14,7 +14,7 @@ void *get_in_addr(struct sockaddr *sa)
 socketHandle comm_init(const char* port)
 {
 	int sockfd;  // our socket! yaaay.
-	struct addrinfo hints, *p;
+	struct addrinfo hints;
 	int yes=1;
 
         memset(&hints, 0, sizeof hints);
@@ -48,7 +48,7 @@ socketHandle comm_init(const char* port)
         printf ("listening...\n");
         #else
 	int rv;
-        struct addrinfo* servinfo;
+        struct addrinfo* servinfo, *p;
 	if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 0;
@@ -112,8 +112,78 @@ void comm_accept(socketHandle sock, clientHandle* client) {
     }
 }
 
-void comm_mxLookup(const char* domain)
+
+cvector* comm_mxLookup(const char* domain)
 { 
-// wtb a proper unix machine to develop on...oh wait, I got one...somewhere...
+    cvector* vec = cvector_init();
     
+#ifdef RUMBLE_WINSOCK // Windows MX resolver
+    DNS_STATUS status;
+    struct _DnsRecord* rec;
+    status = DnsQuery_A(domain, DNS_TYPE_MX, DNS_QUERY_STANDARD, 0, &rec,0);
+    if ( !status ) {
+        while ( rec ) {
+            if ( rec->wType == DNS_TYPE_MX ) {
+                mxRecord* mx = malloc(sizeof(mxRecord));
+                ssize_t len = strlen(rec->Data.MX.pNameExchange);
+                mx->host = calloc(1,len+1);
+                strncpy((char*) mx->host, rec->Data.MX.pNameExchange, len);
+                mx->preference = rec->Data.MX.wPreference;
+                cvector_add(vec, mx);
+                printf("found MX: %s (%d)\n", mx->host, mx->preference);
+            }
+            rec = rec->pNext;
+        }
+        DnsRecordListFree(rec, DNS_TYPE_MX);
+    }
+    
+   
+#else // UNIX (IBM) MX resolver
+  u_char nsbuf[4096];
+  memset(nsbuf, 0, sizeof(nsbuf));
+  int  l;
+  ns_msg query_parse_msg;
+  ns_rr query_parse_rr;
+
+  // Try to resolve domain
+  res_init();
+  l = res_search (domain, ns_c_in, ns_t_mx, nsbuf, sizeof (nsbuf));
+  if (l < 0) { // Resolving failed
+    return NULL;
+  }
+  ns_initparse(nsbuf, l, &query_parse_msg);
+  int x;
+  for (x = 0; x < ns_msg_count(query_parse_msg, ns_s_an); x++)
+       {
+         if (ns_parserr(&query_parse_msg, ns_s_an, x, &query_parse_rr))
+         {
+             break;
+         }
+         if (ns_rr_type(query_parse_rr) == ns_t_mx)
+ 	  {
+             mxRecord* mx = malloc(sizeof(mxRecord));
+             mx->preference = ns_get16((u_char *)ns_rr_rdata(query_parse_rr));
+             mx->host = calloc(1,1024);
+             if (ns_name_uncompress(ns_msg_base(query_parse_msg), ns_msg_end(query_parse_msg), (u_char  *)ns_rr_rdata(query_parse_rr)+2, (char*) mx->host, 1024) < 0) break;
+             cvector_add(vec, mx);
+ 	  }
+     }
+  
+#endif
+    // Fall back to A record if no MX exists
+    if ( cvector_size(vec) == 0 ) {
+        struct hostent* a = gethostbyname(domain);
+        if ( a ) {
+            mxRecord* mx = malloc(sizeof(mxRecord));
+            struct in_addr x;
+            bcopy(a->h_addr_list++, &x, sizeof(x));
+            char* b = inet_ntoa(x);
+            ssize_t len = strlen(b);
+            mx->host = calloc(1,len+1);
+            strncpy((char*) mx->host, b, len);
+            mx->preference = 10;
+            free(a);
+        }
+    }
+    return vec;
  }

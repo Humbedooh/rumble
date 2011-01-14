@@ -1,7 +1,7 @@
 #include "rumble.h"
 #include "servers.h"
+#include <sqlite3.h>
 #include "comm.h"
-
 
 // Main loop
 void* rumble_smtp_init(void* m) {

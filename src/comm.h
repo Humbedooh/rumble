@@ -61,10 +61,10 @@ struct sockaddr_in6
 };
 #endif
 
-    void *get_in_addr(struct sockaddr *sa);
+   void *get_in_addr(struct sockaddr *sa);
     socketHandle comm_init(const char* port);
     void comm_accept(socketHandle sock, clientHandle* client);
-    void comm_mxLookup(const char* domain);
+    cvector* comm_mxLookup(const char* domain);
     
 
 #endif	/* COMM_H */

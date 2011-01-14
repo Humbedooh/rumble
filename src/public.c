@@ -22,10 +22,10 @@ inline ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
 char* rumble_comm_read(sessionHandle* session) {
     char* ret = calloc(1,1025);
     char b = 0;
-    ssize_t rc = 0;
+    uint32_t rc = 0;
     uint32_t p;
     for (p = 0; p < 1024; p++) {
-        rc = recv(session->client->socket, &b, 1, NULL);
+        rc = recv(session->client->socket, &b, 1, 0);
         if ( !rc ) { free(ret); return NULL; }
         ret[p] = b;
         if ( b == '\n' ) break;
