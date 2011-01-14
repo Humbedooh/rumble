@@ -4,13 +4,14 @@
  *
  * Created on January 3, 2011, 8:07 PM
  */
-#define RUMBLE_IGNORE_WIN
+//#define RUMBLE_IGNORE_WIN
 #ifndef RUMBLE_H
 #define	RUMBLE_H
 #if (defined(_WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)
 #define RUMBLE_WINSOCK
 #include <winsock2.h>
 #include <windns.h> // for DnsQuery_A instead of res_query
+#include <unistd.h> // for sleep()
 #define AI_PASSIVE 1
 #else
 #include <unistd.h>

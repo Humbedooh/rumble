@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }
-    comm_mxLookup("dr.dk");
+
     rumble_config_load(master);
     rumble_master_init(master);
     rumble_database_load(master);

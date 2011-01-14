@@ -130,7 +130,6 @@ cvector* comm_mxLookup(const char* domain)
                 strncpy((char*) mx->host, rec->Data.MX.pNameExchange, len);
                 mx->preference = rec->Data.MX.wPreference;
                 cvector_add(vec, mx);
-                printf("found MX: %s (%d)\n", mx->host, mx->preference);
             }
             rec = rec->pNext;
         }
@@ -168,7 +167,6 @@ cvector* comm_mxLookup(const char* domain)
              cvector_add(vec, mx);
  	  }
      }
-  
 #endif
     // Fall back to A record if no MX exists
     if ( cvector_size(vec) == 0 ) {
