@@ -165,6 +165,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     recipient->domain = domain;
     recipient->user = user;
     recipient->raw = raw;
+    recipient->_flags = 0;
     recipient->flags = cvector_init();
     cvector_add(session->recipients, recipient);
     
@@ -273,8 +274,9 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
                 "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
                 fid, session->sender.raw, el->user, el->domain, session->sender._flags);
-        sqlite3_step(state);
+        int rc = sqlite3_step(state);
         sqlite3_finalize(state);
+        printf("sql returned %d\n", rc);
     }
     return 250;
 }

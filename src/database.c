@@ -63,7 +63,7 @@ sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...) {
     const char* val;
     for (x = 0; x < count; x++) {
         val = va_arg(vl, const char*);
-        sqlite3_bind_text(state, x+1, val, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(state, x+1, val ? val : "", -1, SQLITE_TRANSIENT);
     }
     return state;
 }

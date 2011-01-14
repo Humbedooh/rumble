@@ -47,7 +47,7 @@ struct in6_addr
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00010800 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00010900 // Internal version for module checks
 
 
 #ifdef	__cplusplus

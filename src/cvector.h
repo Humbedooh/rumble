@@ -61,7 +61,7 @@ void* cvector_current(cvector* parent);
 void* cvector_shift(cvector* parent);
 void* cvector_pop(cvector* parent);
 unsigned int cvector_size(cvector* parent);
-
+void cvector_flush(cvector* parent);
 
 #ifdef	__cplusplus
 }

@@ -154,3 +154,17 @@ inline void* cvector_current(cvector* parent) {
 inline unsigned int cvector_size(cvector* parent) {
     return parent->size;
 }
+
+inline void cvector_flush(cvector* parent) {
+    cvector_element* el = parent->last;
+    cvector_element* oel;
+    while ( el ) {
+        oel = el;
+        el = el->previous;
+        free(oel);
+    }
+    parent->last = 0;
+    parent->first = 0;
+    parent->current = 0;
+    parent->size = 0;
+}

@@ -6,8 +6,8 @@ void rumble_clean_session(sessionHandle* session) {
     address* el;
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
         rumble_free_address(el);
-        cvector_delete(session->recipients);
     }
+    cvector_flush(session->recipients);
 }
 
 masterHandle* rumble_get_master() {
