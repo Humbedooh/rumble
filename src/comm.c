@@ -1,6 +1,11 @@
 #include "comm.h"
 #include "rumble.h"
-
+#ifdef WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#endif
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR -1
+#endif
 extern masterHandle* master;
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -17,7 +22,10 @@ socketHandle comm_init(const char* port)
 	struct addrinfo hints, *servinfo, *p;
 	int yes=1;
 	int rv;
-
+        #ifdef _WINSOCK_H
+                WSADATA wsaData; 
+                if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) { perror("Winsock failed to start"); exit(EXIT_FAILURE); }
+        #endif
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = rumble_config_int("forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
@@ -31,7 +39,7 @@ socketHandle comm_init(const char* port)
 	// Loop through all the results and bind to the first we can
 	for(p = servinfo; p != NULL; p = p->ai_next) {
 		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-				p->ai_protocol)) == -1) {
+				p->ai_protocol)) == SOCKET_ERROR) {
 			perror("server: socket");
 			continue;
 		}
