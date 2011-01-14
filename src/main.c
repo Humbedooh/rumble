@@ -71,6 +71,10 @@ int main(int argc, char** argv) {
             pthread_create(t, NULL, master->smtp.init, master);
         }
         printf("OK\n");
+        pthread_t* t = malloc(sizeof(pthread_t));
+        cvector_add(master->readOnly.workers, t);
+        pthread_create(t, NULL, rumble_worker_init, master);
+        
     }
  
     

@@ -176,6 +176,8 @@ typedef struct {
     struct {
         cvector*                conf;
         cvector*                workers;
+        pthread_cond_t          workcond;
+        pthread_mutex_t         workmutex;
         const char*             currentSO;
         cvector*                modules;
         void*                   db;
@@ -196,6 +198,14 @@ typedef struct {
     const char*     host;
     unsigned int    preference;
 } mxRecord;
+
+typedef struct {
+    address         sender;
+    address         recipient;
+    const char*     fid;
+    const char*     flags;
+    uint32_t        date;
+} mqueue;
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
