@@ -115,7 +115,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     sscanf(argument, "%*4c:%1000c", raw);
     
     // Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-    sscanf(raw, "%*256[^<]<%128[^>@\"]@%128[^@\">] %500c", user, domain, flags);
+    sscanf(raw, "%*256[^<]<%128[^>@\"]@%128[^@\">]> %500c", user, domain, flags);
     // Set the current values
     session->sender.raw = raw;
     session->sender.user = user;
@@ -276,7 +276,6 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
                 fid, session->sender.raw, el->user, el->domain, session->sender._flags);
         int rc = sqlite3_step(state);
         sqlite3_finalize(state);
-        printf("sql returned %d\n", rc);
     }
     return 250;
 }
