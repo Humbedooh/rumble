@@ -136,6 +136,7 @@ typedef struct {
     char*           domain;
     char*           raw;
     cvector*        flags;
+    char*           _flags;
 } address;
 
 typedef struct {

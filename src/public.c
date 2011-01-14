@@ -97,10 +97,12 @@ void rumble_free_address(address* a) {
     if ( a->domain ) free(a->domain);
     if ( a->raw ) free(a->raw);
     if ( a->user ) free(a->user);
+    if ( a->_flags ) free(a->_flags);
     rumble_flush_dictionary(a->flags);
     a->domain = 0;
     a->user = 0;
     a->raw = 0;
+    a->_flags = 0;
 }
 
 

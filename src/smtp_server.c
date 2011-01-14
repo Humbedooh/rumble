@@ -19,6 +19,7 @@ void* rumble_smtp_init(void* m) {
     session.sender.domain = 0;
     session.sender.user = 0;
     session.sender.raw = 0;
+    session.sender._flags = 0;
     session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
     while (1) {
@@ -119,6 +120,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     session->sender.raw = raw;
     session->sender.user = user;
     session->sender.domain = domain;
+    session->sender._flags = flags;
     rumble_scan_flags(session->sender.flags, flags);
     // Fire events scheduled for pre-processing run
     ssize_t rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
@@ -269,8 +271,8 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     address* el;
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
         sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
-                "INSERT INTO queue (fid, sender, user, domain) VALUES (?,?,?,?)", \
-                fid, session->sender.raw, el->user, el->domain);
+                "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
+                fid, session->sender.raw, el->user, el->domain, session->sender._flags);
         sqlite3_step(state);
         sqlite3_finalize(state);
     }
