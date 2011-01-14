@@ -10,7 +10,6 @@
 #include "rumble.h"
 #include <inttypes.h>
 #include <openssl/sha.h>
-#include <unistd.h>
 #include "sqlite3.h"
 /*
  * This file contains public functions for rumble (usable by both server and modules
@@ -26,7 +25,7 @@ char* rumble_comm_read(sessionHandle* session) {
     ssize_t rc = 0;
     uint32_t p;
     for (p = 0; p < 1024; p++) {
-        rc = read(session->client->socket, &b, 1);
+        rc = recv(session->client->socket, &b, 1, NULL);
         if ( !rc ) { free(ret); return NULL; }
         ret[p] = b;
         if ( b == '\n' ) break;

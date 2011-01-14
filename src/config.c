@@ -1,8 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "cvector.h"
 #include "rumble.h"
+
 extern masterHandle* master_ext_copy;
 extern cvector* args;
 

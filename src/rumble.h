@@ -7,7 +7,20 @@
 
 #ifndef RUMBLE_H
 #define	RUMBLE_H
+#if defined(_WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) 
+#define RUMBLE_WINSOCK
+#include <winsock2.h>
+#include <windns.h> // for DnsQuery_A instead of res_query
+#define AI_PASSIVE 1
+#else
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <resolv.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
