@@ -6,11 +6,9 @@
  *
  * Created on January 3, 2011, 8:08 PM
  */
-
-#include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include "../../rumble.h"
+
+
 cvector* blacklist_baddomains;
 cvector* blacklist_badhosts;
 cvector* blacklist_dnsbl;
@@ -30,7 +28,7 @@ ssize_t rumble_blacklist_domains(sessionHandle* session) {
                 #endif
                 rumble_comm_send(session,"530 Sender domain has been blacklisted.\r\n");
                 if ( blacklist_logfile ) { 
-                    FILE* fp = fopen(blacklist_logfile, "w+");
+                    FILE* fp = fopen(blacklist_logfile, "a");
                     if (fp) {
                         time_t rawtime;
                         time(&rawtime);

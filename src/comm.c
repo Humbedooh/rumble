@@ -1,5 +1,5 @@
-#include "comm.h"
 #include "rumble.h"
+#include "comm.h"
 
 extern masterHandle* master;
 void *get_in_addr(struct sockaddr *sa)

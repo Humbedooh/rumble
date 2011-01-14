@@ -4,14 +4,25 @@
  *
  * Created on January 3, 2011, 8:07 PM
  */
-//#define RUMBLE_IGNORE_WIN
 #ifndef RUMBLE_H
 #define	RUMBLE_H
-#if (defined(_WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)
+#if ((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)
 #define RUMBLE_WINSOCK
 #include <winsock2.h>
 #include <windns.h> // for DnsQuery_A instead of res_query
 #include <unistd.h> // for sleep()
+struct in6_addr
+{
+  union
+    {
+      uint8_t 	  __s6_addr[16];
+      uint16_t 	  __s6_addr16[8];
+      uint32_t 	  __s6_addr32[4];
+    } __u6;
+#define s6_addr		__u6.__s6_addr
+#define s6_addr16	__u6.__s6_addr16
+#define s6_addr32	__u6.__s6_addr32
+};
 #define AI_PASSIVE 1
 #else
 #include <unistd.h>

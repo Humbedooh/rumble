@@ -5,8 +5,6 @@
  * Created on January 7, 2011, 11:27 PM
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include "rumble.h"
 #include <inttypes.h>
 #include <openssl/sha.h>

@@ -4,9 +4,7 @@
  *
  * Created on January 2, 2011, 8:22 AM
  */
-
-#include <stdio.h>
-#include <stdlib.h>
+#include "rumble.h"
 #include "database.h"
 #include "comm.h"
 #include "cvector.h"
