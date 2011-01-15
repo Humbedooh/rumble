@@ -17,13 +17,26 @@ void* rumble_worker_process(void* m) {
         if ( rumble_domain_exists(sess, item->recipient.domain)) {
             userAccount* user = rumble_get_account(master, item->recipient.user, item->recipient.domain);
             if ( user ) {
-                
+                if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
+                }
+                if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
+                }
+                if ( user->type & RUMBLE_MTYPE_MOD ) { // feed to module
+                    
+                }
+                if ( user->type & RUMBLE_MTYPE_FEED) { // feed to program or url
+                }
             }
         }
         // Foreign delivery?
         else {
             
         }
+        if ( item->recipient ) rumble_free_address(item->recipient);
+        if ( item->sender ) rumble_free_address(item->recipient);
+        if ( item->fid) free((char*) item->fid);
+        if ( item->flags) free((char*) item->flags);
+        free(item);
     }
 }
 

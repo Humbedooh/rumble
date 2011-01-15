@@ -37,6 +37,8 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
                 case RUMBLE_HOOK_IMAP: cvector_add(((masterHandle*) handle)->imap.exit_hooks, hook);break;
                 default: break;
                 } break;
+        case RUMBLE_HOOK_FEED:
+                cvector_add(((masterHandle*) handle)->readOnly.feed_hooks, hook);
         default: break;
     }
 }
@@ -98,6 +100,8 @@ ssize_t rumble_server_schedule_hooks(masterHandle* handle, sessionHandle* sessio
                 case RUMBLE_HOOK_IMAP: return rumble_server_execute_hooks(session, handle->imap.exit_hooks, flags);
                 default: break;
             } break;
+        case RUMBLE_HOOK_FEED:
+            return rumble_server_execute_hooks(session, handle->readOnly.feed_hooks, flags);
         default: break;
     }
     return RUMBLE_RETURN_OKAY;

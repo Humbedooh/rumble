@@ -47,7 +47,7 @@ struct in6_addr
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00010A00 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00020100 // Internal version for module checks
 
 
 #ifdef	__cplusplus
@@ -63,6 +63,7 @@ extern "C" {
 #define RUMBLE_HOOK_ACCEPT              0x00000001
 #define RUMBLE_HOOK_COMMAND             0x00000002
 #define RUMBLE_HOOK_EXIT                0x00000004
+#define RUMBLE_HOOK_FEED                0x00000008
 #define RUMBLE_HOOK_STATE_MASK          0x0000000F
     
 #define RUMBLE_HOOK_SMTP                0x00000010
@@ -183,6 +184,7 @@ typedef struct {
         pthread_mutex_t         workmutex;
         const char*             currentSO;
         cvector*                modules;
+        cvector*                feed_hooks;
         void*                   db;
         void*                   mail;
     }               readOnly;
