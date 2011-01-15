@@ -1,5 +1,6 @@
 #include "rumble.h"
 #include <sqlite3.h>
+#include "servers.h"
 
 mqueue* current = 0;
 
@@ -17,12 +18,14 @@ void* rumble_worker_process(void* m) {
         if ( rumble_domain_exists(sess, item->recipient.domain)) {
             userAccount* user = rumble_get_account(master, item->recipient.user, item->recipient.domain);
             if ( user ) {
+                item->account = user;
                 if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
                 }
                 if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
                 }
                 if ( user->type & RUMBLE_MTYPE_MOD ) { // feed to module
-                    
+                    printf("<worker> Feeding mail to module %s\n", user->arg);
+                    rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_FEED); // hack, hack, hack
                 }
                 if ( user->type & RUMBLE_MTYPE_FEED) { // feed to program or url
                 }
@@ -32,8 +35,8 @@ void* rumble_worker_process(void* m) {
         else {
             
         }
-        if ( item->recipient ) rumble_free_address(item->recipient);
-        if ( item->sender ) rumble_free_address(item->recipient);
+        if ( &item->recipient ) rumble_free_address(&item->recipient);
+        if ( &item->sender ) rumble_free_address(&item->recipient);
         if ( item->fid) free((char*) item->fid);
         if ( item->flags) free((char*) item->flags);
         free(item);

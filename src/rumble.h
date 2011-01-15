@@ -47,7 +47,7 @@ struct in6_addr
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00020100 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00020200 // Internal version for module checks
 
 
 #ifdef	__cplusplus
@@ -58,42 +58,45 @@ extern "C" {
 #define RUMBLE_RETURN_OKAY              1       // Everything went fine, keep going.
 #define RUMBLE_RETURN_FAILURE           2       // Something went really wrong, abort the connection!
 #define RUMBLE_RETURN_IGNORE            3       // Module handled the return code, skip to next command.
+#define RUMBLE_RETURN_SPAM              4       // Treat message file as spam
+#define RUMBLE_RETURN_VIRUS             5       // Treat message file as containing a virus
     
 // Hook flags
 #define RUMBLE_HOOK_ACCEPT              0x00000001
 #define RUMBLE_HOOK_COMMAND             0x00000002
 #define RUMBLE_HOOK_EXIT                0x00000004
 #define RUMBLE_HOOK_FEED                0x00000008
-#define RUMBLE_HOOK_STATE_MASK          0x0000000F
+#define RUMBLE_HOOK_PARSER              0x00000010
+#define RUMBLE_HOOK_STATE_MASK          0x000000FF
     
-#define RUMBLE_HOOK_SMTP                0x00000010
-#define RUMBLE_HOOK_POP3                0x00000020
-#define RUMBLE_HOOK_IMAP                0x00000040
-#define RUMBLE_HOOK_SVC_MASK            0x000000F0
+#define RUMBLE_HOOK_SMTP                0x00000100
+#define RUMBLE_HOOK_POP3                0x00000200
+#define RUMBLE_HOOK_IMAP                0x00000400
+#define RUMBLE_HOOK_SVC_MASK            0x00000F00
     
 #define RUMBLE_HOOK_BEFORE              0x00000000
-#define RUMBLE_HOOK_AFTER               0x00000100
-#define RUMBLE_HOOK_TIMING_MASK         0x00000F00
+#define RUMBLE_HOOK_AFTER               0x00001000
+#define RUMBLE_HOOK_TIMING_MASK         0x0000F000
 
 // Cue definitions
-#define RUMBLE_CUE_SMTP_HELO            0x00001000
-#define RUMBLE_CUE_SMTP_RCPT            0x00002000
-#define RUMBLE_CUE_SMTP_MAIL            0x00004000
-#define RUMBLE_CUE_SMTP_DATA            0x00008000
-#define RUMBLE_CUE_SMTP_QUIT            0x00010000
-#define RUMBLE_CUE_SMTP_RSET            0x00020000
-#define RUMBLE_CUE_SMTP_NOOP            0x00040000
-#define RUMBLE_CUE_SMTP_VRFY            0x00080000
-#define RUMBLE_CUE_SMTP_AUTH            0x00100000
+#define RUMBLE_CUE_SMTP_HELO            0x00010000
+#define RUMBLE_CUE_SMTP_RCPT            0x00020000
+#define RUMBLE_CUE_SMTP_MAIL            0x00040000
+#define RUMBLE_CUE_SMTP_DATA            0x00080000
+#define RUMBLE_CUE_SMTP_QUIT            0x00100000
+#define RUMBLE_CUE_SMTP_RSET            0x00200000
+#define RUMBLE_CUE_SMTP_NOOP            0x00400000
+#define RUMBLE_CUE_SMTP_VRFY            0x00800000
+#define RUMBLE_CUE_SMTP_AUTH            0x01000000
     
-#define RUMBLE_CUE_POP3_HELO            0x00001000
-#define RUMBLE_CUE_POP3_QUIT            0x00002000
-#define RUMBLE_CUE_POP3_TOP             0x00004000
-#define RUMBLE_CUE_POP3_RETR            0x00008000
-#define RUMBLE_CUE_POP3_LIST            0x00010000
-#define RUMBLE_CUE_POP3_DELE            0x00020000
+#define RUMBLE_CUE_POP3_HELO            0x00010000
+#define RUMBLE_CUE_POP3_QUIT            0x00020000
+#define RUMBLE_CUE_POP3_TOP             0x00040000
+#define RUMBLE_CUE_POP3_RETR            0x00080000
+#define RUMBLE_CUE_POP3_LIST            0x00100000
+#define RUMBLE_CUE_POP3_DELE            0x00200000
 
-#define RUMBLE_CUE_MASK                 0x00FFF000
+#define RUMBLE_CUE_MASK                 0x0FFF0000
 
     
 // SMTP session flags
@@ -184,6 +187,7 @@ typedef struct {
         pthread_mutex_t         workmutex;
         const char*             currentSO;
         cvector*                modules;
+        cvector*                parser_hooks;
         cvector*                feed_hooks;
         void*                   db;
         void*                   mail;
@@ -205,20 +209,23 @@ typedef struct {
 } mxRecord;
 
 typedef struct {
-    address         sender;
-    address         recipient;
-    const char*     fid;
-    const char*     flags;
-    uint32_t        date;
-} mqueue;
-
-typedef struct {
     uint32_t            uid;
     char*               user;
     char*               domain;
     uint32_t            type;
     char*               arg;
 } userAccount;
+
+typedef struct {
+    address         sender;
+    address         recipient;
+    const char*     fid;
+    const char*     flags;
+    uint32_t        date;
+    userAccount*    account;
+} mqueue;
+
+
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
 

@@ -1,6 +1,6 @@
 #include "rumble.h"
 #include "servers.h"
-
+#include <string.h>
 uint32_t rumble_module_check() {
     return RUMBLE_VERSION;
 }
@@ -39,6 +39,9 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
                 } break;
         case RUMBLE_HOOK_FEED:
                 cvector_add(((masterHandle*) handle)->readOnly.feed_hooks, hook);
+                break;
+        case RUMBLE_HOOK_PARSER:
+                cvector_add(((masterHandle*) handle)->readOnly.parser_hooks, hook);
         default: break;
     }
 }
@@ -54,6 +57,10 @@ ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint
     for (el = hooks->first; el != NULL; el = el->next) {
         hookHandle* hook = (hookHandle*) el->object;
         if ( hook->flags == flags ) {
+            if ( hook->flags & RUMBLE_HOOK_FEED ) {  // ignore wrong feeds
+                mqueue* item = (mqueue*) session;
+                if (!item->account->arg || strcmp(hook->module, item->account->arg)) { continue; } 
+            }
             g++;
             ssize_t (*hookFunc)(sessionHandle*) = hook->func;
             #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
@@ -102,6 +109,10 @@ ssize_t rumble_server_schedule_hooks(masterHandle* handle, sessionHandle* sessio
             } break;
         case RUMBLE_HOOK_FEED:
             return rumble_server_execute_hooks(session, handle->readOnly.feed_hooks, flags);
+            break;
+        case RUMBLE_HOOK_PARSER:
+            return rumble_server_execute_hooks(session, handle->readOnly.parser_hooks, flags);
+            break;
         default: break;
     }
     return RUMBLE_RETURN_OKAY;
