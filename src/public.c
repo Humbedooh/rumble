@@ -7,8 +7,6 @@
 
 #include "rumble.h"
 #include <inttypes.h>
-#include <openssl/sha.h>
-#include "sqlite3.h"
 /*
  * This file contains public functions for rumble (usable by both server and modules
  */
@@ -72,8 +70,8 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
 }
 
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value) {
-    char* nkey = malloc(strlen(key));
-    char* nval = malloc(strlen(value));
+    char* nkey = calloc(1,strlen(key)+1);
+    char* nval = calloc(1,strlen(value)+1);
     strcpy(nval, value);
     strcpy(nkey, key);
     configElement* el = malloc(sizeof(configElement));
@@ -86,11 +84,11 @@ void rumble_flush_dictionary(cvector* dict) {
     if (!dict) return;
     configElement* el;
     for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
-        free((char*) el->key);
-        free((char*) el->value);
+        if ( el->key  ) free((char*) el->key);
+        if ( el->value) free((char*) el->value);
         free(el);
-        cvector_delete(dict);
     }
+    cvector_flush(dict);
 }
 
 void rumble_free_address(address* a) {

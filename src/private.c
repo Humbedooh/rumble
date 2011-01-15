@@ -14,21 +14,9 @@ masterHandle* rumble_get_master() {
     return master;
 }
 
-void rumble_tag_file(FILE* fp, const char* host, const char* fid, const char* usr, const char* dmn ) {
-    char* log = calloc(1,1024);
-    char* now = rumble_mtime();
-    if ( dmn && usr ) {
-        sprintf(log, "Received: from %s by %s (rumble) for %s@%s with ESMTP id %s; %s\r\n", host, rumble_config_str("servername"), usr, dmn, fid, now);
-    }
-    else {
-        sprintf(log, "Received: from %s by %s (rumble) with ESMTP id %s; %s\r\n", host, rumble_config_str("servername"), fid, now);
-    }
-    free(now);
-    fwrite(log, strlen(log), 1, fp);
-}
 
-char* rumble_copy_mail(const char* fid, const char* usr, const char* dmn) {
-    const char* path = rumble_config_str("storagefolder");
+char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const char* dmn) {
+    const char* path = rumble_config_str(m, "storagefolder");
     char* nfid = calloc(1,25);
     sprintf(nfid, "%x%x%x", (uint32_t) pthread_self(), (uint32_t) time(0), (uint32_t) rand());
     char* filename = calloc(1, strlen(path) + 26);
@@ -44,7 +32,7 @@ char* rumble_copy_mail(const char* fid, const char* usr, const char* dmn) {
     free(ofilename);
     if ( fp && ofp ) {
         char* now = rumble_mtime();
-        fprintf(fp, "Received: from localhost by %s (rumble) for %s@%s with ESMTP id %s; %s\r\n", rumble_config_str("servername"), usr, dmn, nfid, now);
+        fprintf(fp, "Received: from localhost by %s (rumble) for %s@%s with ESMTP id %s; %s\r\n", rumble_config_str(m,"servername"), usr, dmn, nfid, now);
         free(now);
         void* buffer = calloc(1,4096);
         while (!feof(ofp)) {

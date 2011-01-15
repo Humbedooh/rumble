@@ -1,7 +1,6 @@
 #include "rumble.h"
 #include "comm.h"
 
-extern masterHandle* master;
 void *get_in_addr(struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET) {
@@ -11,14 +10,14 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-socketHandle comm_init(const char* port)
+socketHandle comm_init(masterHandle* m, const char* port) 
 {
 	int sockfd;  // our socket! yaaay.
 	struct addrinfo hints;
 	int yes=1;
 
         memset(&hints, 0, sizeof hints);
-	hints.ai_family = rumble_config_int("forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
+	hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
         #ifdef RUMBLE_WINSOCK

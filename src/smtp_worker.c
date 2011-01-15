@@ -4,7 +4,7 @@
 #include "private.h"
 #include "database.h"
 
-mqueue* current = 0;
+mqueue* current;
 
 void* rumble_worker_process(void* m) {
     masterHandle* master = (masterHandle*) m;
@@ -24,14 +24,14 @@ void* rumble_worker_process(void* m) {
                 item->account = user;
                 
                 // Start by making a copy of the letter
-                item->fid = rumble_copy_mail(item->fid,user->user,user->domain);
+                item->fid = rumble_copy_mail(master, item->fid,user->user,user->domain);
                 
                 // pre-delivery parsing (virus, spam, that sort of stuff)
                 ssize_t rc = rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_PARSER); // hack, hack, hack
                 if ( rc == RUMBLE_RETURN_OKAY ) {
                     if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
                         // move file to user's inbox
-                        const char* path = rumble_config_str("storagefolder");
+                        const char* path = rumble_config_str(master, "storagefolder");
                         char* ofilename = calloc(1, strlen(path) + 26);
                         char* nfilename = calloc(1, strlen(path) + 26);
                         sprintf(ofilename, "%s/%s", path, item->fid);

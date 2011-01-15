@@ -18,7 +18,7 @@
  */
 masterHandle* master;
 masterHandle* master_ext_copy;
-cvector* args;
+
 
 void rumble_master_init(masterHandle* master) {
     master->smtp.cue_hooks = cvector_init();
@@ -50,20 +50,20 @@ void rumble_master_init(masterHandle* master) {
 int main(int argc, char** argv) {
     master = malloc(sizeof(masterHandle));
     master_ext_copy = master;
-    args = cvector_init();
+    cvector* args = cvector_init();
     int x;
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }
 
-    rumble_config_load(master);
+    rumble_config_load(master, args);
     rumble_master_init(master);
     rumble_database_load(master);
     rumble_modules_load(master);
     
-    if ( rumble_config_int("enablesmtp") ) {
+    if ( rumble_config_int(master, "enablesmtp") ) {
         printf("Launching SMTP service...");
-        master->smtp.socket = comm_init((const char*) rumble_config_str("smtpport"));
+        master->smtp.socket = comm_init(master, rumble_config_str(master, "smtpport"));
         int n;
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             pthread_t* t = malloc(sizeof(pthread_t));

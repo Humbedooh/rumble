@@ -250,8 +250,8 @@ const char* rumble_smtp_reply_code(unsigned int code);
 ssize_t rumble_comm_send(sessionHandle* session, const char* message);
 char* rumble_comm_read(sessionHandle* session);
 
-const char* rumble_config_str(const char* key);
-uint32_t rumble_config_int(const char* key);
+const char* rumble_config_str(masterHandle* master, const char* key);
+uint32_t rumble_config_int(masterHandle* master, const char* key);
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);

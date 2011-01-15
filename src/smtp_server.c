@@ -133,7 +133,7 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
         rumble_free_address(&session->sender);
         return 501; // Syntax error in MAIL FROM parameter
     }
-    uint32_t max = rumble_config_int("messagesizelimit");
+    uint32_t max = rumble_config_int(master, "messagesizelimit");
     uint32_t size = atoi(rumble_get_dictionary_value(session->sender.flags, "SIZE"));
     if ( max != 0 && size != 0 && size > max ) {
         rumble_free_address(&session->sender);
@@ -230,7 +230,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     // Make a unique filename and try to open the storage folder for writing.
     char* fid = calloc(1,25);
     sprintf(fid, "%x%x%x", (uint32_t) pthread_self(), (uint32_t) time(0), (uint32_t) rand());
-    const char* sf = rumble_config_str("storagefolder");
+    const char* sf = rumble_config_str(master, "storagefolder");
     char* filename = calloc(1, strlen(sf) + 26);
     sprintf(filename, "%s/%s", sf, fid);
     FILE* fp = fopen(filename, "w");
@@ -247,7 +247,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     }
     char* log = calloc(1,1024);
     char* now = rumble_mtime();
-    sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTP id %s; %s\r\n", rumble_get_dictionary_value(session->sender.flags, "helo"), session->client->addr, rumble_config_str("servername"), fid, now);
+    sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTP id %s; %s\r\n", rumble_get_dictionary_value(session->sender.flags, "helo"), session->client->addr, rumble_config_str(master, "servername"), fid, now);
     free(now);
     fwrite(log, strlen(log), 1, fp);
     rumble_comm_send(session, rumble_smtp_reply_code(354));

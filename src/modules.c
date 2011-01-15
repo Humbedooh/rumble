@@ -6,8 +6,11 @@
 #endif
 
 void rumble_modules_load(masterHandle* master) {
+    printf("called loader\n");
     configElement* el;
-    for ( el = cvector_first(master->readOnly.conf); el != NULL; el = cvector_next(master->readOnly.conf)) {
+    cvector_element* line;
+    for ( line = master->readOnly.conf->first; line != NULL; line = line->next ) {
+        el = (configElement*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
             printf("<modules> Loading %s...\n", el->value);
             void* handle = dlopen(el->value, RTLD_LAZY | RTLD_NODELETE);

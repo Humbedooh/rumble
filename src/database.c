@@ -5,10 +5,10 @@
 
 
 void rumble_database_load(masterHandle* master) {
-    char* dbpath = calloc(1, strlen(rumble_config_str("datafolder")) + 32);
-    char* mailpath = calloc(1, strlen(rumble_config_str("datafolder")) + 32);
-    sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str("datafolder"));
-    sprintf(mailpath, "%s/mail.sqlite", rumble_config_str("datafolder"));
+    char* dbpath = calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
+    char* mailpath = calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
+    sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
+    sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
     printf("Reading database...");
     
     // Domains and accounts

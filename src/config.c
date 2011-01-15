@@ -1,9 +1,7 @@
 #include "rumble.h"
+#include <stdarg.h>
 
-extern masterHandle* master_ext_copy;
-extern cvector* args;
-
-void rumble_config_load(masterHandle* master) {
+void rumble_config_load(masterHandle* master, cvector* args) {
     master->readOnly.conf = cvector_init();
     char* paths[] = { "config", "/var/rumble/config" };
     char* cfgfile = calloc(1,1024);
@@ -43,7 +41,7 @@ void rumble_config_load(masterHandle* master) {
                 char* variable = calloc(1, 512);
                 char* value = calloc(1, 512);
                 sscanf(buffer, "%511[^# \t]%*[ \t]%511[^\r\n]", variable, value );
-                if ( strlen(variable) ) {
+                if ( strlen(variable) > 2 ) {
                     rumble_string_lower(variable);
                     configElement* el = malloc(sizeof(configElement));
                     el->key = variable;
@@ -65,8 +63,7 @@ void rumble_config_load(masterHandle* master) {
     }
 }
 
-const char* rumble_config_str(const char* key) {
-    masterHandle* master = master_ext_copy;
+const char* rumble_config_str(masterHandle* master, const char* key) {
     configElement* el;
     for ( el = cvector_first(master->readOnly.conf); el != NULL; el = cvector_next(master->readOnly.conf)) {
         if ( !strcmp(el->key, key)) {
@@ -76,8 +73,7 @@ const char* rumble_config_str(const char* key) {
     return (const char*) "0";
 }
 
-uint32_t rumble_config_int(const char* key) {
-    masterHandle* master = master_ext_copy;
+uint32_t rumble_config_int(masterHandle* master, const char* key) {
     configElement* el;
     for ( el = cvector_first(master->readOnly.conf); el != NULL; el = cvector_next(master->readOnly.conf)) {
         if ( !strcmp(el->key, key)) {
