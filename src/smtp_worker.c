@@ -12,17 +12,13 @@ void* rumble_worker_process(void* m) {
         // do stuff here
         mqueue* item = current;
         pthread_mutex_unlock(&master->readOnly.workmutex);
-        printf("Got a request to handle mail from %s\n", item->sender.raw);
-        
+
         // Local delivery?
         if ( rumble_domain_exists(sess, item->recipient.domain)) {
-            printf("Domain %s is local, checking accounts...\n", item->recipient.domain);
             userAccount* user = rumble_get_account(master, item->recipient.user, item->recipient.domain);
             if ( user ) {
-                printf("%s matched user %d (%s@%s) of type %d\n", item->recipient.user, user->uid, user->user, user->domain, user->type);
+                
             }
-            else printf("No records found matching %s@%s :/ \n", item->recipient.user, item->recipient.domain);
-            
         }
         // Foreign delivery?
         else {

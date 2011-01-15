@@ -60,7 +60,6 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
         ret->arg = calloc(1,l+1);
         memcpy((char*) ret->arg, sqlite3_column_text(state,4), l);
     }
-    else printf("sqlite returned error no %d\n", rc);
     sqlite3_finalize(state);
     return ret;
 }
