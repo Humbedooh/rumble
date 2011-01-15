@@ -157,6 +157,8 @@ typedef struct {
 typedef struct {
     const char*         title;
     const char*         description;
+    const char*         author;
+    const char*         file;
     
 } rumble_module_info;
 

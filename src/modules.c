@@ -37,6 +37,7 @@ void rumble_modules_load(masterHandle* master) {
                 int x = (*init)(master, modinfo);
                 if ( x != EXIT_SUCCESS ) { fprintf(stderr, "<modules> Error: %s failed to load!\n", el->value); dlclose(handle); exit(EXIT_FAILURE); }
             }
+            modinfo->file = el->value;
             //dlclose(handle);
         }
     }
