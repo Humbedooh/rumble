@@ -23,8 +23,51 @@ void rumble_database_load(masterHandle* master) {
 }
 
 
+userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain) {
+    userAccount* ret = 0;
+    const char* sql = "SELECT id,user,domain,type,arg FROM accounts WHERE domain = ? AND ? GLOB user ORDER BY LENGTH(user) DESC LIMIT 1";
+    sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db,sql,domain,user);
+    int rc = sqlite3_step(state);
+    if ( rc == SQLITE_ROW ) {
+        ssize_t l;
+        ret = calloc(1, sizeof(userAccount));
+        
+        // user ID
+        ret->uid = sqlite3_column_int(state, 0);
+        
+        // user
+        l = sqlite3_column_bytes(state,1);
+        ret->user = calloc(1,l+1);
+        memcpy((char*) ret->user, sqlite3_column_text(state,1), l);
+        
+        // domain
+        l = sqlite3_column_bytes(state,2);
+        ret->domain = calloc(1,l+1);
+        memcpy((char*) ret->domain, sqlite3_column_text(state,2), l);
+        
+        // mbox type (alias, mbox, prog)
+        l = sqlite3_column_bytes(state,3);
+        char* tmp = calloc(1,l+1);
+        memcpy((char*) tmp, sqlite3_column_text(state,3), l);
+        rumble_string_lower(tmp);
+        ret->type = RUMBLE_MTYPE_MBOX;
+        if (!strcmp(tmp, "alias")) ret->type = RUMBLE_MTYPE_ALIAS;
+        else if (!strcmp(tmp, "mod")) ret->type = RUMBLE_MTYPE_MOD;
+        else if (!strcmp(tmp, "feed")) ret->type = RUMBLE_MTYPE_FEED;
+        free(tmp);
+        // arg (if any)
+        l = sqlite3_column_bytes(state,4);
+        ret->arg = calloc(1,l+1);
+        memcpy((char*) ret->arg, sqlite3_column_text(state,4), l);
+    }
+    else printf("sqlite returned error no %d\n", rc);
+    sqlite3_finalize(state);
+    return ret;
+}
+
+
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
-    const char* sql = "SELECT 1 FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
+    const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
     char* clause = calloc(1, strlen(sql) + 256);
     sprintf(clause, sql, domain, user);
      masterHandle* master = (masterHandle*) session->_master;
@@ -38,7 +81,7 @@ uint32_t rumble_account_exists(sessionHandle* session, const char* user, const c
 }
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
-    const char* sql = "SELECT 1 FROM domains WHERE `domain` = \"%s\" LIMIT 1";
+    const char* sql = "SELECT * FROM domains WHERE `domain` = \"%s\" LIMIT 1";
     char* clause = calloc(1, strlen(sql) + 128);
     sprintf(clause, sql, domain);
      masterHandle* master = (masterHandle*) session->_master;

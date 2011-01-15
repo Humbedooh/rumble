@@ -47,7 +47,7 @@ struct in6_addr
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00010900 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00010A00 // Internal version for module checks
 
 
 #ifdef	__cplusplus
@@ -119,7 +119,10 @@ extern "C" {
 #define RUMBLE_THREAD_SVCMASK           0x000F0000
 
     
-    
+#define RUMBLE_MTYPE_MBOX               0x00000001   // Regular mailbox
+#define RUMBLE_MTYPE_ALIAS              0x00000002   // Alias to somewhere else
+#define RUMBLE_MTYPE_MOD                0x00000004   // Mail goes into a module
+#define RUMBLE_MTYPE_FEED               0x00000008   // Mail is fed to an external program or URL
     
     
 // Structure definitions
@@ -207,6 +210,13 @@ typedef struct {
     uint32_t        date;
 } mqueue;
 
+typedef struct {
+    uint32_t            uid;
+    char*               user;
+    char*               domain;
+    uint32_t            type;
+    char*               arg;
+} userAccount;
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
 
@@ -237,6 +247,7 @@ uint32_t rumble_config_int(const char* key);
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
+userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain);
 
 #ifdef	__cplusplus
 }

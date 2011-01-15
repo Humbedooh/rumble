@@ -274,7 +274,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
                 "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
                 fid, session->sender.raw, el->user, el->domain, session->sender._flags);
-        int rc = sqlite3_step(state);
+        /*int rc = */sqlite3_step(state);
         sqlite3_finalize(state);
     }
     return 250;

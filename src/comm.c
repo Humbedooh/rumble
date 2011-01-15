@@ -21,7 +21,6 @@ socketHandle comm_init(const char* port)
 	hints.ai_family = rumble_config_int("forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
-        printf("socket stuff...\n");
         #ifdef RUMBLE_WINSOCK
                 WSADATA wsaData; 
                 if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) { perror("Winsock failed to start"); exit(EXIT_FAILURE); }

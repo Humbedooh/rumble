@@ -13,7 +13,7 @@
     #include <openssl/sha.h>
 
     sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...);
-
+    
 
 #endif	/* DATABASE_H */
 
