@@ -1,6 +1,8 @@
 #include "rumble.h"
 #include <sqlite3.h>
 #include "servers.h"
+#include "private.h"
+#include "database.h"
 
 mqueue* current = 0;
 
@@ -13,27 +15,72 @@ void* rumble_worker_process(void* m) {
         // do stuff here
         mqueue* item = current;
         pthread_mutex_unlock(&master->readOnly.workmutex);
-
+        printf("Handling mail no. %s\n", item->fid);
         // Local delivery?
         if ( rumble_domain_exists(sess, item->recipient.domain)) {
+            printf("%s is local domain, looking for user %s@%s\n", item->recipient.domain, item->recipient.user, item->recipient.domain);
             userAccount* user = rumble_get_account(master, item->recipient.user, item->recipient.domain);
             if ( user ) {
                 item->account = user;
-                if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
+                
+                // Start by making a copy of the letter
+                item->fid = rumble_copy_mail(item->fid,user->user,user->domain);
+                
+                // pre-delivery parsing (virus, spam, that sort of stuff)
+                ssize_t rc = rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_PARSER); // hack, hack, hack
+                if ( rc == RUMBLE_RETURN_OKAY ) {
+                    if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
+                        // move file to user's inbox
+                        const char* path = rumble_config_str("storagefolder");
+                        char* ofilename = calloc(1, strlen(path) + 26);
+                        char* nfilename = calloc(1, strlen(path) + 26);
+                        sprintf(ofilename, "%s/%s", path, item->fid);
+                        sprintf(nfilename, "%s/%s.msg", path, item->fid);
+                        #ifdef RUMBLE_DEBUG_STORAGE
+                        printf("Moving %s to %s\n", ofilename, nfilename);
+                        #endif
+                        rename(ofilename, nfilename);
+                        // done here!
+                    }
+                    if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
+                        if ( strlen(user->arg)) {
+                            char* pch = strtok(user->arg," ");
+                            char* usr = calloc(1,128);
+                            char* dmn = calloc(1,128);
+                            while ( pch != NULL ) {
+                                memset(usr,0,128);
+                                memset(dmn,0,128);
+                                if ( strlen(pch) >= 3 ) {
+                                    sscanf(pch, "%128[^@]@%128c", usr, dmn);
+                                    rumble_string_lower(dmn);
+                                    rumble_string_lower(usr);
+                                    sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
+                                            "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
+                                            item->fid, item->sender.raw, usr, dmn, item->flags);
+                                    sqlite3_step(state);
+                                    sqlite3_finalize(state);
+                                }
+                                pch = strtok(NULL, " ");
+                            }
+                        }
+                        // done here!
+                    }
+                    if ( user->type & RUMBLE_MTYPE_MOD ) { // feed to module
+                        printf("<worker> Feeding mail to module %s\n", user->arg);
+                        rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_FEED); // hack, hack, hack
+                        // done here!
+                    }
+                    if ( user->type & RUMBLE_MTYPE_FEED) { // feed to program or url
+                        // done here!
+                    }
                 }
-                if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
-                }
-                if ( user->type & RUMBLE_MTYPE_MOD ) { // feed to module
-                    printf("<worker> Feeding mail to module %s\n", user->arg);
-                    rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_FEED); // hack, hack, hack
-                }
-                if ( user->type & RUMBLE_MTYPE_FEED) { // feed to program or url
-                }
+                rumble_free_account(user);
             }
         }
+        
         // Foreign delivery?
         else {
-            
+            printf ("%s@%s is a foreign user\n",item->recipient.user, item->recipient.domain);
         }
         if ( &item->recipient ) rumble_free_address(&item->recipient);
         if ( &item->sender ) rumble_free_address(&item->recipient);

@@ -58,8 +58,7 @@ extern "C" {
 #define RUMBLE_RETURN_OKAY              1       // Everything went fine, keep going.
 #define RUMBLE_RETURN_FAILURE           2       // Something went really wrong, abort the connection!
 #define RUMBLE_RETURN_IGNORE            3       // Module handled the return code, skip to next command.
-#define RUMBLE_RETURN_SPAM              4       // Treat message file as spam
-#define RUMBLE_RETURN_VIRUS             5       // Treat message file as containing a virus
+
     
 // Hook flags
 #define RUMBLE_HOOK_ACCEPT              0x00000001
@@ -243,7 +242,7 @@ void rumble_flush_dictionary(cvector* dict);
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag);
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value);
 void rumble_free_address(address* a);
-
+void rumble_free_account(userAccount* user);
 
 const char* rumble_smtp_reply_code(unsigned int code);
 //const char* rumble_pop3_reply_code(unsigned int code);

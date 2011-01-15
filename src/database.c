@@ -64,6 +64,14 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
     return ret;
 }
 
+void rumble_free_account(userAccount* user) {
+    if ( user->arg ) free(user->arg);
+    if ( user->domain) free(user->domain);
+    if ( user->user) free(user->user);
+    user->arg = 0;
+    user->domain = 0;
+    user->user = 0;
+}
 
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
     const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";

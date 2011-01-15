@@ -277,6 +277,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
         /*int rc = */sqlite3_step(state);
         sqlite3_finalize(state);
     }
+    free(fid);
     return 250;
 }
 
