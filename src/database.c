@@ -5,8 +5,8 @@
 
 
 void rumble_database_load(masterHandle* master) {
-    char* dbpath = calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
-    char* mailpath = calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
+    char* dbpath = (char*) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
+    char* mailpath = (char*) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
     printf("Reading database...");
@@ -25,29 +25,30 @@ void rumble_database_load(masterHandle* master) {
 
 userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain) {
     userAccount* ret = 0;
+	char* tmp;
     const char* sql = "SELECT id,user,domain,type,arg FROM accounts WHERE domain = ? AND ? GLOB user ORDER BY LENGTH(user) DESC LIMIT 1";
     sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db,sql,domain,user);
     int rc = sqlite3_step(state);
     if ( rc == SQLITE_ROW ) {
         ssize_t l;
-        ret = calloc(1, sizeof(userAccount));
+        ret = (userAccount*) calloc(1, sizeof(userAccount));
         
         // user ID
         ret->uid = sqlite3_column_int(state, 0);
         
         // user
         l = sqlite3_column_bytes(state,1);
-        ret->user = calloc(1,l+1);
+        ret->user = (char*) calloc(1,l+1);
         memcpy((char*) ret->user, sqlite3_column_text(state,1), l);
         
         // domain
         l = sqlite3_column_bytes(state,2);
-        ret->domain = calloc(1,l+1);
+        ret->domain = (char*) calloc(1,l+1);
         memcpy((char*) ret->domain, sqlite3_column_text(state,2), l);
         
         // mbox type (alias, mbox, prog)
         l = sqlite3_column_bytes(state,3);
-        char* tmp = calloc(1,l+1);
+        tmp = (char*) calloc(1,l+1);
         memcpy((char*) tmp, sqlite3_column_text(state,3), l);
         rumble_string_lower(tmp);
         ret->type = RUMBLE_MTYPE_MBOX;
@@ -75,11 +76,11 @@ void rumble_free_account(userAccount* user) {
 
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
     const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
-    char* clause = calloc(1, strlen(sql) + 256);
-    sprintf(clause, sql, domain, user);
-     masterHandle* master = (masterHandle*) session->_master;
+    char* clause = (char*) calloc(1, strlen(sql) + 256);
+    masterHandle* master = (masterHandle*) session->_master;
     int rc;
     sqlite3_stmt* state;
+	sprintf(clause, sql, domain, user);
     sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
     rc = sqlite3_step(state);
     sqlite3_finalize(state);
@@ -89,11 +90,11 @@ uint32_t rumble_account_exists(sessionHandle* session, const char* user, const c
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
     const char* sql = "SELECT * FROM domains WHERE `domain` = \"%s\" LIMIT 1";
-    char* clause = calloc(1, strlen(sql) + 128);
-    sprintf(clause, sql, domain);
-     masterHandle* master = (masterHandle*) session->_master;
-    int rc;
+    char* clause = (char*) calloc(1, strlen(sql) + 128);
+	masterHandle* master = (masterHandle*) session->_master;
+	int rc;
     sqlite3_stmt* state;
+	sprintf(clause, sql, domain);
     sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
     rc = sqlite3_step(state);
     sqlite3_finalize(state);
@@ -105,12 +106,12 @@ sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...) {
     ssize_t count = 0;
     ssize_t len = strlen(statement);
     ssize_t x;
+	sqlite3_stmt* state;
+	va_list vl;
+	const char* val;
     for ( x = 0; x < len; x++ ) { if (statement[x] == '?') count++; }
-    sqlite3_stmt* state;
     sqlite3_prepare_v2(db, statement, -1, &state, NULL);
-    va_list vl;
     va_start(vl,statement);
-    const char* val;
     for (x = 0; x < count; x++) {
         val = va_arg(vl, const char*);
         sqlite3_bind_text(state, x+1, val ? val : "", -1, SQLITE_TRANSIENT);

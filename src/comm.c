@@ -15,13 +15,17 @@ socketHandle comm_init(masterHandle* m, const char* port)
 	int sockfd;  // our socket! yaaay.
 	struct addrinfo hints;
 	int yes=1;
-
-        memset(&hints, 0, sizeof hints);
+	struct sockaddr_in x;
+#ifdef RUMBLE_WINSOCK
+	WSADATA wsaData; 
+#endif
 	hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
+	
         #ifdef RUMBLE_WINSOCK
-                WSADATA wsaData; 
+                
+				memset(&hints, 0, sizeof hints);
                 if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) { perror("Winsock failed to start"); exit(EXIT_FAILURE); }
                 if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) <= 0) { perror("Winsock: Couldn't create socket"); }
                 if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*) &yes,
@@ -29,7 +33,7 @@ socketHandle comm_init(masterHandle* m, const char* port)
 			perror("setsockopt");
 			exit(0);
 		} 
-                struct sockaddr_in x;
+                
                 x.sin_family = hints.ai_family;
                 x.sin_port = htons(atoi(port));
                 x.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
@@ -92,9 +96,11 @@ socketHandle comm_init(masterHandle* m, const char* port)
 
 ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...) {
     va_list vl;
+	char* buffer;
+	uint32_t len;
     va_start(vl,d);
-    uint32_t len = vsnprintf(NULL, 0, d, vl);
-    char* buffer = calloc(1,len);
+    len = vsnprintf(NULL, 0, d, vl);
+	buffer = (char*) calloc(1,len);
     vsprintf(buffer, d, vl);
     len = send(session->client->socket, buffer, len ,0);
     free(buffer);
@@ -128,15 +134,15 @@ cvector* comm_mxLookup(const char* domain)
     
 #ifdef RUMBLE_WINSOCK // Windows MX resolver
     DNS_STATUS status;
-    struct _DnsRecord* rec;
+    PDNS_RECORD rec;
     status = DnsQuery_A(domain, DNS_TYPE_MX, DNS_QUERY_STANDARD, 0, &rec,0);
     if ( !status ) {
         while ( rec ) {
             if ( rec->wType == DNS_TYPE_MX ) {
-                mxRecord* mx = malloc(sizeof(mxRecord));
-                ssize_t len = strlen(rec->Data.MX.pNameExchange);
-                mx->host = calloc(1,len+1);
-                strncpy((char*) mx->host, rec->Data.MX.pNameExchange, len);
+                mxRecord* mx = (mxRecord*) malloc(sizeof(mxRecord));
+                ssize_t len = strlen((char*) rec->Data.MX.pNameExchange);
+                mx->host = (char*) calloc(1,len+1);
+                strncpy((char*) mx->host, (char*) rec->Data.MX.pNameExchange, len);
                 mx->preference = rec->Data.MX.wPreference;
                 cvector_add(vec, mx);
             }
@@ -181,12 +187,14 @@ cvector* comm_mxLookup(const char* domain)
     if ( cvector_size(vec) == 0 ) {
         struct hostent* a = gethostbyname(domain);
         if ( a ) {
-            mxRecord* mx = malloc(sizeof(mxRecord));
+			char* b;
+			ssize_t len;
+            mxRecord* mx = (mxRecord*) malloc(sizeof(mxRecord));
             struct in_addr x;
-            bcopy(a->h_addr_list++, &x, sizeof(x));
-            char* b = inet_ntoa(x);
-            ssize_t len = strlen(b);
-            mx->host = calloc(1,len+1);
+            memcpy(a->h_addr_list++, &x, sizeof(x));
+            b = inet_ntoa(x);
+            len = strlen(b);
+            mx->host = (char*) calloc(1,len+1);
             strncpy((char*) mx->host, b, len);
             mx->preference = 10;
             free(a);

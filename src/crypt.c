@@ -1,5 +1,8 @@
 #include "rumble.h"
 #include <openssl/sha.h>
+#ifndef PRIx32
+#define PRIx32 "x"
+#endif
 
 /* char* rumble_sha256(const unsigned char* d)
  * Converts the string (d) into a SHA-256 digest (64 byte hex string).
@@ -8,10 +11,11 @@
  * This should have no effect on security and is roughly 3 times faster.
 */
 char* rumble_sha256(const unsigned char* d) {
-    unsigned char* md = malloc(33);
-    char* ret = malloc(65);
+	unsigned int* x;
+    unsigned char* md = (unsigned char*) malloc(33);
+    char* ret = (char*) malloc(65);
     SHA256(d, strlen((const char*) d), md);
-    unsigned int* x = (unsigned int*) md;
+    x = (unsigned int*) md;
     sprintf((char*) ret, "%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32, x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7]);
     memset(md, 0, 33); // Erase md, just in case.
     free(md);
@@ -27,10 +31,11 @@ char* rumble_sha256(const unsigned char* d) {
  * This should have no effect on security and is roughly 3 times faster.
 */
 char* rumble_sha160(const unsigned char* d) {
-    unsigned char* md = malloc(21);
-    char* ret = malloc(41);
+	unsigned int* x;
+    unsigned char* md = (unsigned char*) malloc(21);
+    char* ret = (char*) malloc(41);
     SHA1(d, strlen((const char*) d), md);
-    unsigned int* x = (unsigned int*) md;
+    x = (unsigned int*) md;
     sprintf((char*) ret, "%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32, x[0],x[1],x[2],x[3],x[4]);
     memset(md, 0, 21); // Erase md, just in case.
     free(md);

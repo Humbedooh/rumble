@@ -7,24 +7,16 @@
 
 #ifndef CVECTOR_H
 #define	CVECTOR_H
-//#define CVECTOR_THREADED // Comment out this line to disable threaded support.
-
+/*#define CVECTOR_THREADED // Comment out this line to disable threaded support.*/
 #ifdef	__cplusplus
 extern "C" {
 #endif
 #include <stdlib.h>
-#include <sys/types.h>
     
 #ifdef CVECTOR_THREADED
 #include <pthread.h>
 #endif
     
-typedef struct {
-    unsigned char* digest;
-    time_t when;
-} greyList;
-
-
 struct _cvector_element {
     struct _cvector_element* previous;
     struct _cvector_element* next;
@@ -32,7 +24,7 @@ struct _cvector_element {
 };
 typedef struct _cvector_element cvector_element;
 
-struct _cvector {
+typedef struct {
     cvector_element* first;
     cvector_element* last;
     cvector_element* current;
@@ -40,14 +32,10 @@ struct _cvector {
 #ifdef CVECTOR_THREADED
     pthread_mutex_t  mutex;
 #endif
-};
-
-typedef struct _cvector cvector;
+} cvector;
 
 
-
-#define cvector_element_init() malloc(sizeof(cvector_element))
-cvector* cvector_init();
+cvector* cvector_init(void);
 #ifdef CVECTOR_THREADED
 cvector* cvector_init_threaded();
 #endif

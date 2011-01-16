@@ -6,7 +6,7 @@ uint32_t rumble_module_check() {
 }
 
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) ) {
-    hookHandle* hook = malloc(sizeof(hookHandle));
+    hookHandle* hook = (hookHandle*) malloc(sizeof(hookHandle));
     rumble_module_check();
     hook->func = func;
     hook->flags = flags;
@@ -15,7 +15,7 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
     #if (RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS)
     printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
     #endif
-    switch ( flags && RUMBLE_HOOK_STATE_MASK ) {
+    switch ( flags & RUMBLE_HOOK_STATE_MASK ) {
         case RUMBLE_HOOK_ACCEPT:
             switch ( flags & RUMBLE_HOOK_SVC_MASK ) {
                 case RUMBLE_HOOK_SMTP: cvector_add(((masterHandle*) handle)->smtp.init_hooks, hook);break;
@@ -54,6 +54,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint
     #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
     if ( cvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
     #endif
+	ssize_t (*hookFunc)(sessionHandle*) = NULL;
     for (el = hooks->first; el != NULL; el = el->next) {
         hookHandle* hook = (hookHandle*) el->object;
         if ( hook->flags == flags ) {
@@ -61,8 +62,8 @@ ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint
                 mqueue* item = (mqueue*) session;
                 if (!item->account->arg || strcmp(hook->module, item->account->arg)) { continue; } 
             }
-            g++;
-            ssize_t (*hookFunc)(sessionHandle*) = hook->func;
+            hookFunc = hook->func;
+			g++;
             #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
             printf("<debug :: hooks> Executing hook %p from %s\n", (void*) hookFunc, hook->module);
             #endif
@@ -85,7 +86,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint
 }
 
 ssize_t rumble_server_schedule_hooks(masterHandle* handle, sessionHandle* session, uint32_t flags) {
-    switch ( flags && RUMBLE_HOOK_STATE_MASK ) {
+    switch ( flags & RUMBLE_HOOK_STATE_MASK ) {
         case RUMBLE_HOOK_ACCEPT:
             switch ( flags & RUMBLE_HOOK_SVC_MASK ) {
                 case RUMBLE_HOOK_SMTP: return rumble_server_execute_hooks(session, handle->smtp.init_hooks, flags);

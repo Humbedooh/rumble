@@ -6,17 +6,17 @@
  */
 
 #include "rumble.h"
-#include <inttypes.h>
+
 /*
  * This file contains public functions for rumble (usable by both server and modules
  */
 
-inline ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
+ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
     return send(session->client->socket, message, strlen(message),0);
 }
 
 char* rumble_comm_read(sessionHandle* session) {
-    char* ret = calloc(1,1025);
+    char* ret = (char*) calloc(1,1025);
     char b = 0;
     uint32_t rc = 0;
     uint32_t p;
@@ -48,14 +48,18 @@ void  rumble_string_upper(char* d) {
 
 void rumble_scan_flags(cvector* dict, const char* flags){
     char* pch = strtok((char*) flags," ");
+	char *key, *val;
+	key = (char*) calloc(1,100);
+	val = (char*) calloc(1,100);
     while ( pch != NULL ) {
         if ( strlen(pch) >= 3 ) {
-            configElement* entry = malloc(sizeof(configElement));
-            entry->key = calloc(1, 100);
-            entry->value = calloc(1, 100);
-            sscanf(pch, "%100[^=]=%100c", (char*) entry->key, (char*) entry->value);
-            rumble_string_upper((char*) entry->key);
-            cvector_add(dict, entry);
+			memset(key, 0, 100);
+			memset(val, 0, 100);
+            sscanf(pch, "%100[^=]=%100c", key, val);
+			if ( strlen(key) && strlen(val) ) {
+				rumble_string_upper(key);
+				rsdict(dict, key, val);
+			}
         }
         pch = strtok(NULL, " ");
     }
@@ -63,27 +67,28 @@ void rumble_scan_flags(cvector* dict, const char* flags){
 
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
     configElement* el;
-    for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
+    for ( el = (configElement*) cvector_first(dict); el != NULL; el = (configElement*) cvector_next(dict)) {
         if (!strcmp(flag, el->key)) return el->value;
     }
     return "";
 }
 
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value) {
-    char* nkey = calloc(1,strlen(key)+1);
-    char* nval = calloc(1,strlen(value)+1);
+    char* nkey = (char*) calloc(1,strlen(key)+1);
+    char* nval = (char*) calloc(1,strlen(value)+1);
+	configElement* el;
     strcpy(nval, value);
     strcpy(nkey, key);
-    configElement* el = malloc(sizeof(configElement));
+    el = (configElement*) malloc(sizeof(configElement));
     el->key = (const char*) nkey;
     el->value = (const char*) nval;
     cvector_add(dict, el);
 }
 
 void rumble_flush_dictionary(cvector* dict) {
-    if (!dict) return;
-    configElement* el;
-    for ( el = (configElement*) cvector_first(dict); el != NULL; el = cvector_next(dict)) {
+	configElement* el;
+	if (!dict) { return; }
+    for ( el = (configElement*) cvector_first(dict); el != NULL; el = (configElement*) cvector_next(dict)) {
         if ( el->key  ) free((char*) el->key);
         if ( el->value) free((char*) el->value);
         free(el);
@@ -108,9 +113,9 @@ void rumble_free_address(address* a) {
 char* rumble_mtime() {
     time_t rawtime;
     struct tm * timeinfo;
+	char* moo = (char*) calloc(1,128);
     time ( &rawtime );
     timeinfo = gmtime ( &rawtime );
-    char* moo = calloc(1,128);
     strftime(moo, 128, "%a, %d %b %Y %X +0000 (UTC)", timeinfo);
     //free(timeinfo);
     return moo;

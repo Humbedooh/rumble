@@ -6,38 +6,91 @@
  */
 #ifndef RUMBLE_H
 #define	RUMBLE_H
-#if ((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)
-#define RUMBLE_WINSOCK
-#include <winsock2.h>
-#include <windns.h> // for DnsQuery_A instead of res_query
-#include <unistd.h> // for sleep()
-struct in6_addr
-{
-  union
-    {
-      uint8_t 	  __s6_addr[16];
-      uint16_t 	  __s6_addr16[8];
-      uint32_t 	  __s6_addr32[4];
-    } __u6;
-#define s6_addr		__u6.__s6_addr
-#define s6_addr16	__u6.__s6_addr16
-#define s6_addr32	__u6.__s6_addr32
-};
-#define AI_PASSIVE 1
+#define FORCE_WIN
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
+
+#if (((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)) || defined(FORCE_WIN)
+	#define RUMBLE_WINSOCK
+        #define HAVE_STRUCT_TIMESPEC
+	#include <Windows.h>
+	#include <winsock.h>
+	#include <windns.h> // for DnsQuery_A instead of res_query
+	//#include <WinCrypt.h>
+	//#pragma comment (lib, "Crypt32");
+	//#include <sys/types.h>
+        #if !defined(__CYGWIN__)
+                #include "pthreads-win32/include/pthread.h"
+        #else
+                #include "pthread.h"
+        #endif
+	
+	#ifndef uint32_t
+		typedef unsigned char uint8_t;
+		typedef unsigned short uint16_t;
+		typedef unsigned int uint32_t;
+		typedef unsigned long long uint64_t;
+		typedef signed int ssize_t;
+
+	#endif
+	#define sleep(a) Sleep(a*1000)
+	struct in6_addr
+	{
+	  union
+		{
+		  uint8_t 	  __s6_addr[16];
+		  uint16_t 	  __s6_addr16[8];
+		  uint32_t 	  __s6_addr32[4];
+		} __u6;
+	#define s6_addr		__u6.__s6_addr
+	#define s6_addr16	__u6.__s6_addr16
+	#define s6_addr32	__u6.__s6_addr32
+
+	};
+	#define close(a) closesocket(a);
+	typedef int socklen_t;
+	typedef uint16_t sa_family_t;
+	typedef uint16_t in_port_t;
+	typedef uint32_t in_addr_t;
+	struct addrinfo {
+	  int             ai_flags;		/* input flags */
+	  int             ai_family;		/* address family of socket */
+	  int             ai_socktype;		/* socket type */
+	  int             ai_protocol;		/* ai_protocol */
+	  socklen_t       ai_addrlen;		/* length of socket address */
+	  char            *ai_canonname;	/* canonical name of service location */
+	  struct sockaddr *ai_addr;		/* socket address of socket */
+	  struct addrinfo *ai_next;		/* pointer to next in list */
+	};
+
+
+	struct sockaddr_in6
+	{
+	  sa_family_t	  sin6_family;		/* AF_INET6 */
+	  in_port_t	  sin6_port;		/* Port number. */
+	  uint32_t	  sin6_flowinfo;	/* Traffic class and flow inf. */
+	  struct in6_addr sin6_addr;		/* IPv6 address. */
+	  uint32_t	  sin6_scope_id;	/* Set of interfaces for a scope. */
+	};
+	#ifndef AI_PASSIVE 
+		#define AI_PASSIVE 1
+	#endif
 #else
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <resolv.h>
+	#include <unistd.h>
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <netdb.h>
+	#include <arpa/inet.h>
+	#include <resolv.h>
+	#include <inttypes.h>
+	#include "pthread.h"
 #endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
-#include "pthread.h"
 #include <time.h>
 #include "cvector.h"
 #include "reply_codes.h"
@@ -49,10 +102,6 @@ struct in6_addr
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
 #define RUMBLE_VERSION                  0x00020200 // Internal version for module checks
 
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
 
 // Return codes for modules
 #define RUMBLE_RETURN_OKAY              1       // Everything went fine, keep going.
@@ -131,6 +180,19 @@ extern "C" {
 // Structure definitions
 
 #define socketHandle int
+#ifndef _SS_PAD2SIZE
+	#define _SS_MAXSIZE 128			/* Maximum size. */
+	#define _SS_ALIGNSIZE (sizeof (uint64_t))/* Desired alignment. */
+	#define _SS_PAD1SIZE (_SS_ALIGNSIZE - sizeof (sa_family_t))
+	#define _SS_PAD2SIZE (_SS_MAXSIZE - (sizeof (sa_family_t) \
+				  + _SS_PAD1SIZE + _SS_ALIGNSIZE))
+	struct sockaddr_storage {
+	  unsigned short		ss_family;
+	  char			_ss_pad1[_SS_PAD1SIZE];
+	  uint64_t		__ss_align;
+	  char			_ss_pad2[_SS_PAD2SIZE];
+	};
+#endif
 typedef struct {
     socketHandle               socket;
     struct sockaddr_storage    client_info;
