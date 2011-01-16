@@ -1,5 +1,5 @@
 #include "rumble.h"
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__CYGWIN__)
 
 #else
 #include <dlfcn.h>
@@ -29,7 +29,7 @@ void rumble_modules_load(masterHandle* master) {
         el = (configElement*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
             printf("<modules> Loading %s...\n", el->value);
-			#ifdef _WIN32
+#if defined(_WIN32) && !defined(__CYGWIN__)
 			handle = LoadLibraryA(el->value);
 			error = "(no such file?)";
 #else
@@ -45,7 +45,7 @@ void rumble_modules_load(masterHandle* master) {
             modinfo->author = 0;
             modinfo->description = 0;
             modinfo->title = 0;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__CYGWIN__)
 			init = (rumbleModInit) GetProcAddress(handle, "rumble_module_init");
 			mcheck = (rumbleVerCheck) GetProcAddress(handle, "rumble_module_check");
 			error = ( init == 0 || mcheck == 0 ) ? "no errors" : 0;
@@ -64,7 +64,7 @@ void rumble_modules_load(masterHandle* master) {
                 if ( ver != RUMBLE_VERSION ) fprintf(stderr, "<modules> Warning: %s was compiled with librumble v%#x - current is %#x!\n<modules> Please recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
                 x = init(master, modinfo);
                 if ( x != EXIT_SUCCESS ) { fprintf(stderr, "<modules> Error: %s failed to load!\n", el->value); 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__CYGWIN__)
 				FreeLibrary(handle);
 #else
 				dlclose(handle);

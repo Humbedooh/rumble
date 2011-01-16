@@ -24,7 +24,7 @@ struct _cvector_element {
 };
 typedef struct _cvector_element cvector_element;
 
-typedef struct {
+typedef struct _cvector {
     cvector_element* first;
     cvector_element* last;
     cvector_element* current;

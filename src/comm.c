@@ -22,10 +22,10 @@ socketHandle comm_init(masterHandle* m, const char* port)
 	hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
-	
+	memset(&hints, 0, sizeof hints);
         #ifdef RUMBLE_WINSOCK
                 
-				memset(&hints, 0, sizeof hints);
+		
                 if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) { perror("Winsock failed to start"); exit(EXIT_FAILURE); }
                 if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) <= 0) { perror("Winsock: Couldn't create socket"); }
                 if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*) &yes,

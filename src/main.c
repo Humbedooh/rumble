@@ -13,10 +13,6 @@
 #include "private.h"
 
 #define RUMBLE_INITIAL_THREADS 10
-/*
- * 
- */
-masterHandle* master;
 
 
 void rumble_master_init(masterHandle* master) {
@@ -49,12 +45,13 @@ void rumble_master_init(masterHandle* master) {
 int main(int argc, char** argv) {
 	int x;
 	pthread_t* t;
+	masterHandle* master;
 	cvector* args = cvector_init();
     master = (masterHandle*) malloc(sizeof(masterHandle));
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }
-
+	
     rumble_config_load(master, args);
     rumble_master_init(master);
     rumble_database_load(master);

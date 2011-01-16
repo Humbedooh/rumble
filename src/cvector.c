@@ -1,7 +1,9 @@
 #include "cvector.h"
-
+#include <stdio.h>
+#include "rumble.h"
 cvector* cvector_init(void) {
-    cvector* c = (cvector*) malloc(sizeof(cvector));
+    cvector* c = 0;
+    c = (cvector*) malloc(sizeof(cvector));
     c->current = NULL;
     c->first = NULL;
     c->last = NULL;
@@ -21,7 +23,7 @@ void cvector_add(cvector* parent, void* object) {
     #ifdef CVECTOR_THREADED
     if (parent->mutex) pthread_mutex_lock(&parent->mutex);
     #endif
-    cvector_element* el = (cvector_element*) malloc(sizeof(cvector_element*));
+    cvector_element* el = (cvector_element*) malloc(sizeof(cvector_element));
     el->object = object;
     el->previous = parent->last;
     el->next = NULL;

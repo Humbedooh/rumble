@@ -53,9 +53,9 @@ void rumble_scan_flags(cvector* dict, const char* flags){
 	val = (char*) calloc(1,100);
     while ( pch != NULL ) {
         if ( strlen(pch) >= 3 ) {
-			memset(key, 0, 100);
-			memset(val, 0, 100);
-            sscanf(pch, "%100[^=]=%100c", key, val);
+			memset(key, 0, 99);
+			memset(val, 0, 99);
+            sscanf(pch, "%99[^=]=%99c", key, val);
 			if ( strlen(key) && strlen(val) ) {
 				rumble_string_upper(key);
 				rsdict(dict, key, val);
@@ -74,11 +74,12 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
 }
 
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value) {
-    char* nkey = (char*) calloc(1,strlen(key)+1);
-    char* nval = (char*) calloc(1,strlen(value)+1);
+    char* nkey, *nval;
 	configElement* el;
-    strcpy(nval, value);
-    strcpy(nkey, key);
+	nkey = (char*) calloc(1,strlen(key)+1);
+    nval = (char*) calloc(1,strlen(value)+1);
+    strncpy(nval, value, strlen(value));
+    strncpy(nkey, key, strlen(key));
     el = (configElement*) malloc(sizeof(configElement));
     el->key = (const char*) nkey;
     el->value = (const char*) nval;

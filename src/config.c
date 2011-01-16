@@ -2,11 +2,12 @@
 #include <stdarg.h>
 
 void rumble_config_load(masterHandle* master, cvector* args) {
-    char* paths[] = { "config", "/var/rumble/config" };
-    char* cfgfile = (char*) calloc(1,1024);
+    char* paths[3] = { "config", "/var/rumble/config", "C:/cygwin/home/Administrator/rumble/config" };
+    char* cfgfile;
 	FILE* config;
 	configElement* el;
 	master->readOnly.conf = cvector_init();
+	cfgfile = (char*) calloc(1,1024);
     if ( strlen(rumble_get_dictionary_value(args, "--CONFIG-DIR"))) {
         el = (configElement*) malloc(sizeof(configElement));
         el->key = "config-dir";
@@ -17,8 +18,8 @@ void rumble_config_load(masterHandle* master, cvector* args) {
     }
     else {
         int x = 0;
-		configElement* el;
-        for ( x = 0; x < 2; x++ ) {
+	configElement* el;
+        for ( x = 0; x < 3; x++ ) {
             sprintf(cfgfile, "%s/rumble.conf", paths[x]);
             config = fopen(cfgfile, "r");     
             if ( config ) {
@@ -34,22 +35,22 @@ void rumble_config_load(masterHandle* master, cvector* args) {
     }
     config = fopen(cfgfile, "r");
     if ( config ) {
-        char* buffer = (char*) malloc(512);
-        int p = 0;
+		int p = 0;
+		char *key, *value, *buffer;
+        buffer = (char*) malloc(512);
+		key = (char*) calloc(1,512);
+		value = (char*) calloc(1,512);
         while (!feof(config)) {
             memset(buffer, 0, 512);
-            fgets(buffer, 512,config);
+            fgets(buffer, 511,config);
             p++;
             if ( !ferror(config) ) {
-                char* variable = (char*) calloc(1, 512);
-                char* value = (char*) calloc(1, 512);
-                sscanf(buffer, "%511[^# \t]%*[ \t]%511[^\r\n]", variable, value );
-                if ( strlen(variable) > 2 ) {
-                    rumble_string_lower(variable);
-                    el = (configElement*) malloc(sizeof(configElement));
-                    el->key = variable;
-                    el->value = value;
-                    cvector_add(master->readOnly.conf, el);
+                memset(key, 0, 512);
+				memset(value, 0, 512);
+                sscanf(buffer, "%511[^# \t]%*[ \t]%511[^\r\n]", key, value );
+                if ( strlen(key) > 2 && strlen(value) > 0 ) {
+                    rumble_string_lower(key);
+                    rsdict(master->readOnly.conf, key, value);
                 }
             }
             else {
@@ -73,7 +74,7 @@ const char* rumble_config_str(masterHandle* master, const char* key) {
             return (const char*) el->value;
         }
     }
-    return (const char*) "0";
+    return (const char*) "";
 }
 
 uint32_t rumble_config_int(masterHandle* master, const char* key) {

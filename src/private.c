@@ -1,5 +1,23 @@
 #include "rumble.h"
-extern masterHandle* master;
+
+#undef malloc
+#undef calloc
+void* xalloc(size_t m) {
+	void* x;
+	printf("malloc(%u)\n", m);
+	x = malloc(m);
+	if (!x) printf("malloc failed!\n");
+	return x;
+}
+void* yalloc(size_t n, size_t m) {
+	void* x;
+	printf("calloc(%u,%u)\n", n,m);
+	x = calloc(n,m);
+	if (!x) printf("calloc failed!\n");
+	return x;
+}
+#define malloc xalloc
+#define calloc yalloc
 
 void rumble_clean_session(sessionHandle* session) {
 	address* el;
@@ -10,10 +28,6 @@ void rumble_clean_session(sessionHandle* session) {
     cvector_flush(session->recipients);
 }
 
-masterHandle* rumble_get_master() {
-    return master;
-}
-
 
 char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const char* dmn) {
     const char* path = rumble_config_str(m, "storagefolder");
@@ -22,7 +36,13 @@ char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const 
     char* ofilename = (char*) calloc(1, strlen(path) + 26);
 	FILE *fp, *ofp;
 	pthread_t p = pthread_self();
-	sprintf(nfid, "%x%x%x", (uint32_t) p.p, (uint32_t) time(0), (uint32_t) rand());
+        void* pp;
+#ifdef PTW32_CDECL
+        pp = (void*) p.p;
+#else
+        pp = p;
+#endif
+	sprintf(nfid, "%x%x%x", (uint32_t) pp, (uint32_t) time(0), (uint32_t) rand());
     sprintf(filename, "%s/%s", path, nfid);
     sprintf(ofilename, "%s/%s", path, fid);
     fp = fopen(filename, "w");

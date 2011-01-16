@@ -93,8 +93,16 @@ void* rumble_smtp_init(void* m) {
             cvector_element* el = master->smtp.threads->first;
             while ( el != NULL ) {
                 pthread_t* t = (pthread_t*) el->object;
-				pthread_t pt = pthread_self();
-				if (t->p == pt.p) { cvector_delete_at(master->smtp.threads, el); break; }
+				pthread_t p = pthread_self();
+                                void* pp,*tp;
+                                #ifdef PTW32_CDECL
+                                        pp = (void*) p.p;
+                                        tp = t->p;
+                                #else
+                                        pp = p;
+                                        tp = t;
+                                #endif
+				if (tp == pp) { cvector_delete_at(master->smtp.threads, el); break; }
                 el = el->next;
             }
             pthread_mutex_unlock(&master->smtp.mutex);
@@ -237,15 +245,22 @@ ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, const char* argument) {
 	char *fid, *filename, *log, *now, *line;
 	const char *sf;
-	pthread_t pt = pthread_self();
 	FILE* fp;
 	address* el;
+	pthread_t p = pthread_self();
+        void* pp;
+#ifdef PTW32_CDECL
+        pp = (void*) p.p;
+#else
+        pp = p;
+#endif
+	
     // First, check for the right sequence of commands.
     if ( !(session->flags & RUMBLE_SMTP_HAS_RCPT) ) return 503;
     
     // Make a unique filename and try to open the storage folder for writing.
     fid = (char*) calloc(1,25);
-	sprintf(fid, "%x%x%x", (uint32_t) pt.p, (uint32_t) time(0), (uint32_t) rand());
+	sprintf(fid, "%x%x%x", (uint32_t) pp, (uint32_t) time(0), (uint32_t) rand());
     sf = rumble_config_str(master, "storagefolder");
     filename = (char*) calloc(1, strlen(sf) + 26);
     sprintf(filename, "%s/%s", sf, fid);
@@ -267,7 +282,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     free(now);
     fwrite(log, strlen(log), 1, fp);
     rumble_comm_send(session, rumble_smtp_reply_code(354));
-    line;
+    
     // Save the message
     while ( 1 ) {
         line = rumble_comm_read(session);

@@ -6,7 +6,7 @@
  */
 #ifndef RUMBLE_H
 #define	RUMBLE_H
-#define FORCE_WIN
+//#define FORCE_WIN
 
 #ifdef	__cplusplus
 extern "C" {
@@ -99,6 +99,7 @@ extern "C" {
 #define RUMBLE_DEBUG_THREADS            0x02000000
 #define RUMBLE_DEBUG_STORAGE            0x04000000
 #define RUMBLE_DEBUG_COMM               0x00010000
+#define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
 #define RUMBLE_VERSION                  0x00020200 // Internal version for module checks
 
@@ -243,7 +244,7 @@ typedef struct {
     } rumbleService;
 
 typedef struct {
-    struct {
+    struct _readOnly {
         cvector*                conf;
         cvector*                workers;
         pthread_cond_t          workcond;
@@ -331,6 +332,12 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
 #define rcsend   rumble_comm_send
 #define rcprintf rumble_comm_printf
 
+void* xalloc(size_t m);
+void* yalloc(size_t n, size_t m);
+#if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
+	#define malloc xalloc
+	#define calloc yalloc
+#endif
 #ifdef	__cplusplus
 }
 #endif

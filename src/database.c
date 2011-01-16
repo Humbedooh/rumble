@@ -58,7 +58,7 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
         free(tmp);
         // arg (if any)
         l = sqlite3_column_bytes(state,4);
-        ret->arg = calloc(1,l+1);
+        ret->arg = (char*) calloc(1,l+1);
         memcpy((char*) ret->arg, sqlite3_column_text(state,4), l);
     }
     sqlite3_finalize(state);
