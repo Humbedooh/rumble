@@ -15,17 +15,17 @@ socketHandle comm_init(masterHandle* m, const char* port)
 	int sockfd;  // our socket! yaaay.
 	struct addrinfo hints;
 	int yes=1;
-	struct sockaddr_in x;
+	
 #ifdef RUMBLE_WINSOCK
+        struct sockaddr_in x;
 	WSADATA wsaData; 
 #endif
+	memset(&hints, 0, sizeof hints);
 	hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
-	memset(&hints, 0, sizeof hints);
+	
         #ifdef RUMBLE_WINSOCK
-                
-		
                 if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) { perror("Winsock failed to start"); exit(EXIT_FAILURE); }
                 if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) <= 0) { perror("Winsock: Couldn't create socket"); }
                 if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*) &yes,

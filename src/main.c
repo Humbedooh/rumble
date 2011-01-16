@@ -12,7 +12,7 @@
 #include "servers.h"
 #include "private.h"
 
-#define RUMBLE_INITIAL_THREADS 10
+#define RUMBLE_INITIAL_THREADS 1
 
 
 void rumble_master_init(masterHandle* master) {

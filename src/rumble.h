@@ -332,9 +332,9 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
 #define rcsend   rumble_comm_send
 #define rcprintf rumble_comm_printf
 
-void* xalloc(size_t m);
-void* yalloc(size_t n, size_t m);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
+	void* xalloc(size_t m);
+	void* yalloc(size_t n, size_t m);
 	#define malloc xalloc
 	#define calloc yalloc
 #endif

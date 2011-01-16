@@ -6,10 +6,8 @@
 // Main loop
 void* rumble_smtp_init(void* m) {
     masterHandle* master = (masterHandle*) m;
-    #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
-    printf("<smtp::threads> Initialized thread %#x\n", (uintptr_t) pthread_self());
-    #endif
-    
+	
+
     // Initialize a session handle and wait for incoming connections.
     sessionHandle session;
     sessionHandle* sessptr = &session;
@@ -17,6 +15,8 @@ void* rumble_smtp_init(void* m) {
 	char *cmd, *arg, *line;
 	int x = 0;
     sessionHandle* s;
+	void* pp,*tp;
+	pthread_t p = pthread_self();
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
     session.sender.flags = cvector_init();
@@ -26,9 +26,20 @@ void* rumble_smtp_init(void* m) {
     session.sender._flags = 0;
     session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
+
+	#if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
+		#ifdef PTW32_CDECL
+				pp = (void*) p.p;
+		#else
+				pp = p;
+		#endif
+		printf("<smtp::threads> Initialized thread %#x\n", pp);
+    #endif
 	
     while (1) {
+		printf("acceptz0rs!\n");
         comm_accept(master->smtp.socket, session.client);
+		printf("kk!\n");
         pthread_mutex_lock(&master->smtp.mutex);
         cvector_add(master->smtp.handles, (void*) sessptr);
         pthread_mutex_unlock(&master->smtp.mutex);

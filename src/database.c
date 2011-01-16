@@ -75,16 +75,15 @@ void rumble_free_account(userAccount* user) {
 }
 
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
-    const char* sql = "SELECT * FROM accounts WHERE `domain` = \"%s\" AND \"%s\" GLOB `user` ORDER BY LENGTH(`user`) DESC LIMIT 1";
-    char* clause = (char*) calloc(1, strlen(sql) + 256);
-    masterHandle* master = (masterHandle*) session->_master;
-    int rc;
+	int rc;
     sqlite3_stmt* state;
-	sprintf(clause, sql, domain, user);
-    sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
+	masterHandle* master = (masterHandle*) session->_master;
+	printf("checking %s@%s...\n", user, domain);
+	state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
+		"SELECT * FROM accounts WHERE domain = ? AND ? GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
+		domain, user);
     rc = sqlite3_step(state);
     sqlite3_finalize(state);
-    free(clause);
     return ( rc == SQLITE_ROW) ? 1 : 0;
 }
 
@@ -103,18 +102,18 @@ uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
 }
 
 sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...) {
-    ssize_t count = 0;
-    ssize_t len = strlen(statement);
-    ssize_t x;
+    size_t count = 0;
+	size_t x, rc, len;
 	sqlite3_stmt* state;
 	va_list vl;
 	const char* val;
+    len = strlen(statement);
     for ( x = 0; x < len; x++ ) { if (statement[x] == '?') count++; }
     sqlite3_prepare_v2(db, statement, -1, &state, NULL);
     va_start(vl,statement);
     for (x = 0; x < count; x++) {
         val = va_arg(vl, const char*);
-        sqlite3_bind_text(state, x+1, val ? val : "", -1, SQLITE_TRANSIENT);
+        rc = sqlite3_bind_text(state, x+1, val ? val : " ", -1, SQLITE_TRANSIENT);
     }
     return state;
 }

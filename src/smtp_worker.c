@@ -15,9 +15,11 @@ void* rumble_worker_process(void* m) {
     sess->_master = m;
 	
     while (1) {
+		printf("waiting for mails..\n");
         pthread_cond_wait(&master->readOnly.workcond, &master->readOnly.workmutex);
         // do stuff here
         item = current;
+		if ( ! current ) { printf("threading went bad :(\n"); pthread_exit(0); }
         pthread_mutex_unlock(&master->readOnly.workmutex);
         printf("Handling mail no. %s\n", item->fid);
         // Local delivery?
@@ -101,7 +103,8 @@ void* rumble_worker_init(void* m) {
 	const char* statement = "SELECT time, fid, sender, user, domain, flags, id FROM queue LIMIT 1";
     pthread_cond_init(&master->readOnly.workcond, NULL);
     pthread_mutex_init(&master->readOnly.workmutex, NULL);
-    for (x = 0; x < 10; x++ ) {
+	//pthread_mutex_lock(&master->readOnly.workmutex);
+    for (x = 0; x < 1; x++ ) {
         pthread_t* t = (pthread_t*) malloc(sizeof(pthread_t));
         cvector_add(master->readOnly.workers, t);
         pthread_create(t, NULL, rumble_worker_process, (void *)m);
@@ -153,7 +156,6 @@ void* rumble_worker_init(void* m) {
             current = item;
             pthread_cond_signal(&master->readOnly.workcond);
             pthread_mutex_unlock(&master->readOnly.workmutex);
-            
         }
         else {
             sqlite3_finalize(state);

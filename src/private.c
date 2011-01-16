@@ -1,23 +1,25 @@
 #include "rumble.h"
 
-#undef malloc
-#undef calloc
-void* xalloc(size_t m) {
-	void* x;
-	printf("malloc(%u)\n", m);
-	x = malloc(m);
-	if (!x) printf("malloc failed!\n");
-	return x;
-}
-void* yalloc(size_t n, size_t m) {
-	void* x;
-	printf("calloc(%u,%u)\n", n,m);
-	x = calloc(n,m);
-	if (!x) printf("calloc failed!\n");
-	return x;
-}
-#define malloc xalloc
-#define calloc yalloc
+#if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
+	#undef malloc
+	#undef calloc
+	void* xalloc(size_t m) {
+		void* x;
+		printf("malloc(%u)\n", m);
+		x = malloc(m);
+		if (!x) printf("malloc failed!\n");
+		return x;
+	}
+	void* yalloc(size_t n, size_t m) {
+		void* x;
+		printf("calloc(%u,%u)\n", n,m);
+		x = calloc(n,m);
+		if (!x) printf("calloc failed!\n");
+		return x;
+	}
+	#define malloc xalloc
+	#define calloc yalloc
+#endif
 
 void rumble_clean_session(sessionHandle* session) {
 	address* el;
