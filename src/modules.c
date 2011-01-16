@@ -21,6 +21,9 @@ void rumble_modules_load(masterHandle* master) {
             char* d = dlerror();    /* Clear any existing error */
             if ( d ) { printf("<modules> Warning: %s\n", d); }
             rumble_module_info* modinfo = calloc(1,sizeof(rumble_module_info));
+            modinfo->author = 0;
+            modinfo->description = 0;
+            modinfo->title = 0;
             int (*init)(void* master, rumble_module_info* modinfo);
             uint32_t (*mcheck) ();
             char* error;

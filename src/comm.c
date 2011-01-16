@@ -90,6 +90,17 @@ socketHandle comm_init(masterHandle* m, const char* port)
         return sockfd;
 }
 
+ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...) {
+    va_list vl;
+    va_start(vl,d);
+    uint32_t len = vsnprintf(NULL, 0, d, vl);
+    char* buffer = calloc(1,len);
+    vsprintf(buffer, d, vl);
+    len = send(session->client->socket, buffer, len ,0);
+    free(buffer);
+    return len;
+}
+
 void comm_accept(socketHandle sock, clientHandle* client) {
     socklen_t sin_size = sizeof client->client_info;
     while(1) {  // loop through accept() till we get something worth passing along.

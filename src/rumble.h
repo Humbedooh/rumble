@@ -250,6 +250,7 @@ const char* rumble_smtp_reply_code(unsigned int code);
 //const char* rumble_pop3_reply_code(unsigned int code);
 
 ssize_t rumble_comm_send(sessionHandle* session, const char* message);
+ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...);
 char* rumble_comm_read(sessionHandle* session);
 
 const char* rumble_config_str(masterHandle* master, const char* key);
@@ -258,6 +259,15 @@ uint32_t rumble_config_int(masterHandle* master, const char* key);
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
 userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain);
+
+
+// Shortcuts to common functions
+#define rrdict   rumble_get_dictionary_value // read dict
+#define rsdict   rumble_add_dictionary_value // set dict
+#define rfdict   rumble_flush_dictionary     // flush dict
+
+#define rcsend   rumble_comm_send
+#define rcprintf rumble_comm_printf
 
 #ifdef	__cplusplus
 }
