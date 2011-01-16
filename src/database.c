@@ -88,28 +88,25 @@ uint32_t rumble_account_exists(sessionHandle* session, const char* user, const c
 }
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
-    const char* sql = "SELECT * FROM domains WHERE `domain` = \"%s\" LIMIT 1";
-    char* clause = (char*) calloc(1, strlen(sql) + 128);
 	masterHandle* master = (masterHandle*) session->_master;
 	int rc;
     sqlite3_stmt* state;
-	sprintf(clause, sql, domain);
-    sqlite3_prepare_v2((sqlite3*) master->readOnly.db, clause, -1, &state, NULL);
+	state = rumble_sql_inject((sqlite3*) master->readOnly.db, "SELECT 1 FROM domains WHERE domain = ? LIMIT 1", domain);
     rc = sqlite3_step(state);
     sqlite3_finalize(state);
-    free(clause);
+	printf("check for domain %s returned %u\n", domain, rc);
     return ( rc == SQLITE_ROW) ? 1 : 0;
 }
 
 sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...) {
     size_t count = 0;
-	size_t x, rc, len;
-	sqlite3_stmt* state;
-	va_list vl;
-	const char* val;
+    size_t x, rc, len;
+    sqlite3_stmt* state;
+    va_list vl;
+    const char* val;
     len = strlen(statement);
     for ( x = 0; x < len; x++ ) { if (statement[x] == '?') count++; }
-    sqlite3_prepare_v2(db, statement, -1, &state, NULL);
+    rc = sqlite3_prepare_v2(db, statement, -1, &state, NULL);
     va_start(vl,statement);
     for (x = 0; x < count; x++) {
         val = va_arg(vl, const char*);

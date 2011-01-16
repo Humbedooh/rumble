@@ -103,7 +103,9 @@ void* rumble_worker_init(void* m) {
 	const char* statement = "SELECT time, fid, sender, user, domain, flags, id FROM queue LIMIT 1";
     pthread_cond_init(&master->readOnly.workcond, NULL);
     pthread_mutex_init(&master->readOnly.workmutex, NULL);
-	//pthread_mutex_lock(&master->readOnly.workmutex);
+	#ifdef PTW32_CDECL
+	pthread_mutex_lock(&master->readOnly.workmutex);
+	#endif
     for (x = 0; x < 1; x++ ) {
         pthread_t* t = (pthread_t*) malloc(sizeof(pthread_t));
         cvector_add(master->readOnly.workers, t);

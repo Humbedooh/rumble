@@ -83,6 +83,11 @@ void* cvector_shift(cvector* parent) {
     obj = currobj->object;
     free(currobj);
     parent->size--;
+	if ( parent->size == 0) {
+		parent->current = 0;
+		parent->first = 0;
+		parent->last = 0;
+	}
     #ifdef CVECTOR_THREADED
     if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
     #endif
@@ -100,6 +105,11 @@ void* cvector_pop(cvector* parent) {
     obj = currobj->object;
     free(currobj);
     parent->size--;
+	if ( parent->size == 0) {
+		parent->current = 0;
+		parent->first = 0;
+		parent->last = 0;
+	}
     #ifdef CVECTOR_THREADED
     if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
     #endif

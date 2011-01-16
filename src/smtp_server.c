@@ -37,9 +37,7 @@ void* rumble_smtp_init(void* m) {
     #endif
 	
     while (1) {
-		printf("acceptz0rs!\n");
         comm_accept(master->smtp.socket, session.client);
-		printf("kk!\n");
         pthread_mutex_lock(&master->smtp.mutex);
         cvector_add(master->smtp.handles, (void*) sessptr);
         pthread_mutex_unlock(&master->smtp.mutex);
@@ -86,7 +84,7 @@ void* rumble_smtp_init(void* m) {
         printf("<debug::comm> Closed connection from %s on SMTP\n", session.client->addr);
         #endif
         rumble_comm_send(sessptr, rumble_smtp_reply_code(221)); // bye!
-        shutdown(session.client->socket,0);
+		
         close(session.client->socket);
         free(arg);
         free(cmd);
@@ -202,12 +200,15 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     
     // Fire events scheduled for pre-processing run
     rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
-    if ( rc != RUMBLE_RETURN_OKAY ) return rc;
-    
-    
+    if ( rc != RUMBLE_RETURN_OKAY ) {
+        cvector_pop(session->recipients);
+        rumble_free_address(recipient);
+        return rc;
+    }
+            
     // Check if recipient is local
-    isLocalDomain = rumble_domain_exists(session, recipient->domain);
-    isLocalUser = isLocalDomain ? rumble_account_exists(session,recipient->user, recipient->domain) : 0;
+    isLocalDomain = rumble_domain_exists(session, domain);
+    isLocalUser = isLocalDomain ? rumble_account_exists(session, user, domain) : 0;
     
     if ( isLocalUser )     {
     // If everything went fine, set the RCPT flag and return with code 250.
@@ -225,9 +226,13 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
             return 251;
         }
         // Not local and no relaying allowed, return 530.
+        cvector_pop(session->recipients);
+        rumble_free_address(recipient);
         return 530;
     }
     // Domain is local but user doesn't exist, return 550
+    cvector_pop(session->recipients);
+    rumble_free_address(recipient);
     return 550;
 }
 
