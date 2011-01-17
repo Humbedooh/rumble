@@ -117,7 +117,7 @@ char* rumble_mtime() {
 	char* moo = (char*) calloc(1,128);
     time ( &rawtime );
     timeinfo = gmtime ( &rawtime );
-    strftime(moo, 128, "%a, %d %b %Y %X +0000 (UTC)", timeinfo);
+    strftime(moo, 128, "%a, %d %b %Y %X +0000 (UTC)\0", timeinfo);
     //free(timeinfo);
     return moo;
 }

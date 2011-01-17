@@ -280,7 +280,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     sf = rumble_config_str(master, "storagefolder");
     filename = (char*) calloc(1, strlen(sf) + 26);
     sprintf(filename, "%s/%s", sf, fid);
-    fp = fopen(filename, "w");
+    fp = fopen(filename, "wb");
 #ifdef RUMBLE_DEBUG_STORAGE
     printf("Writing to file %s...\n", filename);
 #endif

@@ -47,7 +47,7 @@ char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const 
 	sprintf(nfid, "%x%x%x", (uint32_t) pp, (uint32_t) time(0), (uint32_t) rand());
     sprintf(filename, "%s/%s", path, nfid);
     sprintf(ofilename, "%s/%s", path, fid);
-    fp = fopen(filename, "w");
+    fp = fopen(filename, "wb");
     ofp = fopen(ofilename, "r");
     #ifdef RUMBLE_DEBUG_STORAGE
         printf("Copying %s to file %s...\n", ofilename, filename);
