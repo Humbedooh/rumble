@@ -16,10 +16,11 @@ ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
 }
 
 char* rumble_comm_read(sessionHandle* session) {
-    char* ret = (char*) calloc(1,1025);
-    char b = 0;
+	char b = 0;
     uint32_t rc = 0;
     uint32_t p;
+	char* ret = (char*) calloc(1,1025);
+	if (!ret) { perror("Calloc failed!"); exit(1);}
     for (p = 0; p < 1024; p++) {
         rc = recv(session->client->socket, &b, 1, 0);
         if ( !rc ) { free(ret); return NULL; }
@@ -55,8 +56,7 @@ void rumble_scan_flags(cvector* dict, const char* flags){
         if ( strlen(pch) >= 3 ) {
 			memset(key, 0, 99);
 			memset(val, 0, 99);
-            sscanf(pch, "%99[^=]=%99c", key, val);
-			if ( strlen(key) && strlen(val) ) {
+            if (sscanf(pch, "%99[^=]=%99c", key, val) == 2) {
 				rumble_string_upper(key);
 				rsdict(dict, key, val);
 			}
@@ -78,9 +78,11 @@ void rumble_add_dictionary_value(cvector* dict, const char* key, const char* val
 	configElement* el;
 	nkey = (char*) calloc(1,strlen(key)+1);
     nval = (char*) calloc(1,strlen(value)+1);
+	if (!nkey || !nval) { perror("calloc() failed!"); exit(1); }
     strncpy(nval, value, strlen(value));
     strncpy(nkey, key, strlen(key));
     el = (configElement*) malloc(sizeof(configElement));
+	if (!el) merror();
     el->key = (const char*) nkey;
     el->value = (const char*) nval;
     cvector_add(dict, el);
@@ -114,10 +116,11 @@ void rumble_free_address(address* a) {
 char* rumble_mtime() {
     time_t rawtime;
     struct tm * timeinfo;
-	char* moo = (char*) calloc(1,128);
+	char* txt = (char*) calloc(1,128);
+	if (!txt) { perror("calloc() failed!"); exit(1); }
     time ( &rawtime );
     timeinfo = gmtime ( &rawtime );
-    strftime(moo, 128, "%a, %d %b %Y %X +0000 (UTC)\0", timeinfo);
+    strftime(txt, 128, "%a, %d %b %Y %X +0000 (UTC)", timeinfo);
     //free(timeinfo);
-    return moo;
+    return txt;
 }

@@ -44,7 +44,9 @@ void* rumble_worker_process(void* m) {
                         #ifdef RUMBLE_DEBUG_STORAGE
                         printf("Moving %s to %s\n", ofilename, nfilename);
                         #endif
-                        rename(ofilename, nfilename);
+                        if (rename(ofilename, nfilename)) {
+							perror("Couldn't move file");
+						}
                         // done here!
                     }
                     if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
@@ -57,14 +59,15 @@ void* rumble_worker_process(void* m) {
                                 memset(dmn,0,128);
                                 if ( strlen(pch) >= 3 ) {
 									sqlite3_stmt* state;
-                                    sscanf(pch, "%128[^@]@%128c", usr, dmn);
-                                    rumble_string_lower(dmn);
-                                    rumble_string_lower(usr);
-                                    state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
-                                            "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
-                                            item->fid, item->sender.raw, usr, dmn, item->flags);
-                                    sqlite3_step(state);
-                                    sqlite3_finalize(state);
+                                    if (sscanf(pch, "%128[^@]@%128c", usr, dmn)) {
+										rumble_string_lower(dmn);
+										rumble_string_lower(usr);
+										state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
+												"INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
+												item->fid, item->sender.raw, usr, dmn, item->flags);
+										sqlite3_step(state);
+										sqlite3_finalize(state);
+									}
                                 }
                                 pch = strtok(NULL, " ");
                             }
@@ -120,43 +123,46 @@ void* rumble_worker_init(void* m) {
 			uint32_t mid;
 			char* sql, *zErrMsg;
             mqueue* item = (mqueue*) calloc(1,sizeof(mqueue));
-            item->date = sqlite3_column_int(state, 0);
+			if (item) {
+				item->date = sqlite3_column_int(state, 0);
             
-            // fid
-            l = sqlite3_column_bytes(state,1);
-            item->fid = (char*) calloc(1,l+1);
-            memcpy((char*) item->fid, sqlite3_column_text(state,1), l);
+				// fid
+				l = sqlite3_column_bytes(state,1);
+				item->fid = (char*) calloc(1,l+1);
+				memcpy((char*) item->fid, sqlite3_column_text(state,1), l);
             
-            // sender
-            l = sqlite3_column_bytes(state,2);
-            item->sender.raw = (char*) calloc(1,l+1);
-            memcpy((char*) item->sender.raw, sqlite3_column_text(state,2), l);
+				// sender
+				l = sqlite3_column_bytes(state,2);
+				item->sender.raw = (char*) calloc(1,l+1);
+				memcpy((char*) item->sender.raw, sqlite3_column_text(state,2), l);
             
-            // recipient
-            l = sqlite3_column_bytes(state,3);
-            item->recipient.user = (char*) calloc(1,l+1);
-            memcpy((char*) item->recipient.user, sqlite3_column_text(state,3), l);
-            l = sqlite3_column_bytes(state,4);
-            item->recipient.domain = (char*) calloc(1,l+1);
-            memcpy((char*) item->recipient.domain, sqlite3_column_text(state,4), l);
+				// recipient
+				l = sqlite3_column_bytes(state,3);
+				item->recipient.user = (char*) calloc(1,l+1);
+				memcpy((char*) item->recipient.user, sqlite3_column_text(state,3), l);
+				l = sqlite3_column_bytes(state,4);
+				item->recipient.domain = (char*) calloc(1,l+1);
+				memcpy((char*) item->recipient.domain, sqlite3_column_text(state,4), l);
             
-            //flags
-            l = sqlite3_column_bytes(state,5);
-            item->flags = (char*) calloc(1,l+1);
-            memcpy((char*) item->flags, sqlite3_column_text(state,5), l);
+				//flags
+				l = sqlite3_column_bytes(state,5);
+				item->flags = (char*) calloc(1,l+1);
+				memcpy((char*) item->flags, sqlite3_column_text(state,5), l);
             
-            mid = sqlite3_column_int(state, 6);
+				mid = sqlite3_column_int(state, 6);
             
-            sqlite3_finalize(state);
-            sql = (char*) calloc(1,128);
-            sprintf(sql, "DELETE FROM queue WHERE id=%u", mid);
-            zErrMsg = 0;
-            l = sqlite3_exec((sqlite3*) master->readOnly.db,sql, 0, 0, &zErrMsg);
-            free(sql);
-            pthread_mutex_lock(&master->readOnly.workmutex);
-            current = item;
-            pthread_cond_signal(&master->readOnly.workcond);
+				sqlite3_finalize(state);
+				sql = (char*) calloc(1,128);
+				if (!sql) return 0;
+				sprintf(sql, "DELETE FROM queue WHERE id=%u", mid);
+				zErrMsg = 0;
+				l = sqlite3_exec((sqlite3*) master->readOnly.db,sql, 0, 0, &zErrMsg);
+				free(sql);
+				pthread_mutex_lock(&master->readOnly.workmutex);
+				current = item;
+				pthread_cond_signal(&master->readOnly.workcond);
             //pthread_mutex_unlock(&master->readOnly.workmutex);
+			}
         }
         else {
             pthread_mutex_unlock(&master->readOnly.workmutex);

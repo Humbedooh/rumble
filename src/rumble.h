@@ -292,6 +292,7 @@ typedef struct {
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
+uint32_t __declspec(dllexport) rumble_module_check();
 
 // Public tool-set
 char* rumble_sha160(const unsigned char* d); //SHA1 digest (40 byte hex string)
@@ -331,6 +332,7 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
 
 #define rcsend   rumble_comm_send
 #define rcprintf rumble_comm_printf
+#define merror() fprintf(stderr, "Memory allocation failed, this is bad!\n");exit(1);
 
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
 	void* xalloc(size_t m);

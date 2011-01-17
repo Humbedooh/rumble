@@ -4,6 +4,7 @@
 cvector* cvector_init(void) {
     cvector* c = 0;
     c = (cvector*) malloc(sizeof(cvector));
+	if (!c) return 0;
     c->current = NULL;
     c->first = NULL;
     c->last = NULL;
@@ -24,6 +25,7 @@ void cvector_add(cvector* parent, void* object) {
     if (parent->mutex) pthread_mutex_lock(&parent->mutex);
     #endif
     cvector_element* el = (cvector_element*) malloc(sizeof(cvector_element));
+	if (!el) return;
     el->object = object;
     el->previous = parent->last;
     el->next = NULL;

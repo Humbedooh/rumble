@@ -14,6 +14,7 @@ char* rumble_sha256(const unsigned char* d) {
 	unsigned int* x;
     unsigned char* md = (unsigned char*) malloc(33);
     char* ret = (char*) malloc(65);
+	if (!ret) merror();
     SHA256(d, strlen((const char*) d), md);
     x = (unsigned int*) md;
     sprintf((char*) ret, "%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32, x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7]);
@@ -34,6 +35,7 @@ char* rumble_sha160(const unsigned char* d) {
 	unsigned int* x;
     unsigned char* md = (unsigned char*) malloc(21);
     char* ret = (char*) malloc(41);
+	if (!ret) merror();
     SHA1(d, strlen((const char*) d), md);
     x = (unsigned int*) md;
     sprintf((char*) ret, "%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32"%08"PRIx32, x[0],x[1],x[2],x[3],x[4]);

@@ -27,16 +27,16 @@ void* accept_connection(void* m); // Prototype
 rumbleService* svc;
 
 // Standard module initialization function
-int rumble_module_init(void* m, rumble_module_info* modinfo) {
-    svc = calloc(1,sizeof(rumbleService));
+int __declspec(dllexport) rumble_module_init(void* m, rumble_module_info* modinfo) {
+	int n;
+    svc = (rumbleService*) calloc(1,sizeof(rumbleService));
     modinfo->title = "Entrepreneur module";
     modinfo->description = "Module for administering stuff";
     modinfo->author = "Humbedooh";
     svc->socket = comm_init((masterHandle*) m, "80");
     if ( ! svc->socket) { printf("bleh, no socket :(\n"); exit(0); }
     svc->threads = cvector_init();
-    
-    int n;
+   
     for ( n = 0; n < 10; n++) {
         pthread_t* t = malloc(sizeof(pthread_t));
         cvector_add(svc->threads, t);
@@ -48,15 +48,21 @@ int rumble_module_init(void* m, rumble_module_info* modinfo) {
 
 void* accept_connection(void* m) {
     masterHandle* master = (masterHandle*) m;
+	cvector *args, *form;
+	char* postBuffer, *URL, *rest, *now;
+	const char* URI;
+	ssize_t rc;
+	rumble_module_info* mod;
     // Initialize a session handle and wait for incoming connections.
     sessionHandle session;
     sessionHandle* s = &session;
     clientHandle client;
     session.client = &client;
     session._master = master;
-    cvector* args = cvector_init();
-    cvector* form = cvector_init();
-    char* postBuffer = 0;
+	
+    args = cvector_init();
+    form = cvector_init();
+    
     while (1) {
         postBuffer = 0;
         comm_accept(svc->socket, &client);
@@ -72,7 +78,7 @@ void* accept_connection(void* m) {
                     uint32_t len = atoi(arg);
                     if ( len > (1024*1024)) len = 1024*1024;
                     postBuffer = calloc(1, len+1);
-                    ssize_t rc = recv(client.socket, postBuffer, len, 0);
+                    rc = recv(client.socket, postBuffer, len, 0);
                     if ( rc < 1) { free(postBuffer); postBuffer = 0;}
                     break;
                 }
@@ -81,20 +87,19 @@ void* accept_connection(void* m) {
             }
             else break;
         }
-        const char* URI = strlen(rrdict(args, "get")) ? rrdict(args, "get") : rrdict(args, "post");
-        char* URL = calloc(1, strlen(URI));
-        char* rest = calloc(1, strlen(URI));
+        URI = strlen(rrdict(args, "get")) ? rrdict(args, "get") : rrdict(args, "post");
+        URL = calloc(1, strlen(URI));
+        rest = calloc(1, strlen(URI));
         sscanf(URI, "/%200[^? ]?%200[^ ]", URL, rest);
         if ( strlen(rest)) rumble_scan_formdata(form, rest);
         if ( postBuffer) { rumble_scan_formdata(form, postBuffer); free(postBuffer); }
         rcsend(s, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
         rcsend(s, "<h1>Rumble admin page</h1>\n");
         rcsend(s, "<h2>Enabled modules:</h2>");
-        rumble_module_info* mod;
         for (mod = cvector_first(master->readOnly.modules); mod != NULL; mod = cvector_next(master->readOnly.modules)) {
             rcprintf(s, "<b>%s</b>: %s (<small><font color='red'>%s</font></small>)<br/>\n", mod->title, mod->description, mod->file);
         }
-        char* now = rumble_mtime();
+        now = rumble_mtime();
         rcprintf(s,"<br/><br/><hr/><small>Rumble (mod_entrepreneur) v/%x on %s - %s</small>", RUMBLE_VERSION, rumble_config_str(master, "servername"), now);
         free(now);
         close(session.client->socket);

@@ -23,25 +23,28 @@ void rumble_modules_load(masterHandle* master) {
 #endif
 	rumbleModInit init;
 	rumbleVerCheck mcheck;
-    char* error;
+    
 	rumble_module_info* modinfo;
+	char* error = 0;
     for ( line = master->readOnly.conf->first; line != NULL; line = line->next ) {
         el = (configElement*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
             printf("<modules> Loading %s...\n", el->value);
 #if defined(_WIN32) && !defined(__CYGWIN__)
 			handle = LoadLibraryA(el->value);
-			error = "(no such file?)";
+
 #else
             handle = dlopen(el->value, RTLD_LAZY | RTLD_NODELETE);
 			error = dlerror();
 #endif
             if (!handle) {
+				error = error ? error : "(no such file?)";
                 fprintf (stderr, "\n<modules> Error loading %s: %s\n", el->value, error);
                 exit(1);
             }
             if ( error ) { printf("<modules> Warning: %s\n", error); }
             modinfo = (rumble_module_info*) calloc(1,sizeof(rumble_module_info));
+			if (!modinfo) merror();
             modinfo->author = 0;
             modinfo->description = 0;
             modinfo->title = 0;

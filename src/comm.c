@@ -99,8 +99,13 @@ ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...) {
 	char* buffer;
 	uint32_t len;
     va_start(vl,d);
+#ifdef _CRTIMP // Windows CRT library has a nifty function for this
+    len = _vscprintf(d, vl);
+#else
     len = vsnprintf(NULL, 0, d, vl);
+#endif
 	buffer = (char*) calloc(1,len);
+	if (!buffer) merror();
     vsprintf(buffer, d, vl);
     len = send(session->client->socket, buffer, len ,0);
     free(buffer);
@@ -134,21 +139,25 @@ cvector* comm_mxLookup(const char* domain)
     
 #ifdef RUMBLE_WINSOCK // Windows MX resolver
     DNS_STATUS status;
-    PDNS_RECORD rec;
+    PDNS_RECORD rec, prec;
     status = DnsQuery_A(domain, DNS_TYPE_MX, DNS_QUERY_STANDARD, 0, &rec,0);
+	prec = rec;
     if ( !status ) {
         while ( rec ) {
             if ( rec->wType == DNS_TYPE_MX ) {
+				ssize_t len;
                 mxRecord* mx = (mxRecord*) malloc(sizeof(mxRecord));
-                ssize_t len = strlen((char*) rec->Data.MX.pNameExchange);
+				if (!mx) merror();
+                len = strlen((char*) rec->Data.MX.pNameExchange);
                 mx->host = (char*) calloc(1,len+1);
+				if (!mx->host) merror();
                 strncpy((char*) mx->host, (char*) rec->Data.MX.pNameExchange, len);
                 mx->preference = rec->Data.MX.wPreference;
                 cvector_add(vec, mx);
             }
             rec = rec->pNext;
         }
-        DnsRecordListFree(rec, DNS_TYPE_MX);
+        if ( prec) DnsRecordListFree(prec, DNS_TYPE_MX);
     }
     
    
@@ -189,8 +198,9 @@ cvector* comm_mxLookup(const char* domain)
         if ( a ) {
 			char* b;
 			ssize_t len;
-            mxRecord* mx = (mxRecord*) malloc(sizeof(mxRecord));
-            struct in_addr x;
+			struct in_addr x;
+            mxRecord* mx = (mxRecord*) calloc(1,sizeof(mxRecord));
+			if (!mx) merror();
             memcpy(a->h_addr_list++, &x, sizeof(x));
             b = inet_ntoa(x);
             len = strlen(b);

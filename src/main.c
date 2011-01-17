@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
 	masterHandle* master;
 	cvector* args = cvector_init();
     master = (masterHandle*) malloc(sizeof(masterHandle));
+	if (!master) merror();
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }

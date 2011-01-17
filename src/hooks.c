@@ -1,12 +1,13 @@
 #include "rumble.h"
 #include "servers.h"
 #include <string.h>
-uint32_t rumble_module_check() {
+uint32_t __declspec(dllexport) rumble_module_check() {
     return RUMBLE_VERSION;
 }
 
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) ) {
     hookHandle* hook = (hookHandle*) malloc(sizeof(hookHandle));
+	if (!hook) merror();
     rumble_module_check();
     hook->func = func;
     hook->flags = flags;

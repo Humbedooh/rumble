@@ -7,6 +7,7 @@
 void rumble_database_load(masterHandle* master) {
     char* dbpath = (char*) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
     char* mailpath = (char*) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
+	if(!dbpath||!mailpath) merror();
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
     printf("Reading database...");
@@ -32,7 +33,7 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
     if ( rc == SQLITE_ROW ) {
         ssize_t l;
         ret = (userAccount*) calloc(1, sizeof(userAccount));
-        
+        if (!ret) merror();
         // user ID
         ret->uid = sqlite3_column_int(state, 0);
         
@@ -49,6 +50,7 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
         // mbox type (alias, mbox, prog)
         l = sqlite3_column_bytes(state,3);
         tmp = (char*) calloc(1,l+1);
+		if(!tmp)merror();
         memcpy((char*) tmp, sqlite3_column_text(state,3), l);
         rumble_string_lower(tmp);
         ret->type = RUMBLE_MTYPE_MBOX;

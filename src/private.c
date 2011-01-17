@@ -44,6 +44,7 @@ char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const 
 #else
         pp = p;
 #endif
+	if (!filename || !nfid || !ofilename) merror();
 	sprintf(nfid, "%x%x%x", (uint32_t) pp, (uint32_t) time(0), (uint32_t) rand());
     sprintf(filename, "%s/%s", path, nfid);
     sprintf(ofilename, "%s/%s", path, fid);
@@ -57,6 +58,7 @@ char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const 
     if ( fp && ofp ) {
         char* now = rumble_mtime();
 		void* buffer = (char*) calloc(1,4096);
+		if (!now || !buffer) merror();
         fprintf(fp, "Received: from localhost by %s (rumble) for %s@%s with ESMTP id %s; %s\r\n", rumble_config_str(m,"servername"), usr, dmn, nfid, now);
         free(now);
         while (!feof(ofp)) {

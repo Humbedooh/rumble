@@ -9,11 +9,12 @@ void* rumble_pop3_init(void* m) {
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
     while (1) {
-		char* cmd = (char*) malloc(5);
-        char* arg = (char*) malloc(1024);
 		char* line;
 		ssize_t rc;
-
+		char* cmd = (char*) malloc(5);
+        char* arg = (char*) malloc(1024);
+		if (!cmd || !arg) merror();
+		
         comm_accept(master->smtp.socket, session.client);
         // Check for hooks on accept()
         rc = EXIT_SUCCESS;
@@ -26,15 +27,16 @@ void* rumble_pop3_init(void* m) {
             memset(arg, 0, 1024);
             line = rumble_comm_read(&session);
             if ( !line ) break;
-            sscanf(line, "%4[^\t ]%*[ \t]%1000c", cmd, arg);
-            free(line);
-            rumble_string_upper(cmd);
-            rc = 500; // default return code is "500 lolwut?"
-            if (!strcmp(cmd, "QUIT")) break; // bye!
-            else if (!strcmp(cmd, "USER")) rc = rumble_server_smtp_mail(master, &session, arg);
-            if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
-            else if ( rc == RUMBLE_RETURN_FAILURE ) break; // Abort!
-            else rumble_comm_send(&session, rumble_pop3_reply_code(rc)); // Bad mojo!
+            if (sscanf(line, "%4[^\t ]%*[ \t]%1000c", cmd, arg)) {
+				rumble_string_upper(cmd);
+				rc = 500; // default return code is "500 lolwut?"
+				if (!strcmp(cmd, "QUIT")) break; // bye!
+				else if (!strcmp(cmd, "USER")) rc = rumble_server_smtp_mail(master, &session, arg);
+				if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
+				else if ( rc == RUMBLE_RETURN_FAILURE ) break; // Abort!
+				else rumble_comm_send(&session, rumble_pop3_reply_code(rc)); // Bad mojo!
+			}
+			free(line);
         }
         // Cleanup
         rumble_comm_send(&session, rumble_pop3_reply_code(221)); // bye!
