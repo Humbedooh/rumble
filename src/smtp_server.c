@@ -201,8 +201,8 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     // Fire events scheduled for pre-processing run
     rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
     if ( rc != RUMBLE_RETURN_OKAY ) {
-        cvector_pop(session->recipients);
-        rumble_free_address(recipient);
+        cvector_pop(session->recipients); // pop the last element from the vector
+        rumble_free_address(recipient); // flush the memory
         return rc;
     }
             

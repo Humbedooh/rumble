@@ -19,19 +19,20 @@ void* rumble_worker_process(void* m) {
         pthread_cond_wait(&master->readOnly.workcond, &master->readOnly.workmutex);
         // do stuff here
         item = current;
-		if ( ! current ) { printf("threading went bad :(\n"); pthread_exit(0); }
+	current = 0;
+	if ( ! item ) continue; // windows crap
         pthread_mutex_unlock(&master->readOnly.workmutex);
         printf("Handling mail no. %s\n", item->fid);
         // Local delivery?
         if ( rumble_domain_exists(sess, item->recipient.domain)) {
-            printf("%s is local domain, looking for user %s@%s\n", item->recipient.domain, item->recipient.user, item->recipient.domain);
+           // printf("%s is local domain, looking for user %s@%s\n", item->recipient.domain, item->recipient.user, item->recipient.domain);
             user = rumble_get_account(master, item->recipient.user, item->recipient.domain);
             if ( user ) {
                 item->account = user;
                 
                 // Start by making a copy of the letter
                 item->fid = rumble_copy_mail(master, item->fid,user->user,user->domain);
-                
+                if ( !item->fid ) { printf("bad mail file, aborting\n"); continue;}
                 // pre-delivery parsing (virus, spam, that sort of stuff)
                 rc = rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_PARSER); // hack, hack, hack
                 if ( rc == RUMBLE_RETURN_OKAY ) {
@@ -157,9 +158,10 @@ void* rumble_worker_init(void* m) {
             pthread_mutex_lock(&master->readOnly.workmutex);
             current = item;
             pthread_cond_signal(&master->readOnly.workcond);
-            pthread_mutex_unlock(&master->readOnly.workmutex);
+            //pthread_mutex_unlock(&master->readOnly.workmutex);
         }
         else {
+            pthread_mutex_unlock(&master->readOnly.workmutex);
             sqlite3_finalize(state);
             sleep(10); // sleep for 10 seconds if there's nothing to do right now.
         }

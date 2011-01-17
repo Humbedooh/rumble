@@ -45,29 +45,32 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
         default: break;
     }
 }
-
+typedef ssize_t (*hookFunc)(sessionHandle*);
 
 ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint32_t flags) {
     int g = 0;
     ssize_t rc = RUMBLE_RETURN_OKAY;
     cvector_element* el;
+	hookFunc mFunc = NULL;
+	hookHandle* hook;
     #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
     if ( cvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
     #endif
-	ssize_t (*hookFunc)(sessionHandle*) = NULL;
+	
     for (el = hooks->first; el != NULL; el = el->next) {
-        hookHandle* hook = (hookHandle*) el->object;
+        hook = (hookHandle*) el->object;
+		if ( !hook ) continue;
         if ( hook->flags == flags ) {
             if ( hook->flags & RUMBLE_HOOK_FEED ) {  // ignore wrong feeds
                 mqueue* item = (mqueue*) session;
                 if (!item->account->arg || strcmp(hook->module, item->account->arg)) { continue; } 
             }
-            hookFunc = hook->func;
+            mFunc = hook->func;
 			g++;
             #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
             printf("<debug :: hooks> Executing hook %p from %s\n", (void*) hookFunc, hook->module);
             #endif
-            rc = (*hookFunc)(session);
+            rc = (mFunc)(session);
             if ( rc == RUMBLE_RETURN_FAILURE ) {
                 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
                 printf("<debug :: hooks> Hook %p claimed failure, aborting connection!\n", (void*) hookFunc);

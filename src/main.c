@@ -40,6 +40,7 @@ void rumble_master_init(masterHandle* master) {
     master->readOnly.modules = cvector_init();
     master->readOnly.workers = cvector_init();
     master->readOnly.feed_hooks = cvector_init();
+	master->readOnly.parser_hooks = cvector_init();
 }
 
 int main(int argc, char** argv) {
