@@ -244,7 +244,7 @@ typedef struct {
     } rumbleService;
 
 typedef struct {
-    struct _readOnly {
+    struct __core {
         cvector*                conf;
         cvector*                workers;
         pthread_cond_t          workcond;
@@ -255,7 +255,7 @@ typedef struct {
         cvector*                feed_hooks;
         void*                   db;
         void*                   mail;
-    }               readOnly;
+    }               _core;
     rumbleService       smtp;
     rumbleService       pop3;
     rumbleService       imap;
@@ -265,7 +265,7 @@ typedef struct {
 typedef struct {
     const char*     key;
     const char*     value;
-} configElement;
+} rumbleKeyValuePair;
 
 typedef struct {
     const char*     host;
@@ -302,11 +302,12 @@ void  rumble_string_lower(char* d); // Converts <d> into lowercase.
 void  rumble_string_upper(char* d); // Converts <d> into uppercase.
 char* rumble_mtime(); // mail time
 
-
+void rumble_scan_words(cvector* dict, const char* wordlist);
 void rumble_scan_flags(cvector* dict, const char* flags);
 void rumble_flush_dictionary(cvector* dict);
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag);
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value);
+uint32_t rumble_has_dictionary_value(cvector* dict, const char* flag);
 void rumble_free_address(address* a);
 void rumble_free_account(userAccount* user);
 
@@ -329,10 +330,11 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
 #define rrdict   rumble_get_dictionary_value // read dict
 #define rsdict   rumble_add_dictionary_value // set dict
 #define rfdict   rumble_flush_dictionary     // flush dict
+#define rhdict   rumble_has_dictionary_value // returns 1 if value exists, 0 otherwise
 
 #define rcsend   rumble_comm_send
 #define rcprintf rumble_comm_printf
-#define merror() fprintf(stderr, "Memory allocation failed, this is bad!\n");exit(1);
+#define merror() {printf("Memory allocation failed, this is bad!\n");exit(1);}
 
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
 	void* xalloc(size_t m);

@@ -12,7 +12,7 @@ typedef int (*rumbleModInit)(void* master, rumble_module_info* modinfo);
 typedef uint32_t (*rumbleVerCheck) (void);
 
 void rumble_modules_load(masterHandle* master) {
-    configElement* el;
+    rumbleKeyValuePair* el;
     cvector_element* line;
 	uint32_t ver;
 	int x;
@@ -26,8 +26,8 @@ void rumble_modules_load(masterHandle* master) {
     
 	rumble_module_info* modinfo;
 	char* error = 0;
-    for ( line = master->readOnly.conf->first; line != NULL; line = line->next ) {
-        el = (configElement*) line->object;
+    for ( line = master->_core.conf->first; line != NULL; line = line->next ) {
+        el = (rumbleKeyValuePair*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
             printf("<modules> Loading %s...\n", el->value);
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -61,8 +61,8 @@ void rumble_modules_load(masterHandle* master) {
                 fprintf (stderr, "<modules> Warning: %s does not contain required module functions.\n", el->value);
             }
             if ( init && mcheck ) { 
-                master->readOnly.currentSO = el->value;
-                cvector_add(master->readOnly.modules, modinfo);
+                master->_core.currentSO = el->value;
+                cvector_add(master->_core.modules, modinfo);
                 ver = (*mcheck)();
                 if ( ver != RUMBLE_VERSION ) fprintf(stderr, "<modules> Warning: %s was compiled with librumble v%#x - current is %#x!\n<modules> Please recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
                 x = init(master, modinfo);

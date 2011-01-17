@@ -31,12 +31,13 @@ void rumble_clean_session(sessionHandle* session) {
 }
 
 
-char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const char* dmn) {
+uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const char* dmn, char** pfid) {
     const char* path = rumble_config_str(m, "storagefolder");
     char* nfid = (char*) calloc(1,25);
     char* filename = (char*) calloc(1, strlen(path) + 26);
     char* ofilename = (char*) calloc(1, strlen(path) + 26);
 	FILE *fp, *ofp;
+	uint32_t fsize = 0;
 	pthread_t p = pthread_self();
         void* pp;
 #ifdef PTW32_CDECL
@@ -65,16 +66,19 @@ char* rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const 
             size_t rc = fread(buffer, 1, 4096, ofp);
             if ( rc < 0 ) break;
             if ( !fwrite(buffer, rc, 1, fp)) break;
+			fsize += rc;
         }
         fclose(fp);
         fclose(ofp);
         free(buffer);
+		*pfid = nfid;
     }
     else {
         if (fp) fclose(fp);
         if (ofp) fclose(ofp);
         free(nfid);
+		*pfid = 0;
         return 0;
     }
-    return nfid;
+    return fsize;
 }

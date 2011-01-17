@@ -37,10 +37,10 @@ void rumble_master_init(masterHandle* master) {
     //master->imap.init = rumble_imap_init;
     pthread_mutex_init(&master->imap.mutex,0);
     
-    master->readOnly.modules = cvector_init();
-    master->readOnly.workers = cvector_init();
-    master->readOnly.feed_hooks = cvector_init();
-	master->readOnly.parser_hooks = cvector_init();
+    master->_core.modules = cvector_init();
+    master->_core.workers = cvector_init();
+    master->_core.feed_hooks = cvector_init();
+	master->_core.parser_hooks = cvector_init();
 }
 
 int main(int argc, char** argv) {
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         }
         printf("OK\n");
         t = (pthread_t*) malloc(sizeof(pthread_t));
-        cvector_add(master->readOnly.workers, t);
+        cvector_add(master->_core.workers, t);
         pthread_create(t, NULL, rumble_worker_init, master);
         
     }

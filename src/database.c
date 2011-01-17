@@ -13,10 +13,10 @@ void rumble_database_load(masterHandle* master) {
     printf("Reading database...");
     
     // Domains and accounts
-    if (sqlite3_open(dbpath, (sqlite3**) &master->readOnly.db)) { fprintf(stderr, "Can't open database <%s>: %s\n", dbpath, sqlite3_errmsg((sqlite3*) master->readOnly.db)); exit(EXIT_FAILURE); }
+    if (sqlite3_open(dbpath, (sqlite3**) &master->_core.db)) { fprintf(stderr, "Can't open database <%s>: %s\n", dbpath, sqlite3_errmsg((sqlite3*) master->_core.db)); exit(EXIT_FAILURE); }
     
     // Letters
-    if (sqlite3_open(mailpath, (sqlite3**) &master->readOnly.mail)) { fprintf(stderr, "Can't open database <%s>: %s\n", mailpath, sqlite3_errmsg((sqlite3*) master->readOnly.mail)); exit(EXIT_FAILURE); }
+    if (sqlite3_open(mailpath, (sqlite3**) &master->_core.mail)) { fprintf(stderr, "Can't open database <%s>: %s\n", mailpath, sqlite3_errmsg((sqlite3*) master->_core.mail)); exit(EXIT_FAILURE); }
     
     free(dbpath);
     free(mailpath);
@@ -28,7 +28,7 @@ userAccount* rumble_get_account(masterHandle* master, const char* user, const ch
     userAccount* ret = 0;
 	char* tmp;
     const char* sql = "SELECT id,user,domain,type,arg FROM accounts WHERE domain = ? AND ? GLOB user ORDER BY LENGTH(user) DESC LIMIT 1";
-    sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->readOnly.db,sql,domain,user);
+    sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->_core.db,sql,domain,user);
     int rc = sqlite3_step(state);
     if ( rc == SQLITE_ROW ) {
         ssize_t l;
@@ -80,8 +80,7 @@ uint32_t rumble_account_exists(sessionHandle* session, const char* user, const c
 	int rc;
     sqlite3_stmt* state;
 	masterHandle* master = (masterHandle*) session->_master;
-	printf("checking %s@%s...\n", user, domain);
-	state = rumble_sql_inject((sqlite3*) master->readOnly.db, \
+	state = rumble_sql_inject((sqlite3*) master->_core.db, \
 		"SELECT * FROM accounts WHERE domain = ? AND ? GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
 		domain, user);
     rc = sqlite3_step(state);
@@ -93,10 +92,9 @@ uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
 	masterHandle* master = (masterHandle*) session->_master;
 	int rc;
     sqlite3_stmt* state;
-	state = rumble_sql_inject((sqlite3*) master->readOnly.db, "SELECT 1 FROM domains WHERE domain = ? LIMIT 1", domain);
+	state = rumble_sql_inject((sqlite3*) master->_core.db, "SELECT 1 FROM domains WHERE domain = ? LIMIT 1", domain);
     rc = sqlite3_step(state);
     sqlite3_finalize(state);
-	printf("check for domain %s returned %u\n", domain, rc);
     return ( rc == SQLITE_ROW) ? 1 : 0;
 }
 

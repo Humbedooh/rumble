@@ -11,8 +11,8 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
     rumble_module_check();
     hook->func = func;
     hook->flags = flags;
-    hook->module = ((masterHandle*) handle)->readOnly.currentSO;
-    hook->modinfo = (rumble_module_info*) cvector_last(((masterHandle*) handle)->readOnly.modules);
+    hook->module = ((masterHandle*) handle)->_core.currentSO;
+    hook->modinfo = (rumble_module_info*) cvector_last(((masterHandle*) handle)->_core.modules);
     #if (RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS)
     printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
     #endif
@@ -39,10 +39,10 @@ void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionH
                 default: break;
                 } break;
         case RUMBLE_HOOK_FEED:
-                cvector_add(((masterHandle*) handle)->readOnly.feed_hooks, hook);
+                cvector_add(((masterHandle*) handle)->_core.feed_hooks, hook);
                 break;
         case RUMBLE_HOOK_PARSER:
-                cvector_add(((masterHandle*) handle)->readOnly.parser_hooks, hook);
+                cvector_add(((masterHandle*) handle)->_core.parser_hooks, hook);
         default: break;
     }
 }
@@ -113,10 +113,10 @@ ssize_t rumble_server_schedule_hooks(masterHandle* handle, sessionHandle* sessio
                 default: break;
             } break;
         case RUMBLE_HOOK_FEED:
-            return rumble_server_execute_hooks(session, handle->readOnly.feed_hooks, flags);
+            return rumble_server_execute_hooks(session, handle->_core.feed_hooks, flags);
             break;
         case RUMBLE_HOOK_PARSER:
-            return rumble_server_execute_hooks(session, handle->readOnly.parser_hooks, flags);
+            return rumble_server_execute_hooks(session, handle->_core.parser_hooks, flags);
             break;
         default: break;
     }

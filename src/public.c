@@ -46,7 +46,9 @@ void  rumble_string_upper(char* d) {
     }
 }
 
-
+/*
+ * Scans a string for key=value pairs and stores them in a cvector dictionary.
+ */
 void rumble_scan_flags(cvector* dict, const char* flags){
     char* pch = strtok((char*) flags," ");
 	char *key, *val;
@@ -65,23 +67,50 @@ void rumble_scan_flags(cvector* dict, const char* flags){
     }
 }
 
+/*
+ * Scans a string for words and stores them in a cvector dictionary as [word] => 1
+ */
+void rumble_scan_words(cvector* dict, const char* wordlist){
+    char* pch = strtok((char*) wordlist," ");
+    char *key= (char*) calloc(1,200);
+    while ( pch != NULL ) {
+		strncpy(key, pch, 200);
+        if ( strlen(key) >= 1 ) { 
+            rumble_string_lower(key);
+            rsdict(dict, key, "1");
+		}
+        pch = strtok(NULL, " ");
+    }
+    
+}
+
 const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
-    configElement* el;
-    for ( el = (configElement*) cvector_first(dict); el != NULL; el = (configElement*) cvector_next(dict)) {
+	cvector_element* curr;
+    rumbleKeyValuePair* el;
+	for ( curr = dict->first; curr != NULL; curr = curr->next) {
+		el = (rumbleKeyValuePair*) curr->object;
         if (!strcmp(flag, el->key)) return el->value;
     }
     return "";
 }
 
+uint32_t rumble_has_dictionary_value(cvector* dict, const char* flag) {
+	cvector_element* curr;
+	for ( curr = dict->first; curr != NULL; curr = curr->next) {
+        if (!strcmp(flag, (const char*) ((rumbleKeyValuePair*) curr->object)->key)) return 1;
+    }
+    return 0;
+}
+
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value) {
     char* nkey, *nval;
-	configElement* el;
+	rumbleKeyValuePair* el;
 	nkey = (char*) calloc(1,strlen(key)+1);
     nval = (char*) calloc(1,strlen(value)+1);
 	if (!nkey || !nval) { perror("calloc() failed!"); exit(1); }
     strncpy(nval, value, strlen(value));
     strncpy(nkey, key, strlen(key));
-    el = (configElement*) malloc(sizeof(configElement));
+    el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
 	if (!el) merror();
     el->key = (const char*) nkey;
     el->value = (const char*) nval;
@@ -89,9 +118,9 @@ void rumble_add_dictionary_value(cvector* dict, const char* key, const char* val
 }
 
 void rumble_flush_dictionary(cvector* dict) {
-	configElement* el;
+	rumbleKeyValuePair* el;
 	if (!dict) { return; }
-    for ( el = (configElement*) cvector_first(dict); el != NULL; el = (configElement*) cvector_next(dict)) {
+    for ( el = (rumbleKeyValuePair*) cvector_first(dict); el != NULL; el = (rumbleKeyValuePair*) cvector_next(dict)) {
         if ( el->key  ) free((char*) el->key);
         if ( el->value) free((char*) el->value);
         free(el);
