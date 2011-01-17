@@ -287,6 +287,7 @@ typedef struct {
     const char*     flags;
     uint32_t        date;
     userAccount*    account;
+	uint32_t		loops;
 } mqueue;
 
 
@@ -324,6 +325,8 @@ uint32_t rumble_config_int(masterHandle* master, const char* key);
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
 userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain);
+
+uint32_t rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, const char* sender, const char* recipient);
 
 
 // Shortcuts to common functions

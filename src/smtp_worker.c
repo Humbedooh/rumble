@@ -9,6 +9,10 @@
 mqueue* current = 0;
 cvector* badmx;
 
+uint32_t rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, const char* sender, const char* recipient) {
+	return 0;
+}
+
 void* rumble_worker_process(void* m) {
     mqueue* item;
     userAccount* user;
@@ -27,6 +31,18 @@ void* rumble_worker_process(void* m) {
         current = 0;
         pthread_mutex_unlock(&master->_core.workmutex);
 
+		// Check for rampant loops
+		item->loops++;
+		if ( item->loops > 5 ) { 
+			if ( &item->recipient ) rumble_free_address(&item->recipient);
+			if ( &item->sender ) rumble_free_address(&item->recipient);
+			if ( item->fid) free((char*) item->fid);
+			if ( item->flags) free((char*) item->flags);
+			free(item);
+			printf("Mail is looping, ignoring it!\n");
+			continue;
+		}
+
         // Local delivery?
         if ( rumble_domain_exists(sess, item->recipient.domain)) {
             printf("%s is local domain, looking for user %s@%s\n", item->recipient.domain, item->recipient.user, item->recipient.domain);
@@ -35,19 +51,22 @@ void* rumble_worker_process(void* m) {
                 uint32_t fsize;
                 item->account = user;
                 
-                // Start by making a copy of the letter
-                fsize = rumble_copy_mail(master, item->fid,user->user,user->domain, (char**) &item->fid);
-                if ( !item->fid || !fsize ) { fprintf(stderr, "<smtp::worker> Bad mail file, aborting\n"); continue;}
                 // pre-delivery parsing (virus, spam, that sort of stuff)
                 rc = rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_PARSER); // hack, hack, hack
                 if ( rc == RUMBLE_RETURN_OKAY ) {
                     if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
-                        // move file to user's inbox
-                        char* cfsize, *cuid;
+						char* cfsize, *cuid, *ofilename, *nfilename;
                         sqlite3_stmt* state;
-                        const char* path = rumble_config_str(master, "storagefolder");
-                        char* ofilename = (char*) calloc(1, strlen(path) + 26);
-                        char* nfilename = (char*) calloc(1, strlen(path) + 26);
+                        const char* path;
+
+						// Start by making a copy of the letter
+						fsize = rumble_copy_mail(master, item->fid,user->user,user->domain, (char**) &item->fid);
+						if ( !item->fid || !fsize ) { fprintf(stderr, "<smtp::worker> Bad mail file, aborting\n"); continue;}
+
+                        // move file to user's inbox
+                        path = rumble_config_str(master, "storagefolder");
+                        ofilename = (char*) calloc(1, strlen(path) + 26);
+                        nfilename = (char*) calloc(1, strlen(path) + 26);
                         sprintf(ofilename, "%s/%s", path, item->fid);
                         sprintf(nfilename, "%s/%s.msg", path, item->fid);
                         #ifdef RUMBLE_DEBUG_STORAGE
@@ -78,12 +97,14 @@ void* rumble_worker_process(void* m) {
                                 memset(dmn,0,128);
                                 if ( strlen(pch) >= 3 ) {
                                     sqlite3_stmt* state;
+									char* loops = (char*) calloc(1,4);
+									sprintf(loops,"%u",item->loops);
                                     if (sscanf(pch, "%128[^@]@%128c", usr, dmn)) {
                                         rumble_string_lower(dmn);
                                         rumble_string_lower(usr);
                                         state = rumble_sql_inject((sqlite3*) master->_core.db, \
-                                                "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
-                                                item->fid, item->sender.raw, usr, dmn, item->flags);
+                                                "INSERT INTO queue (loops, fid, sender, user, domain, flags) VALUES (?,?,?,?,?,?)", \
+                                                loops, item->fid, item->sender.raw, usr, dmn, item->flags);
                                         sqlite3_step(state);
                                         sqlite3_finalize(state);
                                     }
@@ -110,17 +131,41 @@ void* rumble_worker_process(void* m) {
         else {
             cvector *mx;
             mxRecord* mxr;
+			char *filename, *recipient;
             uint32_t delivered = 0;
+			uint32_t dx = 0;
             printf ("%s@%s is a foreign user\n",item->recipient.user, item->recipient.domain);
             mx = comm_mxLookup(item->recipient.domain);
             if (!mx) merror();
             if ( cvector_size(mx) ) {
+				filename = (char*) calloc(1,256);
+				recipient = (char*) calloc(1,256);
+				if (!filename || !recipient) merror();
+				sprintf(recipient, "<%s@%s>", item->recipient.user, item->recipient.domain);
+				sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagepath"), item->fid);
                 for (mxr = (mxRecord*) cvector_first(mx); mxr != NULL; mxr = (mxRecord*) cvector_next(mx)) {
                     if ( rhdict(badmx, mxr->host) ) continue; // ignore bogus MX records
                     printf("Trying %s (%u)...\n", mxr->host, mxr->preference);
+					dx = rumble_send_email(master, mxr->host, filename, item->sender.raw, recipient); // 0 = crit fail, 1 = temp fail, 2 = delivered!
+					delivered = ( dx > delivered ) ? dx : delivered; // get the best result from all servers we've tried
+					if ( delivered == 2 ) break; // yay!
                 }
+				free(filename);
+				free(recipient);
             }
-            if (!delivered) printf("Sowwy, couldn't deliver the message for %s@%s anywhere :(\n", item->recipient.user, item->recipient.domain);
+			if ( delivered == 0 ) { } // critical failure, giving up.
+			if ( delivered == 1 ) { // temp failure, push mail back into queue (schedule next try in 30 minutes).
+				sqlite3_stmt* state;
+				char* loops = (char*) calloc(1,4);
+				if (!loops) merror();
+				sprintf(loops, "%u", item->loops);
+				state = rumble_sql_inject((sqlite3*) master->_core.db, \
+                        "INSERT INTO queue (time, loops, fid, sender, user, domain, flags) VALUES (strftime('%s', 'now', '+30 minutes'),?,?,?,?,?,?)", \
+						loops, item->fid, item->sender.raw, item->recipient.user, item->recipient.domain, item->flags);
+                sqlite3_step(state);
+                sqlite3_finalize(state);
+			} 
+			// All done!
         }
         if ( &item->recipient ) rumble_free_address(&item->recipient);
         if ( &item->sender ) rumble_free_address(&item->recipient);
@@ -134,7 +179,7 @@ void* rumble_worker_init(void* m) {
     masterHandle* master = (masterHandle*) m;
     int x;
     const char* ignmx;
-    const char* statement = "SELECT time, fid, sender, user, domain, flags, id FROM queue WHERE time <= strftime('%s','now') LIMIT 1";
+    const char* statement = "SELECT time, loops, fid, sender, user, domain, flags, id FROM queue WHERE time <= strftime('%s','now') LIMIT 1";
 	int rc;
     sqlite3_stmt* state;
     sqlite3_prepare_v2((sqlite3*) master->_core.db, statement, -1, &state, NULL);
@@ -157,32 +202,36 @@ void* rumble_worker_init(void* m) {
             char* sql, *zErrMsg;
             mqueue* item = (mqueue*) calloc(1,sizeof(mqueue));
             if (item) {
+				// delivery time
                 item->date = sqlite3_column_int(state, 0);
+
+				// loops
+				item->loops = sqlite3_column_int(state, 1);
             
                 // fid
-                l = sqlite3_column_bytes(state,1);
+                l = sqlite3_column_bytes(state,2);
                 item->fid = (char*) calloc(1,l+1);
-                memcpy((char*) item->fid, sqlite3_column_text(state,1), l);
+                memcpy((char*) item->fid, sqlite3_column_text(state,2), l);
             
                 // sender
-                l = sqlite3_column_bytes(state,2);
+                l = sqlite3_column_bytes(state,3);
                 item->sender.raw = (char*) calloc(1,l+1);
-                memcpy((char*) item->sender.raw, sqlite3_column_text(state,2), l);
+                memcpy((char*) item->sender.raw, sqlite3_column_text(state,3), l);
             
                 // recipient
-                l = sqlite3_column_bytes(state,3);
-                item->recipient.user = (char*) calloc(1,l+1);
-                memcpy((char*) item->recipient.user, sqlite3_column_text(state,3), l);
                 l = sqlite3_column_bytes(state,4);
+                item->recipient.user = (char*) calloc(1,l+1);
+                memcpy((char*) item->recipient.user, sqlite3_column_text(state,4), l);
+                l = sqlite3_column_bytes(state,5);
                 item->recipient.domain = (char*) calloc(1,l+1);
-                memcpy((char*) item->recipient.domain, sqlite3_column_text(state,4), l);
+                memcpy((char*) item->recipient.domain, sqlite3_column_text(state,5), l);
             
                 //flags
-                l = sqlite3_column_bytes(state,5);
+                l = sqlite3_column_bytes(state,6);
                 item->flags = (char*) calloc(1,l+1);
-                memcpy((char*) item->flags, sqlite3_column_text(state,5), l);
+                memcpy((char*) item->flags, sqlite3_column_text(state,6), l);
             
-                mid = sqlite3_column_int(state, 6);
+                mid = sqlite3_column_int(state, 7);
             
                 sqlite3_reset(state);
                 sql = (char*) calloc(1,128);
