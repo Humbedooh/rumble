@@ -256,15 +256,28 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
-	if ( !strchr(argument, '.') ) {
+	int rc;
+    char* tmp = (char*) malloc(128);
+	rc = sscanf(argument, "%128[a-zA-Z0-9].%1[a-zA-Z0-9]%1[a-zA-Z0-9.]", tmp, tmp, tmp);
+	if ( rc < 3 ) {
+		free(tmp);
 		return 501; // simple test for QDN
 	}
+	free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_HELO;
 	rsdict(session->dict, "helo", argument);
     return 250;
 }
 
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
+	int rc;
+    char* tmp = (char*) malloc(128);
+	rc = sscanf(argument, "%128[a-zA-Z0-9].%1[a-zA-Z0-9]%1[a-zA-Z0-9.]", tmp, tmp, tmp);
+	if ( rc < 3 ) {
+		free(tmp);
+		return 501; // simple test for QDN
+	}
+	free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
     rumble_comm_send(session, "250-Extended commands follow\r\n");
     rumble_comm_send(session, "250-EXPN\r\n");
