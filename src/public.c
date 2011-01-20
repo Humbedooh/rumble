@@ -180,6 +180,7 @@ void rumble_flush_dictionary(cvector* dict) {
 }
 
 void rumble_free_address(address* a) {
+    if (!a) return;
     if ( a->domain ) free(a->domain);
     if ( a->raw ) free(a->raw);
     if ( a->user ) free(a->user);

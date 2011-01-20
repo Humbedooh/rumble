@@ -11,8 +11,11 @@
 #ifdef	__cplusplus
 extern "C" {
 #endif
-
+#define rumblemodule int
+    
 #if (((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)) || defined(FORCE_WIN)
+        #undef rumblemodule
+        #define rumblemodule int __declspec(dllexport)
 	#define RUMBLE_WINSOCK
         #define HAVE_STRUCT_TIMESPEC
 	#include <Windows.h>
@@ -159,6 +162,7 @@ extern "C" {
 #define RUMBLE_SMTP_HAS_MAIL            0x00000002   // Has valid MAIL FROM
 #define RUMBLE_SMTP_HAS_RCPT            0x00000004   // Has valid RCPT
 #define RUMBLE_SMTP_HAS_EHLO            0x00000009   // Has extended HELO
+#define RUMBLE_SMTP_HAS_BATV			0x00000010	 // Has valid BATV signature
     
 #define RUMBLE_ROAD_MASK                0x00FF0000   // Command sequence mask
 
@@ -305,7 +309,7 @@ typedef struct {
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
-uint32_t __declspec(dllexport) rumble_module_check();
+rumblemodule rumble_module_check();
 
 // Public tool-set
 char* rumble_sha160(const unsigned char* d); //SHA1 digest (40 byte hex string)
@@ -363,4 +367,5 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 #endif
 
 #endif	/* RUMBLE_H */
+
 

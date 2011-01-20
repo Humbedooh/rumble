@@ -1,7 +1,7 @@
 #include "rumble.h"
 #include "servers.h"
 #include <string.h>
-uint32_t __declspec(dllexport) rumble_module_check() {
+rumblemodule rumble_module_check() {
     return RUMBLE_VERSION;
 }
 

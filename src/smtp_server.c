@@ -39,6 +39,7 @@ void* rumble_smtp_init(void* m) {
         pthread_mutex_unlock(&master->smtp.mutex);
         session.flags = 0;
         session._tflags += 0x00100000; // job count ( 0 through 4095)
+        session.sender = 0;
         
         #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         printf("<debug::comm> Accepted connection from %s on SMTP\n", session.client->addr);
@@ -149,6 +150,32 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
 			if ( max != 0 && size != 0 && size > max ) {
 				rumble_free_address(session->sender);
 				return 552; // message too big.
+			}
+
+			// Look for a BATV signature, and if found, confirm that it's valid
+			if ( strstr(session->sender->tag, "prvs=") ) {
+				rumbleKeyValuePair* entry;
+				cvector_element* el;
+				for ( el = master->_core.batv->first; el != NULL; el = el->next ) {
+					entry = (rumbleKeyValuePair*) el->object;
+					if ( !strcmp(entry->key, session->sender->tag) ) {
+						cvector_delete_at(master->_core.batv, el);
+						session->flags |= RUMBLE_SMTP_HAS_BATV;
+						free((char*) entry->key);
+						free(entry);
+						break;
+					}
+				}
+				if ( !(session->flags & RUMBLE_SMTP_HAS_BATV) ) {
+					rumble_free_address(session->sender);
+					return 530; // bounce is invalid or too old.
+				}
+			}
+
+			// Check if it's a supposed (but fake or very very old) bounce
+			if ( !strlen(session->sender->domain) && !(session->flags & RUMBLE_SMTP_HAS_BATV) ) {
+				rumble_free_address(session->sender);
+				return 530; // bounce is invalid or too old.
 			}
     
     

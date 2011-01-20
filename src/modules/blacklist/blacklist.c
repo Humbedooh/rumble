@@ -22,7 +22,7 @@ ssize_t rumble_blacklist_domains(sessionHandle* session) {
         el = blacklist_baddomains->first;
         while ( el ) {
             char* badhost = (char*) el->object;
-            if ( !strcmp(session->sender.domain, badhost) ) {
+            if ( !strcmp(session->sender->domain, badhost) ) {
                 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
                 printf("<blacklist> %s was blacklisted as a bad domain, aborting\n", badhost);
                 #endif
@@ -122,7 +122,7 @@ ssize_t rumble_blacklist(sessionHandle* session) {
     return RUMBLE_RETURN_OKAY;
 }
 
-int rumble_module_init(void* master, rumble_module_info* modinfo) {
+rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
     modinfo->title = "Blacklisting module";
     modinfo->description = "Standard blacklisting module for rumble.";
     blacklist_badhosts = cvector_init();

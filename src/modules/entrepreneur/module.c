@@ -28,7 +28,6 @@ rumbleService* svc;
 char *html_template;
 
 char* entr_format_page(masterHandle* m, cvector* dict) {
-	char *pch;
 	char *p, *op, *key, *x;
 	ssize_t len = 0, strl = 0;
 	char *ret = (char*) calloc(1, 256*1024);
@@ -59,7 +58,7 @@ char* entr_format_page(masterHandle* m, cvector* dict) {
 }
 
 // Standard module initialization function
-int __declspec(dllexport) rumble_module_init(void* m, rumble_module_info* modinfo) {
+rumblemodule rumble_module_init(void* m, rumble_module_info* modinfo) {
 	int n;
 	long fs;
 	masterHandle* master = (masterHandle*) m;
@@ -100,7 +99,7 @@ void* accept_connection(void* m) {
 	char* postBuffer, *URL, *rest, *now, *output;
 	const char* URI;
 	ssize_t rc;
-	rumble_module_info* mod;
+	//rumble_module_info* mod;
     // Initialize a session handle and wait for incoming connections.
     sessionHandle session;
     sessionHandle* s = &session;

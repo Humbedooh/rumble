@@ -35,8 +35,8 @@ ssize_t rumble_greylist(sessionHandle* session) {
     }
     else strncpy(block, session->client->addr, 19); // IPv6
     
-    char* tmp = calloc(1, strlen(session->sender.raw) + strlen(recipient->raw) + strlen(block) + 1);
-    sprintf(tmp, "%s%s%s", session->sender.raw, recipient->raw, block);
+    char* tmp = calloc(1, strlen(session->sender->raw) + strlen(recipient->raw) + strlen(block) + 1);
+    sprintf(tmp, "%s%s%s", session->sender->raw, recipient->raw, block);
     char* str = rumble_sha160(tmp);
     free(tmp);
     free(block);
