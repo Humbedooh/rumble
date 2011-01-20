@@ -101,7 +101,7 @@ extern "C" {
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00020200 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00020500 // Internal version for module checks
 
 
 // Return codes for modules
@@ -206,11 +206,13 @@ typedef struct {
     char*           raw;
     cvector*        flags;
     char*           _flags;
+	char*			tag;  // VERP or BATV tags
 } address;
 
 typedef struct {
     cvector*        recipients;
-    address         sender;
+	cvector*		dict;
+    address*        sender;
     clientHandle*   client;
     uint32_t        flags;
     uint32_t        _tflags;
@@ -255,6 +257,7 @@ typedef struct {
         cvector*                feed_hooks;
         void*                   db;
         void*                   mail;
+		cvector*				batv; // BATV handles for bounce control
     }               _core;
     rumbleService       smtp;
     rumbleService       pop3;
@@ -281,14 +284,22 @@ typedef struct {
 } userAccount;
 
 typedef struct {
-    address         sender;
-    address         recipient;
+    address*        sender;
+    address*        recipient;
     const char*     fid;
     const char*     flags;
     uint32_t        date;
     userAccount*    account;
 	uint32_t		loops;
+	char			mType; // 0 = regular mail, 1 = bounce
 } mqueue;
+
+typedef struct {
+	uint32_t		replyCode;
+	char*			replyMessage;
+	char*			replyServer;
+	cvector*		flags;
+} rumble_sendmail_response;
 
 
 // Hooking commands
@@ -325,8 +336,8 @@ uint32_t rumble_config_int(masterHandle* master, const char* key);
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
 userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain);
-
-uint32_t rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, const char* sender, const char* recipient);
+address* rumble_parse_mail_address(const char* addr);
+rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, address* sender, address* recipient);
 
 
 // Shortcuts to common functions
@@ -337,6 +348,7 @@ uint32_t rumble_send_email(masterHandle* master, const char* mailserver, const c
 
 #define rcsend   rumble_comm_send
 #define rcprintf rumble_comm_printf
+#define rcread	 rumble_comm_read
 #define merror() {printf("Memory allocation failed, this is bad!\n");exit(1);}
 
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)

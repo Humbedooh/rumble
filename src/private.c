@@ -23,7 +23,7 @@
 
 void rumble_clean_session(sessionHandle* session) {
 	address* el;
-    rumble_free_address(&session->sender);
+    rumble_free_address(session->sender);
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
         rumble_free_address(el);
     }
@@ -56,10 +56,18 @@ uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, con
     #endif
     free(filename);
     free(ofilename);
-    if ( fp && ofp ) {
+    if (!fp || !ofp) {
+        perror("Couldn't copy file");
+        if (fp) fclose(fp);
+        if (ofp) fclose(ofp);
+        free(nfid);
+		*pfid = 0;
+        return 0;
+    }
+    else {
         char* now = rumble_mtime();
-		void* buffer = (char*) calloc(1,4096);
-		if (!now || !buffer) merror();
+        void* buffer = (char*) calloc(1,4096);
+        if (!now || !buffer) merror();
         fprintf(fp, "Received: from localhost by %s (rumble) for %s@%s with ESMTP id %s; %s\r\n", rumble_config_str(m,"servername"), usr, dmn, nfid, now);
         free(now);
         while (!feof(ofp)) {
@@ -72,13 +80,6 @@ uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, con
         fclose(ofp);
         free(buffer);
 		*pfid = nfid;
-    }
-    else {
-        if (fp) fclose(fp);
-        if (ofp) fclose(ofp);
-        free(nfid);
-		*pfid = 0;
-        return 0;
     }
     return fsize;
 }

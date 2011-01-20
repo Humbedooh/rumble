@@ -94,20 +94,77 @@ socketHandle comm_init(masterHandle* m, const char* port)
         return sockfd;
 }
 
+
+socketHandle comm_open(masterHandle* m, const char* host, unsigned short port) {
+	socketHandle sockfd = 0;
+	struct addrinfo hints;
+	int yes=1;
+	char* IP;
+	struct hostent *server;
+        struct sockaddr_in x;
+#ifdef RUMBLE_WINSOCK
+    
+	WSADATA wsaData; 
+#endif
+
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC; // Force IPv4 or use default?
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE; // use my IP
+
+#ifdef RUMBLE_WINSOCK
+    if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) { perror("Winsock failed to start"); exit(EXIT_FAILURE); }
+    if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) <= 0) { perror("Winsock: Couldn't create socket"); }
+#else
+	int rv;
+        char portc[10];
+        struct addrinfo* servinfo, *p;
+        sprintf(portc, "%u", port);
+	if ((rv = getaddrinfo(NULL, portc, &hints, &servinfo)) != 0) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 0;
+	}
+
+	// Loop through all the results and bind to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next) {
+		if ((sockfd = socket(p->ai_family, p->ai_socktype,
+				p->ai_protocol)) == SOCKET_ERROR) {
+			perror("server: socket");
+			continue;
+		}
+		break;
+	}
+	freeaddrinfo(servinfo); // all done with this structure
+#endif
+	setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (const char *)&yes, sizeof(int));
+	server = gethostbyname(host);
+	x.sin_port = htons(port);
+	x.sin_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC;
+	IP = inet_ntoa(*(struct in_addr *)*server->h_addr_list);
+	x.sin_addr.s_addr = inet_addr(IP);
+	if ( server ) {
+		if ( connect(sockfd, (struct sockaddr*) &x, sizeof x) ) {
+			return 0;
+		}
+	}
+	return sockfd;
+	
+}
+
 ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...) {
     va_list vl;
 	char* buffer;
-	uint32_t len;
+	int len;
     va_start(vl,d);
 #ifdef _CRTIMP // Windows CRT library has a nifty function for this
-    len = _vscprintf(d, vl);
+    len = _vscprintf(d, vl) + 10;
 #else
-    len = vsnprintf(NULL, 0, d, vl);
+    len = vsnprintf(NULL, 0, d, vl) + 10;
 #endif
 	buffer = (char*) calloc(1,len);
 	if (!buffer) merror();
     vsprintf(buffer, d, vl);
-    len = send(session->client->socket, buffer, len ,0);
+    len = send(session->client->socket, buffer, strlen(buffer) ,0);
     free(buffer);
     return len;
 }
@@ -201,7 +258,7 @@ cvector* comm_mxLookup(const char* domain)
 			struct in_addr x;
             mxRecord* mx = (mxRecord*) calloc(1,sizeof(mxRecord));
 			if (!mx) merror();
-            memcpy(a->h_addr_list++, &x, sizeof(x));
+            memcpy(&x, a->h_addr_list++, sizeof(x));
             b = inet_ntoa(x);
             len = strlen(b);
             mx->host = (char*) calloc(1,len+1);

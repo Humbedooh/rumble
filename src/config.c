@@ -26,6 +26,7 @@ void rumble_config_load(masterHandle* master, cvector* args) {
             if ( config ) {
                 fclose(config);
                 el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
+				if (!el) merror();
                 el->key = "config-dir";
                 el->value = paths[x];
                 cvector_add(master->_core.conf, el);

@@ -41,6 +41,7 @@ void rumble_master_init(masterHandle* master) {
     master->_core.workers = cvector_init();
     master->_core.feed_hooks = cvector_init();
 	master->_core.parser_hooks = cvector_init();
+	master->_core.batv = cvector_init();
 }
 
 int main(int argc, char** argv) {

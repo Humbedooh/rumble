@@ -15,15 +15,52 @@ ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
     return send(session->client->socket, message, strlen(message),0);
 }
 
+address* rumble_parse_mail_address(const char* addr) {
+	
+	address* usr = (address*) malloc(sizeof(address));
+	char* tmp;
+	if (!usr) merror();
+	usr->domain = (char*) calloc(1,128);
+	usr->user = (char*) calloc(1,128);
+	usr->raw = (char*) calloc(1,256);
+	usr->flags = cvector_init();
+	usr->tag = (char*) calloc(1,128);
+	usr->_flags = (char*) calloc(1,128);
+	tmp = (char*) calloc(1,256);
+	
+	addr = strchr(addr, '<');
+	if ( addr ) {
+		// First, try to scan for "stuff <user@domain> FLAGS"
+		if ( sscanf(addr, "<%256[^@]@%128[^>]>%128[A-Z= %-]", tmp, usr->domain, usr->_flags) < 2) {
+			// Then, try scanning for "<> FLAGS" (bounce message)
+			printf("not regular addy, trying bouncy\n");
+			sscanf(addr, "<%128[^>]>%128[A-Z= %-]", tmp, usr->_flags);
+		}
+		// Parse any flags we find
+		if (strlen(usr->_flags)) rumble_scan_flags(usr->flags, usr->_flags);
+		// Separate username and VERP/BATV tag (if any)
+		if ( sscanf(tmp, "prvs=%16[^+=]=%128c", usr->tag, usr->user) < 2) { // Did we have a BATV tag?
+			if ( sscanf(tmp, "%128[^=]=%128c", usr->tag, usr->user) < 2) { // Or maybe a VERP?
+				strcpy(usr->user, tmp); // Nope, just a username.
+				memset(usr->tag, 0, 128);
+			}
+		}
+		sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags);
+	}
+	free(tmp);
+	return usr;
+	
+}
+
 char* rumble_comm_read(sessionHandle* session) {
 	char b = 0;
-    uint32_t rc = 0;
+    ssize_t rc = 0;
     uint32_t p;
 	char* ret = (char*) calloc(1,1025);
 	if (!ret) { perror("Calloc failed!"); exit(1);}
     for (p = 0; p < 1024; p++) {
         rc = recv(session->client->socket, &b, 1, 0);
-        if ( !rc ) { free(ret); return NULL; }
+        if ( rc <= 0 ) { free(ret); return NULL; }
         ret[p] = b;
         if ( b == '\n' ) break;
     }
@@ -73,8 +110,9 @@ void rumble_scan_flags(cvector* dict, const char* flags){
 void rumble_scan_words(cvector* dict, const char* wordlist){
     char* pch = strtok((char*) wordlist," ");
     char *key= (char*) calloc(1,200);
+	if (!key) merror();
     while ( pch != NULL ) {
-		strncpy(key, pch, 200);
+		strncpy(key, pch, 199);
         if ( strlen(key) >= 1 ) { 
             rumble_string_lower(key);
             rsdict(dict, key, "1");
@@ -91,7 +129,7 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag){
 		el = (rumbleKeyValuePair*) curr->object;
         if (!strcmp(flag, el->key)) return el->value;
     }
-    return "";
+    return "0";
 }
 
 uint32_t rumble_has_dictionary_value(cvector* dict, const char* flag) {
@@ -103,13 +141,14 @@ uint32_t rumble_has_dictionary_value(cvector* dict, const char* flag) {
 }
 
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value) {
-    char* nkey, *nval;
+	char* nkey, *nval;
 	rumbleKeyValuePair* el;
 	nkey = (char*) calloc(1,strlen(key)+1);
     nval = (char*) calloc(1,strlen(value)+1);
-	if (!nkey || !nval) { perror("calloc() failed!"); exit(1); }
-    strncpy(nval, value, strlen(value));
-    strncpy(nkey, key, strlen(key));
+	if (!nkey || !nval) merror();
+    strcpy(nval, value);
+    strcpy(nkey, key);
+
     el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
 	if (!el) merror();
     el->key = (const char*) nkey;
@@ -133,11 +172,13 @@ void rumble_free_address(address* a) {
     if ( a->raw ) free(a->raw);
     if ( a->user ) free(a->user);
     if ( a->_flags ) free(a->_flags);
+	if ( a->tag ) free(a->tag);
     rumble_flush_dictionary(a->flags);
     a->domain = 0;
     a->user = 0;
     a->raw = 0;
     a->_flags = 0;
+	a->tag = 0;
 }
 
 

@@ -9,19 +9,157 @@
 mqueue* current = 0;
 cvector* badmx;
 
-uint32_t rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, const char* sender, const char* recipient) {
-	return 0;
+void get_smtp_response(sessionHandle* session, rumble_sendmail_response* res) {
+	char* line, *flag;
+	unsigned char b = '-';
+	flag = (char*) calloc(1,200);
+	if (!flag) merror();
+	if ( res ) {
+        while (b == '-' ) {
+            line = rcread(session);
+            res->replyCode = 500;
+            if (!line) break;
+            memset(res->replyMessage, 0, 1000);
+            if (sscanf(line, "%3u%c%200c", &res->replyCode, &b, res->replyMessage) < 2) { res->replyCode = 500; break; }
+            memset(flag, 0, 200);
+            if ( sscanf(line, "%*3u%*1[ %-]%20[A-Z0-9]", flag) ) {
+                if ( strlen(flag) > 2 ) {
+                    rsdict(res->flags, flag, flag);
+                }
+            }
+            free(line);
+		}
+	}
+}
+
+rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, address* sender, address* recipient) {
+	rumble_sendmail_response* res;
+	sessionHandle s;
+	clientHandle c;
+	FILE* fp;
+	uint32_t fsize, chunk;
+	char buffer[2048];
+	const char* me;
+	s.client = &c;
+	res = (rumble_sendmail_response*) malloc(sizeof(rumble_sendmail_response));
+	if (!res) merror();
+	res->flags = cvector_init();
+	res->replyCode = 500;
+	res->replyMessage = (char*) calloc(1,1024);
+	res->replyServer = (char*) calloc(1, strlen(mailserver)+1);
+	if (!res->replyServer || !res->replyMessage ||!res->flags) merror();
+	strncpy(res->replyServer, mailserver, strlen(mailserver));
+	sprintf(res->replyMessage, "Server could not be reached.");
+	
+	fp = fopen(filename, "rb");
+	if (!fp) { perror("Couldn't open file!"); return res; }
+	fseek(fp, 0, SEEK_END);
+	fsize = ftell(fp);
+	rewind(fp);
+
+	printf("connecting to %s...\n", mailserver);
+	
+	c.socket = comm_open(master, mailserver, 25);
+	me = rumble_get_dictionary_value(master->_core.conf, "servername");
+	
+	// Append BATV (unless we already have BATV or VERP)
+	if ( !strlen(sender->tag) ) {
+		rumbleKeyValuePair* el;
+		char *batv = (char*) calloc(1,17);
+		uint32_t pp = 0;
+		pthread_t t = pthread_self();
+        #ifdef PTW32_CDECL
+                pp = (uint32_t) t.p;
+        #else
+                pp = t;
+        #endif
+		sprintf(batv, "%x%x", rand()*pp, time(0)+pp);
+		sprintf(sender->tag, "prvs=%s", batv);
+		el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
+		if (!el) merror();
+		el->key = batv;
+		el->value = (char*) time(0);
+		cvector_add(master->_core.batv, el);
+	}
+	printf("sender tag set to %s\n", sender->tag);
+	
+	while ( c.socket ) {
+	
+		printf("Connected to %s!\n", mailserver);
+
+		get_smtp_response(&s, res);
+		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+		if ( res->replyCode >= 300 ) break;
+
+		// Try EHLO first
+		
+		printf("<Me> EHLO %s\n", me);
+		rcprintf(&s, "EHLO %s\r\n", me);
+		get_smtp_response(&s, res);
+		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+		if ( res->replyCode >= 300 ) {
+
+			// Or...try HELO
+			printf("<Me> HELO %s\n", me);
+			rcprintf(&s, "HELO %s\r\n", me);
+			get_smtp_response(&s, res);
+			printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+			if ( res->replyCode >= 300 ) break;
+		}
+
+		// Do a MAIL FROM
+		if ( rhdict(res->flags, "SIZE") ) {
+			printf("<Me> MAIL FROM: <%s=%s@%s> SIZE=%u\n", sender->tag, sender->user, sender->domain, fsize);
+			rcprintf(&s, "MAIL FROM: <%s=%s@%s> SIZE=%u\r\n", sender->tag, sender->user, sender->domain, fsize);
+		}
+		else {
+			printf("<Me> MAIL FROM: <%s=%s@%s>\n", sender->tag, sender->user, sender->domain);
+			rcprintf(&s, "MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
+		}
+		get_smtp_response(&s, res);
+		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+		if ( res->replyCode >= 300 ) break;
+
+		// Do an RCPT TO
+		printf("<Me> RCPT TO: <%s@%s>\n", recipient->user, recipient->domain);
+		rcprintf(&s, "RCPT TO: <%s@%s>\r\n", recipient->user, recipient->domain);
+		get_smtp_response(&s, res);
+		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+		if ( res->replyCode >= 300 ) break;
+
+		// Do a DATA
+		printf("DATA\n");
+		rcprintf(&s, "DATA\r\n", sender);
+		get_smtp_response(&s, res);
+		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+		if ( res->replyCode >= 400 ) break;
+		printf("sending file...");
+		while (!feof(fp)) {
+			memset(buffer, 0, 2000);
+			chunk = fread(buffer, 1, 2000, fp);
+			send(c.socket, buffer, chunk, 0);
+		}
+		rcsend(&s, ".\r\n");
+		printf("done, sent %u bytes\n", fsize);
+		get_smtp_response(&s, res);
+		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
+		break;
+	}
+	fclose(fp);
+	if ( c.socket ) close(c.socket);
+	return res;
 }
 
 void* rumble_worker_process(void* m) {
     mqueue* item;
+	char* tmp;
     userAccount* user;
     ssize_t rc;
     masterHandle* master = (masterHandle*) m;
     sessionHandle* sess = (sessionHandle*) malloc(sizeof(sessionHandle));
     if (!sess) merror();
     sess->_master = m;
-    
+    tmp = (char*) calloc(1,256);
     while (1) {
         pthread_mutex_lock(&master->_core.workmutex);
         pthread_cond_wait(&master->_core.workcond, &master->_core.workmutex);
@@ -30,12 +168,13 @@ void* rumble_worker_process(void* m) {
         item = current;
         current = 0;
         pthread_mutex_unlock(&master->_core.workmutex);
+		if (!item) continue;
 
 		// Check for rampant loops
 		item->loops++;
 		if ( item->loops > 5 ) { 
-			if ( &item->recipient ) rumble_free_address(&item->recipient);
-			if ( &item->sender ) rumble_free_address(&item->recipient);
+			if ( item->recipient ) rumble_free_address(item->recipient);
+			if ( item->sender ) rumble_free_address(item->recipient);
 			if ( item->fid) free((char*) item->fid);
 			if ( item->flags) free((char*) item->flags);
 			free(item);
@@ -44,9 +183,9 @@ void* rumble_worker_process(void* m) {
 		}
 
         // Local delivery?
-        if ( rumble_domain_exists(sess, item->recipient.domain)) {
-            printf("%s is local domain, looking for user %s@%s\n", item->recipient.domain, item->recipient.user, item->recipient.domain);
-            user = rumble_get_account(master, item->recipient.user, item->recipient.domain);
+        if ( rumble_domain_exists(sess, item->recipient->domain)) {
+            printf("%s is local domain, looking for user %s@%s\n", item->recipient->domain, item->recipient->user, item->recipient->domain);
+            user = rumble_get_account(master, item->recipient->user, item->recipient->domain);
             if ( user ) {
                 uint32_t fsize;
                 item->account = user;
@@ -75,12 +214,16 @@ void* rumble_worker_process(void* m) {
                         if (rename(ofilename, nfilename)) {
                             perror("Couldn't move file");
                         }
+						free(ofilename);
+						free(nfilename);
                         cfsize = (char*) calloc(1,15);
                         cuid = (char*) calloc(1,15);
                         if (!cfsize || !cuid) merror();
+						sprintf(cuid, "%u", item->account->uid);
+						sprintf(cfsize, "%u", fsize);
                         state = rumble_sql_inject((sqlite3*) master->_core.db, \
                             "INSERT INTO mbox (uid, fid, size, flags) VALUES (?,?,?,0)",
-                            itoa(user->uid, cuid, 10), item->fid, itoa(fsize, cfsize, 10));
+                            cuid, item->fid,cfsize);
                         rc = sqlite3_step(state);
                         sqlite3_finalize(state);
                         free(cfsize);
@@ -104,13 +247,15 @@ void* rumble_worker_process(void* m) {
                                         rumble_string_lower(usr);
                                         state = rumble_sql_inject((sqlite3*) master->_core.db, \
                                                 "INSERT INTO queue (loops, fid, sender, user, domain, flags) VALUES (?,?,?,?,?,?)", \
-                                                loops, item->fid, item->sender.raw, usr, dmn, item->flags);
+                                                loops, item->fid, item->sender->raw, usr, dmn, item->flags);
                                         sqlite3_step(state);
                                         sqlite3_finalize(state);
                                     }
                                 }
                                 pch = strtok(NULL, " ");
                             }
+							free(usr);
+							free(dmn);
                         }
                         // done here!
                     }
@@ -131,46 +276,56 @@ void* rumble_worker_process(void* m) {
         else {
             cvector *mx;
             mxRecord* mxr;
-			char *filename, *recipient;
-            uint32_t delivered = 0;
-			uint32_t dx = 0;
-            printf ("%s@%s is a foreign user\n",item->recipient.user, item->recipient.domain);
-            mx = comm_mxLookup(item->recipient.domain);
+			char *filename;
+            uint32_t delivered = 500;
+			rumble_sendmail_response* res;
+            printf ("%s@%s is a foreign user\n",item->recipient->user, item->recipient->domain);
+
+            mx = comm_mxLookup(item->recipient->domain);
             if (!mx) merror();
             if ( cvector_size(mx) ) {
 				filename = (char*) calloc(1,256);
-				recipient = (char*) calloc(1,256);
-				if (!filename || !recipient) merror();
-				sprintf(recipient, "<%s@%s>", item->recipient.user, item->recipient.domain);
-				sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagepath"), item->fid);
+				if (!filename) merror();
+				sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
                 for (mxr = (mxRecord*) cvector_first(mx); mxr != NULL; mxr = (mxRecord*) cvector_next(mx)) {
                     if ( rhdict(badmx, mxr->host) ) continue; // ignore bogus MX records
                     printf("Trying %s (%u)...\n", mxr->host, mxr->preference);
-					dx = rumble_send_email(master, mxr->host, filename, item->sender.raw, recipient); // 0 = crit fail, 1 = temp fail, 2 = delivered!
-					delivered = ( dx > delivered ) ? dx : delivered; // get the best result from all servers we've tried
-					if ( delivered == 2 ) break; // yay!
+					res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient); // Anything below 300 would be good :>
+					delivered = ( res->replyCode < delivered ) ? res->replyCode : delivered; // get the best result from all servers we've tried
+					rumble_flush_dictionary(res->flags);
+					free(res->replyMessage);
+					free(res);
+					if ( delivered <= 299 ) break; // yay!
                 }
 				free(filename);
-				free(recipient);
             }
-			if ( delivered == 0 ) { } // critical failure, giving up.
-			if ( delivered == 1 ) { // temp failure, push mail back into queue (schedule next try in 30 minutes).
+			if ( delivered >= 500 ) { // critical failure, giving up.
+				printf("Critical failure, giving up for now.\n");
+			} 
+			else if ( delivered >= 400 ) { // temp failure, push mail back into queue (schedule next try in 30 minutes).
 				sqlite3_stmt* state;
-				char* loops = (char*) calloc(1,4);
+				char* loops = (char*) calloc(1,5);
 				if (!loops) merror();
-				sprintf(loops, "%u", item->loops);
+                sprintf(loops, "%u", item->loops);
+				sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
 				state = rumble_sql_inject((sqlite3*) master->_core.db, \
-                        "INSERT INTO queue (time, loops, fid, sender, user, domain, flags) VALUES (strftime('%s', 'now', '+30 minutes'),?,?,?,?,?,?)", \
-						loops, item->fid, item->sender.raw, item->recipient.user, item->recipient.domain, item->flags);
+                        "INSERT INTO queue (time, loops, fid, sender, user, domain, flags) VALUES (strftime('%s', 'now', '+10 minutes'),?,?,?,?,?,?)", \
+						loops, item->fid, tmp, item->recipient->user, item->recipient->domain, item->flags);
                 sqlite3_step(state);
                 sqlite3_finalize(state);
+				free(loops);
+				memset(tmp, 0, 256);
 			} 
+			else {
+				printf("Mail delivered.\r\n");
+			}
 			// All done!
         }
-        if ( &item->recipient ) rumble_free_address(&item->recipient);
-        if ( &item->sender ) rumble_free_address(&item->recipient);
+        if ( item->recipient ) rumble_free_address(item->recipient);
+        if ( item->sender ) rumble_free_address(item->recipient);
         if ( item->fid) free((char*) item->fid);
         if ( item->flags) free((char*) item->flags);
+		item->account = 0;
         free(item);
         }
     }
@@ -178,6 +333,7 @@ void* rumble_worker_process(void* m) {
 void* rumble_worker_init(void* m) {
     masterHandle* master = (masterHandle*) m;
     int x;
+	char tmp[1024];
     const char* ignmx;
     const char* statement = "SELECT time, loops, fid, sender, user, domain, flags, id FROM queue WHERE time <= strftime('%s','now') LIMIT 1";
 	int rc;
@@ -192,7 +348,7 @@ void* rumble_worker_init(void* m) {
     for (x = 0; x < 10; x++ ) {
         pthread_t* t = (pthread_t*) malloc(sizeof(pthread_t));
         cvector_add(master->_core.workers, t);
-        pthread_create(t, NULL, rumble_worker_process, (void *)m);
+        pthread_create(t, NULL, rumble_worker_process, m);
     }
     while (1) {
         rc = sqlite3_step(state);
@@ -202,6 +358,8 @@ void* rumble_worker_init(void* m) {
             char* sql, *zErrMsg;
             mqueue* item = (mqueue*) calloc(1,sizeof(mqueue));
             if (item) {
+				item->mType = 0;
+
 				// delivery time
                 item->date = sqlite3_column_int(state, 0);
 
@@ -215,20 +373,16 @@ void* rumble_worker_init(void* m) {
             
                 // sender
                 l = sqlite3_column_bytes(state,3);
-                item->sender.raw = (char*) calloc(1,l+1);
-                memcpy((char*) item->sender.raw, sqlite3_column_text(state,3), l);
-            
+				item->sender = rumble_parse_mail_address((const char*) sqlite3_column_text(state,3));
+				            
                 // recipient
-                l = sqlite3_column_bytes(state,4);
-                item->recipient.user = (char*) calloc(1,l+1);
-                memcpy((char*) item->recipient.user, sqlite3_column_text(state,4), l);
-                l = sqlite3_column_bytes(state,5);
-                item->recipient.domain = (char*) calloc(1,l+1);
-                memcpy((char*) item->recipient.domain, sqlite3_column_text(state,5), l);
+				sprintf(tmp, "<%s@%s>", (const char*) sqlite3_column_text(state,4), (const char*) sqlite3_column_text(state,5));
+				item->recipient = rumble_parse_mail_address(tmp);
+				memset(tmp, 0, 1024);
             
                 //flags
                 l = sqlite3_column_bytes(state,6);
-                item->flags = (char*) calloc(1,l+1);
+                item->flags = (char*) calloc(1,1);
                 memcpy((char*) item->flags, sqlite3_column_text(state,6), l);
             
                 mid = sqlite3_column_int(state, 7);

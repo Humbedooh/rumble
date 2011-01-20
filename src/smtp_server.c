@@ -17,13 +17,9 @@ void* rumble_smtp_init(void* m) {
     sessionHandle* s;
 	void* pp,*tp;
 	pthread_t p = pthread_self();
+	session.dict = cvector_init();
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
-    session.sender.flags = cvector_init();
-    session.sender.domain = 0;
-    session.sender.user = 0;
-    session.sender.raw = 0;
-    session.sender._flags = 0;
     session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
 
@@ -109,6 +105,7 @@ void* rumble_smtp_init(void* m) {
                         tp = t->p;
                 #else
                         tp = t;
+                        pp = p;
                 #endif
 				if (tp == pp) { cvector_delete_at(master->smtp.threads, el); break; }
                 el = el->next;
@@ -139,28 +136,18 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
     if (sscanf(argument, "%*4c:%1000c", raw)) {
     
 		// Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-		if (sscanf(raw, "%*256[^<]<%128[^>@\"]@%128[^@\">]> %500c", user, domain, flags) > 1) {
-			// Set the current values
-			session->sender.raw = raw;
-			session->sender.user = user;
-			session->sender.domain = domain;
-			session->sender._flags = flags;
-			rumble_scan_flags(session->sender.flags, flags);
+		session->sender = rumble_parse_mail_address(raw);
+		if (session->sender) {
 			// Fire events scheduled for pre-processing run
 			rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
 			if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
-				rumble_free_address(&session->sender);
+				rumble_free_address(session->sender);
 				return rc;
 			}
-			// Validate address and any following ESMTP flags.
-			if ( !strlen(user) || !strlen(domain) ) {
-				rumble_free_address(&session->sender);
-				return 501; // Syntax error in MAIL FROM parameter
-			}
 			max = rumble_config_int(master, "messagesizelimit");
-			size = atoi(rumble_get_dictionary_value(session->sender.flags, "SIZE"));
+			size = atoi(rumble_get_dictionary_value(session->sender->flags, "SIZE"));
 			if ( max != 0 && size != 0 && size > max ) {
-				rumble_free_address(&session->sender);
+				rumble_free_address(session->sender);
 				return 552; // message too big.
 			}
     
@@ -177,7 +164,6 @@ ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, const char* argument) {
-	char *raw, *user, *domain;
 	address *recipient;
 	ssize_t rc;
 	uint32_t isLocalDomain, isLocalUser;
@@ -185,74 +171,58 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
     if ( !(session->flags & RUMBLE_SMTP_HAS_MAIL) ) return 503; 
     
     // Allocate stuff and start parsing
-    raw = (char*) calloc(1,1000);
-    user = (char*) calloc(1,128);
-    domain = (char*) calloc(1,128); // RFC says 64, but that was before i18n
-	if (!raw || !user || !domain) merror();
-    if (sscanf(argument, "%*2c:%1000c", raw)) {
-		// Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-		if (sscanf(raw, "%*256[^<]<%128[^\">@]@%128[^@\">]", user, domain) == 2) {
-			// Set the current values
-			recipient = (address*) malloc(sizeof(address));
-			if (!recipient) merror();
-			recipient->domain = domain;
-			recipient->user = user;
-			recipient->raw = raw;
-			recipient->_flags = 0;
-			recipient->flags = cvector_init();
-			cvector_add(session->recipients, recipient);
+    recipient = rumble_parse_mail_address(argument);
+	if (recipient) {
+		cvector_add(session->recipients, recipient);
     
-    
-			// Fire events scheduled for pre-processing run
-			rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
-			if ( rc != RUMBLE_RETURN_OKAY ) {
-				cvector_pop(session->recipients); // pop the last element from the vector
-				rumble_free_address(recipient); // flush the memory
-				return rc;
-			}
+		// Fire events scheduled for pre-processing run
+		rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
+		if ( rc != RUMBLE_RETURN_OKAY ) {
+			cvector_pop(session->recipients); // pop the last element from the vector
+			rumble_free_address(recipient); // flush the memory
+			return rc;
+		}
             
-			// Check if recipient is local
-			isLocalDomain = rumble_domain_exists(session, domain);
-			isLocalUser = isLocalDomain ? rumble_account_exists(session, user, domain) : 0;
+		// Check if recipient is local
+		isLocalDomain = rumble_domain_exists(session, recipient->domain);
+		isLocalUser = isLocalDomain ? rumble_account_exists(session, recipient->user, recipient->domain) : 0;
     
-			if ( isLocalUser )     {
-			// If everything went fine, set the RCPT flag and return with code 250.
-				// >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-				// >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<<
-				// Check if user has space in mailbox for this msg!
-				// >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		if ( isLocalUser )     {
+		// If everything went fine, set the RCPT flag and return with code 250.
+			// >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+			// >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<<
+			// Check if user has space in mailbox for this msg!
+			// >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+			session->flags |= RUMBLE_SMTP_HAS_RCPT;
+			return 250;
+		}
+		// If rec isn't local, check if client is allowed to relay
+		if ( !isLocalDomain ) {
+			if ( session->flags & RUMBLE_SMTP_CAN_RELAY ) {
 				session->flags |= RUMBLE_SMTP_HAS_RCPT;
-				return 250;
+				return 251;
 			}
-			// If rec isn't local, check if client is allowed to relay
-			if ( !isLocalDomain ) {
-				if ( session->flags & RUMBLE_SMTP_CAN_RELAY ) {
-					session->flags |= RUMBLE_SMTP_HAS_RCPT;
-					return 251;
-				}
-				// Not local and no relaying allowed, return 530.
-				cvector_pop(session->recipients);
-				rumble_free_address(recipient);
-				return 530;
-			}
-			// Domain is local but user doesn't exist, return 550
+			// Not local and no relaying allowed, return 530.
 			cvector_pop(session->recipients);
 			rumble_free_address(recipient);
-			return 550;
+			return 530;
 		}
+		// Domain is local but user doesn't exist, return 550
+		cvector_pop(session->recipients);
+		rumble_free_address(recipient);
+		return 550;
 	}
 	return 501; // Syntax error in RCPT TO parameter
 }
 
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags |= RUMBLE_SMTP_HAS_HELO;
-    rumble_add_dictionary_value(session->sender.flags, "helo", argument);
+	rsdict(session->dict, "helo", argument);
     return 250;
 }
 
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
-    rumble_add_dictionary_value(session->sender.flags, "helo", argument);
     rumble_comm_send(session, "250-Extended commands follow\r\n");
     rumble_comm_send(session, "250-EXPN\r\n");
     rumble_comm_send(session, "250-VRFY\r\n");
@@ -263,6 +233,7 @@ ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, co
     rumble_comm_send(session, "250-DSN\r\n");
     rumble_comm_send(session, "250-SIZE\r\n");
     rumble_comm_send(session, "250 XVERP\r\n");
+	rsdict(session->dict, "helo", argument);
     return RUMBLE_RETURN_IGNORE;
 }
 
@@ -305,7 +276,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     log = (char*) calloc(1,1024);
 	if (!log) merror();
     now = rumble_mtime();
-    sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTP id %s; %s\r\n", rumble_get_dictionary_value(session->sender.flags, "helo"), session->client->addr, rumble_config_str(master, "servername"), fid, now);
+	sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTP id %s; %s\r\n", rumble_get_dictionary_value(session->dict, "helo"), session->client->addr, rumble_config_str(master, "servername"), fid, now);
     free(now);
     fwrite(log, strlen(log), 1, fp);
     rumble_comm_send(session, rumble_smtp_reply_code(354));
@@ -331,7 +302,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
         sqlite3_stmt* state = rumble_sql_inject((sqlite3*) master->_core.db, \
                 "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (?,?,?,?,?)", \
-                fid, session->sender.raw, el->user, el->domain, session->sender._flags);
+                fid, session->sender->raw, el->user, el->domain, session->sender->_flags);
         /*int rc = */sqlite3_step(state);
         sqlite3_finalize(state);
     }
