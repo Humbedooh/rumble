@@ -67,7 +67,7 @@ rumblemodule rumble_module_init(void* m, rumble_module_info* modinfo) {
 	if (!path) merror();
 	sprintf(path, "%s/entrepreneur/template.html", master->cfgdir);
 	fp = fopen(path, "r");
-	if (!fp) { perror("Couldn't open [cfgdir]/entrepreneur/template.html"); return EXIT_FAILURE; }
+	if (!fp) { perror("Couldn't open [cfgdir]/entrepreneur/template.html"); return EXIT_SUCCESS; }
 	fseek(fp, 0, SEEK_END);
 	fs = ftell(fp);
 	html_template = (char*) malloc(fs);

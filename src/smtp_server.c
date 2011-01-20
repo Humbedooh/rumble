@@ -220,12 +220,25 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 			// >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<<
 			// Check if user has space in mailbox for this msg!
 			// >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                        rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
+                        if ( rc != RUMBLE_RETURN_OKAY ) {
+                            cvector_pop(session->recipients); // pop the last element from the vector
+                            rumble_free_address(recipient); // flush the memory
+                            return rc;
+                        }
 			session->flags |= RUMBLE_SMTP_HAS_RCPT;
 			return 250;
 		}
 		// If rec isn't local, check if client is allowed to relay
 		if ( !isLocalDomain ) {
 			if ( session->flags & RUMBLE_SMTP_CAN_RELAY ) {
+                                // Fire events scheduled for pre-processing run
+                                rc = rumble_server_schedule_hooks(master,session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
+                                if ( rc != RUMBLE_RETURN_OKAY ) {
+                                        cvector_pop(session->recipients); // pop the last element from the vector
+                                        rumble_free_address(recipient); // flush the memory
+                                        return rc;
+                                }
 				session->flags |= RUMBLE_SMTP_HAS_RCPT;
 				return 251;
 			}
@@ -243,6 +256,9 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
+	if ( !strchr(argument, '.') ) {
+		return 501; // simple test for QDN
+	}
     session->flags |= RUMBLE_SMTP_HAS_HELO;
 	rsdict(session->dict, "helo", argument);
     return 250;
