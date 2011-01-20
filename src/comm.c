@@ -177,6 +177,8 @@ void comm_accept(socketHandle sock, clientHandle* client) {
                 perror("Error while attempting accept()");
                 break;
         }
+		FD_ZERO(&client->fd);
+		FD_SET(client->socket, &client->fd);
 
 #ifdef RUMBLE_WINSOCK
         strncpy(client->addr, inet_ntoa( ((struct sockaddr_in *)&(client->client_info))->sin_addr ), 46);

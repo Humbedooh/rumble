@@ -81,39 +81,26 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 		el->value = (char*) time(0);
 		cvector_add(master->_core.batv, el);
 	}
-	printf("sender tag set to %s\n", sender->tag);
-	
 	while ( c.socket ) {
-	
-		printf("Connected to %s!\n", mailserver);
-
 		get_smtp_response(&s, res);
-		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 300 ) break;
 
 		// Try EHLO first
-		
-		printf("<Me> EHLO %s\n", me);
 		rcprintf(&s, "EHLO %s\r\n", me);
 		get_smtp_response(&s, res);
 		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 300 ) {
-
 			// Or...try HELO
-			printf("<Me> HELO %s\n", me);
 			rcprintf(&s, "HELO %s\r\n", me);
 			get_smtp_response(&s, res);
-			printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 			if ( res->replyCode >= 300 ) break;
 		}
 
 		// Do a MAIL FROM
 		if ( rhdict(res->flags, "SIZE") ) {
-			printf("<Me> MAIL FROM: <%s=%s@%s> SIZE=%u\n", sender->tag, sender->user, sender->domain, fsize);
 			rcprintf(&s, "MAIL FROM: <%s=%s@%s> SIZE=%u\r\n", sender->tag, sender->user, sender->domain, fsize);
 		}
 		else {
-			printf("<Me> MAIL FROM: <%s=%s@%s>\n", sender->tag, sender->user, sender->domain);
 			rcprintf(&s, "MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
 		}
 		get_smtp_response(&s, res);
@@ -121,31 +108,27 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 		if ( res->replyCode >= 300 ) break;
 
 		// Do an RCPT TO
-		printf("<Me> RCPT TO: <%s@%s>\n", recipient->user, recipient->domain);
 		rcprintf(&s, "RCPT TO: <%s@%s>\r\n", recipient->user, recipient->domain);
 		get_smtp_response(&s, res);
 		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 300 ) break;
 
 		// Do a DATA
-		printf("DATA\n");
 		rcprintf(&s, "DATA\r\n", sender);
 		get_smtp_response(&s, res);
 		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 400 ) break;
-		printf("sending file...");
 		while (!feof(fp)) {
 			memset(buffer, 0, 2000);
 			chunk = fread(buffer, 1, 2000, fp);
 			send(c.socket, buffer, chunk, 0);
 		}
 		rcsend(&s, ".\r\n");
-		printf("done, sent %u bytes\n", fsize);
 		get_smtp_response(&s, res);
-		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		break;
 	}
 	fclose(fp);
+	rcprintf(&s, "QUIT\r\n", sender);
 	if ( c.socket ) close(c.socket);
 	return res;
 }

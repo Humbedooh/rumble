@@ -195,9 +195,10 @@ extern "C" {
 	};
 #endif
 typedef struct {
-    socketHandle               socket;
-    struct sockaddr_storage    client_info;
-    char                       addr[46]; // INET6_ADDRSTRLEN
+    socketHandle				socket;
+    struct sockaddr_storage		client_info;
+    char						addr[46]; // INET6_ADDRSTRLEN
+	fd_set						fd; // for select()
 } clientHandle;
 
 typedef struct {

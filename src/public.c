@@ -56,15 +56,27 @@ char* rumble_comm_read(sessionHandle* session) {
 	char b = 0;
     ssize_t rc = 0;
     uint32_t p;
+	struct timeval t;
 	char* ret = (char*) calloc(1,1025);
+	signed int f;
 	if (!ret) { perror("Calloc failed!"); exit(1);}
+
+	t.tv_sec = 5;
+	t.tv_usec = 0;
+	
     for (p = 0; p < 1024; p++) {
-        rc = recv(session->client->socket, &b, 1, 0);
-        if ( rc <= 0 ) { free(ret); return NULL; }
-        ret[p] = b;
-        if ( b == '\n' ) break;
-    }
-    return ret;
+		f = select(session->client->socket+1, &session->client->fd, NULL, NULL, &t);
+		if ( f > 0 ) {
+			rc = recv(session->client->socket, &b, 1, 0);
+			if ( rc <= 0 ) { free(ret); return NULL; }
+			ret[p] = b;
+			if ( b == '\n' ) break;
+		}
+		else {
+			free(ret); return NULL;
+		}
+	}
+	return ret;
 }
 
 void  rumble_string_lower(char* d) {
