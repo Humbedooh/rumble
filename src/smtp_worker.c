@@ -137,6 +137,7 @@ void* rumble_worker_process(void* m) {
     mqueue* item;
 	char* tmp;
     userAccount* user;
+	void* state;
     ssize_t rc;
     masterHandle* master = (masterHandle*) m;
     sessionHandle* sess = (sessionHandle*) malloc(sizeof(sessionHandle));
@@ -177,8 +178,7 @@ void* rumble_worker_process(void* m) {
                 rc = rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_PARSER); // hack, hack, hack
                 if ( rc == RUMBLE_RETURN_OKAY ) {
                     if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
-						char* cfsize, *cuid, *ofilename, *nfilename;
-                        sqlite3_stmt* state;
+						char *ofilename, *nfilename;
                         const char* path;
 
 						// Start by making a copy of the letter
@@ -199,18 +199,12 @@ void* rumble_worker_process(void* m) {
                         }
 						free(ofilename);
 						free(nfilename);
-                        cfsize = (char*) calloc(1,15);
-                        cuid = (char*) calloc(1,15);
-                        if (!cfsize || !cuid) merror();
-						sprintf(cuid, "%u", item->account->uid);
-						sprintf(cfsize, "%u", fsize);
-                        state = rumble_sql_inject((sqlite3*) master->_core.db, \
-                            "INSERT INTO mbox (uid, fid, size, flags) VALUES (?,?,?,0)",
-                            cuid, item->fid,cfsize);
-                        rc = sqlite3_step(state);
-                        sqlite3_finalize(state);
-                        free(cfsize);
-                        free(cuid);
+
+						state = rumble_database_prepare(master->_core.db, \
+								"INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)",
+								item->account->uid, item->fid, fsize);
+						rumble_database_run(state);
+						rumble_database_cleanup(state);
                         // done here!
                     }
                     if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
@@ -222,17 +216,16 @@ void* rumble_worker_process(void* m) {
                                 memset(usr,0,128);
                                 memset(dmn,0,128);
                                 if ( strlen(pch) >= 3 ) {
-                                    sqlite3_stmt* state;
 									char* loops = (char*) calloc(1,4);
 									sprintf(loops,"%u",item->loops);
                                     if (sscanf(pch, "%128[^@]@%128c", usr, dmn)) {
                                         rumble_string_lower(dmn);
                                         rumble_string_lower(usr);
-                                        state = rumble_sql_inject((sqlite3*) master->_core.db, \
-                                                "INSERT INTO queue (loops, fid, sender, user, domain, flags) VALUES (?,?,?,?,?,?)", \
-                                                loops, item->fid, item->sender->raw, usr, dmn, item->flags);
-                                        sqlite3_step(state);
-                                        sqlite3_finalize(state);
+										state = rumble_database_prepare(master->_core.db, \
+										"INSERT INTO queue (loops, fid, sender, user, domain, flags) VALUES (%s,%s,%s,%s,%s,%s)", \
+                                         loops, item->fid, item->sender->raw, usr, dmn, item->flags);
+										rumble_database_run(state);
+										rumble_database_cleanup(state);
                                     }
                                 }
                                 pch = strtok(NULL, " ");
@@ -286,17 +279,13 @@ void* rumble_worker_process(void* m) {
 				printf("Critical failure, giving up for now.\n");
 			} 
 			else if ( delivered >= 400 ) { // temp failure, push mail back into queue (schedule next try in 30 minutes).
-				sqlite3_stmt* state;
-				char* loops = (char*) calloc(1,5);
-				if (!loops) merror();
-                sprintf(loops, "%u", item->loops);
+				
 				sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
-				state = rumble_sql_inject((sqlite3*) master->_core.db, \
-                        "INSERT INTO queue (time, loops, fid, sender, user, domain, flags) VALUES (strftime('%s', 'now', '+10 minutes'),?,?,?,?,?,?)", \
-						loops, item->fid, tmp, item->recipient->user, item->recipient->domain, item->flags);
-                sqlite3_step(state);
-                sqlite3_finalize(state);
-				free(loops);
+				state = rumble_database_prepare( master->_core.db, \
+                        "INSERT INTO queue (time, loops, fid, sender, user, domain, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)", \
+						item->loops, item->fid, tmp, item->recipient->user, item->recipient->domain, item->flags);
+                rumble_database_run(state);
+				rumble_database_cleanup(state);
 				memset(tmp, 0, 256);
 			} 
 			else {

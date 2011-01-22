@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     rumble_master_init(master);
     rumble_database_load(master);
     rumble_modules_load(master);
-    
+
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
         printf("Launching SMTP service...");
