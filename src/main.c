@@ -70,11 +70,25 @@ int main(int argc, char** argv) {
             pthread_create(t, NULL, master->smtp.init, master);
         }
         printf("OK\n");
-        t = (pthread_t*) malloc(sizeof(pthread_t));
-        cvector_add(master->_core.workers, t);
-        pthread_create(t, NULL, rumble_worker_init, master);
+        
         
     }
+
+	if ( rumble_config_int(master, "enablepop3") ) {
+		int n;
+        printf("Launching POP3 service...");
+        master->pop3.socket = comm_init(master, rumble_config_str(master, "pop3port"));
+        for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
+            t = (pthread_t*) malloc(sizeof(pthread_t));
+            cvector_add(master->pop3.threads, t);
+            pthread_create(t, NULL, master->pop3.init, master);
+        }
+        printf("OK\n");
+    }
+
+	t = (pthread_t*) malloc(sizeof(pthread_t));
+        cvector_add(master->_core.workers, t);
+        pthread_create(t, NULL, rumble_worker_init, master);
  
     
     sleep(999999);

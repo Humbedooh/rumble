@@ -24,53 +24,11 @@ void rumble_database_load(masterHandle* master) {
 }
 
 
-userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain) {
-    userAccount* ret = 0;
-	char* tmp;
-    const char* sql = "SELECT id,user,domain,type,arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1";
-    sqlite3_stmt* state = (sqlite3_stmt*) rumble_database_prepare(master->_core.db,sql,domain,user);
-    int rc = sqlite3_step(state);
-    if ( rc == SQLITE_ROW ) {
-        ssize_t l;
-        ret = (userAccount*) calloc(1, sizeof(userAccount));
-        if (!ret) merror();
-        // user ID
-        ret->uid = sqlite3_column_int(state, 0);
-        
-        // user
-        l = sqlite3_column_bytes(state,1);
-        ret->user = (char*) calloc(1,l+1);
-        memcpy((char*) ret->user, sqlite3_column_text(state,1), l);
-        
-        // domain
-        l = sqlite3_column_bytes(state,2);
-        ret->domain = (char*) calloc(1,l+1);
-        memcpy((char*) ret->domain, sqlite3_column_text(state,2), l);
-        
-        // mbox type (alias, mbox, prog)
-        l = sqlite3_column_bytes(state,3);
-        tmp = (char*) calloc(1,l+1);
-		if(!tmp)merror();
-        memcpy((char*) tmp, sqlite3_column_text(state,3), l);
-        rumble_string_lower(tmp);
-        ret->type = RUMBLE_MTYPE_MBOX;
-        if (!strcmp(tmp, "alias")) ret->type = RUMBLE_MTYPE_ALIAS;
-        else if (!strcmp(tmp, "mod")) ret->type = RUMBLE_MTYPE_MOD;
-        else if (!strcmp(tmp, "feed")) ret->type = RUMBLE_MTYPE_FEED;
-        free(tmp);
-        // arg (if any)
-        l = sqlite3_column_bytes(state,4);
-        ret->arg = (char*) calloc(1,l+1);
-        memcpy((char*) ret->arg, sqlite3_column_text(state,4), l);
-    }
-    sqlite3_finalize(state);
-    return ret;
-}
-
 void rumble_free_account(userAccount* user) {
     if ( user->arg ) free(user->arg);
     if ( user->domain) free(user->domain);
     if ( user->user) free(user->user);
+	if ( user->hash) free(user->hash);
     user->arg = 0;
     user->domain = 0;
     user->user = 0;
@@ -81,11 +39,95 @@ uint32_t rumble_account_exists(sessionHandle* session, const char* user, const c
     void* state;
 	masterHandle* master = (masterHandle*) session->_master;
 	state = rumble_database_prepare(master->_core.db,
-		"SELECT * FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
+		"SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
 		domain, user);
     rc = rumble_database_run(state);
     rumble_database_cleanup(state);
-    return ( rc == SQLITE_ROW) ? 1 : 0;
+    return ( rc == RUMBLE_DB_RESULT) ? 1 : 0;
+}
+
+userAccount* rumble_account_data(sessionHandle* session, const char* user, const char* domain) {
+	int rc;
+    void* state;
+	char* tmp;
+	userAccount* acc;
+	masterHandle* master = (masterHandle*) session->_master;
+	state = rumble_database_prepare(master->_core.db,
+		"SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
+		domain, user);
+    rc = rumble_database_run(state);
+    acc = NULL;
+	if ( rc == RUMBLE_DB_RESULT ) { 
+		int l;
+		acc = (userAccount*) malloc(sizeof(userAccount));
+		if (!acc) merror();
+		printf("got a result, fetching it...\n");
+		// Account UID
+		acc->uid = sqlite3_column_int((sqlite3_stmt*) state, 0);
+
+		// Account Domain
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		acc->domain = (char*) calloc(1,l+1);
+		memcpy((char*) acc->domain, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		// Account Username
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,2);
+		acc->user = (char*) calloc(1,l+1);
+		memcpy((char*) acc->user, sqlite3_column_text((sqlite3_stmt*) state,2), l);
+
+		// Password (hashed)
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,3);
+		acc->hash = (char*) calloc(1,l+1);
+		memcpy((char*) acc->hash, sqlite3_column_text((sqlite3_stmt*) state,3), l);
+
+		// Account type
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,4);
+        tmp = (char*) calloc(1,l+1);
+		if (!tmp) merror();
+        memcpy((char*) tmp, sqlite3_column_text((sqlite3_stmt*) state,4), l);
+        rumble_string_lower(tmp);
+        acc->type = RUMBLE_MTYPE_MBOX;
+        if (!strcmp(tmp, "alias")) acc->type = RUMBLE_MTYPE_ALIAS;
+        else if (!strcmp(tmp, "mod")) acc->type = RUMBLE_MTYPE_MOD;
+        else if (!strcmp(tmp, "feed")) acc->type = RUMBLE_MTYPE_FEED;
+        free(tmp);
+
+		// Account args
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,5);
+		acc->arg = (char*) calloc(1,l);
+		memcpy((char*) acc->arg, sqlite3_column_text((sqlite3_stmt*) state,5), l);
+
+	}
+	else printf("no such user or something: %u\n", rc);
+	rumble_database_cleanup(state);
+
+    return acc;
+}
+
+void rumble_pop3_populate(sessionHandle* session, pop3Session* pops) {
+	int rc,l;
+    void* state;
+	char* tmp;
+	pop3Letter* letter;
+	masterHandle* master = (masterHandle*) session->_master;
+	state = rumble_database_prepare(master->_core.db, "SELECT id, fid, size FROM mbox WHERE uid = %u", pops->account->uid);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		letter = (pop3Letter*) malloc(sizeof(pop3Letter));
+
+		// Letter ID
+		letter->id = sqlite3_column_int((sqlite3_stmt*) state, 0);
+
+		// Letter File ID
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		letter->fid = (char*) calloc(1,l+1);
+		memcpy((char*) letter->fid, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		// Letter Size
+		letter->size = sqlite3_column_int((sqlite3_stmt*) state, 2);
+
+		cvector_add(pops->letters, letter);
+	}
+	rumble_database_cleanup(state);
 }
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
@@ -95,7 +137,7 @@ uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
 	state = rumble_database_prepare(master->_core.db, "SELECT 1 FROM domains WHERE domain = %s LIMIT 1", domain);
     rc = rumble_database_run(state);
     rumble_database_cleanup(state);
-    return ( rc == SQLITE_ROW) ? 1 : 0;
+    return ( rc == RUMBLE_DB_RESULT) ? 1 : 0;
 }
 
 
@@ -167,7 +209,5 @@ void* rumble_database_prepare(void* db, const char* statement, ...) {
 		#endif
 	}
 	va_end(vl);
-//	rc = sqlite3_step((sqlite3_stmt*) returnObject);
-	
 	return returnObject;
 }

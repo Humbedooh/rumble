@@ -12,8 +12,10 @@ void* rumble_smtp_init(void* m) {
     sessionHandle session;
     sessionHandle* sessptr = &session;
 	ssize_t rc;
-	char *cmd, *arg, *line;
+	char *cmd, *arg, *line, *tmp;
+	const char* myName;
 	int x = 0;
+	time_t now;
     sessionHandle* s;
 	void* pp,*tp;
 	pthread_t p = pthread_self();
@@ -22,7 +24,9 @@ void* rumble_smtp_init(void* m) {
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
     session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
-
+	myName = rrdict(master->_core.conf, "servername");
+	myName = myName ? myName : "??";
+	tmp = (char*) malloc(100);
 	#if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
 		#ifdef PTW32_CDECL
 				pp = (void*) p.p;
@@ -40,24 +44,27 @@ void* rumble_smtp_init(void* m) {
         session.flags = 0;
         session._tflags += 0x00100000; // job count ( 0 through 4095)
         session.sender = 0;
+		now = time(0);
         
         #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        printf("<debug::comm> Accepted connection from %s on SMTP\n", session.client->addr);
+		strftime(tmp, 100, "%X", localtime(&now));
+        printf("<debug::comm> [%s] Accepted connection from %s on SMTP\n", tmp, session.client->addr);
         #endif
         
         // Check for hooks on accept()
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP );
-        if ( rc == RUMBLE_RETURN_OKAY) rumble_comm_send(sessptr, rumble_smtp_reply_code(220)); // Hello!
+		if ( rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_smtp_reply_code(220), myName); // Hello!
         
         // Parse incoming commands
         cmd = (char*) malloc(5);
         arg = (char*) malloc(1024);
-		if (!cmd || !arg) { fprintf(stderr, "calloc() failed! (this is bad)\n"); exit(1); }
+		if (!cmd || !arg) merror();
         while ( rc != RUMBLE_RETURN_FAILURE ) {
             memset(cmd, 0, 5);
             memset(arg, 0, 1024);
             line = rumble_comm_read(sessptr);
+			rc = 421;
             if ( !line ) break;
 			rc = 500; // default return code is "500 unknown command thing"
             if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
@@ -80,9 +87,12 @@ void* rumble_smtp_init(void* m) {
         }
         // Cleanup
         #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        printf("<debug::comm> Closed connection from %s on SMTP\n", session.client->addr);
+		now = time(0);
+        strftime(tmp, 100, "%X", localtime(&now));
+        printf("<debug::comm> [%s] Closing connection from %s on SMTP\n", tmp, session.client->addr);
         #endif
-        rumble_comm_send(sessptr, rumble_smtp_reply_code(221)); // bye!
+		if ( rc == 421 ) rumble_comm_send(sessptr, rumble_smtp_reply_code(421422)); // timeout!
+        else rumble_comm_send(sessptr, rumble_smtp_reply_code(221220)); // bye!
 		
         close(session.client->socket);
         free(arg);
@@ -123,69 +133,63 @@ void* rumble_smtp_init(void* m) {
 
 // Command specific routines
 ssize_t rumble_server_smtp_mail(masterHandle* master, sessionHandle* session, const char* argument) {
-	char *raw, *user, *domain, *flags;
 	ssize_t rc;
 	uint32_t max,size;
+
     // First, check for the right sequence of commands.
-    if ( !(session->flags & RUMBLE_SMTP_HAS_HELO) ) return 503; 
-    if ( (session->flags & RUMBLE_SMTP_HAS_MAIL) ) return 503;
-    raw = (char*) calloc(1,1000);
-    user = (char*) calloc(1,128);
-    domain = (char*) calloc(1,128); // RFC says 64, but that was before i18n
-    flags = (char*) calloc(1,512); // esmtp flags
-	if (!raw || !user || !domain || !flags) merror();
-    if (sscanf(argument, "%*4c:%1000c", raw)) {
-    
-		// Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
-		session->sender = rumble_parse_mail_address(raw);
-		if (session->sender) {
-			// Fire events scheduled for pre-processing run
-			rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
-			if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
-				rumble_free_address(session->sender);
-				return rc;
-			}
-			max = rumble_config_int(master, "messagesizelimit");
-			size = atoi(rumble_get_dictionary_value(session->sender->flags, "SIZE"));
-			if ( max != 0 && size != 0 && size > max ) {
-				rumble_free_address(session->sender);
-				return 552; // message too big.
-			}
+    if ( !(session->flags & RUMBLE_SMTP_HAS_HELO) ) return 503;  // We need a HELO/EHLO first
+    if ( (session->flags & RUMBLE_SMTP_HAS_MAIL) ) return 503;   // And we shouldn't have gotten a MAIL FROM yet
 
-			// Look for a BATV signature, and if found, confirm that it's valid
-			if ( strstr(session->sender->tag, "prvs=") ) {
-				rumbleKeyValuePair* entry;
-				cvector_element* el;
-				for ( el = master->_core.batv->first; el != NULL; el = el->next ) {
-					entry = (rumbleKeyValuePair*) el->object;
-					if ( !strcmp(entry->key, session->sender->tag) ) {
-						cvector_delete_at(master->_core.batv, el);
-						session->flags |= RUMBLE_SMTP_HAS_BATV;
-						free((char*) entry->key);
-						free(entry);
-						break;
-					}
-				}
-				if ( !(session->flags & RUMBLE_SMTP_HAS_BATV) ) {
-					rumble_free_address(session->sender);
-					return 530; // bounce is invalid or too old.
+	// Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld>
+	session->sender = rumble_parse_mail_address(argument);
+	if (session->sender) {
+
+		// Fire events scheduled for pre-processing run
+		rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
+		if ( rc != RUMBLE_RETURN_OKAY ) { // Something went wrong, let's clean up and return.
+			rumble_free_address(session->sender);
+			return rc;
+		}
+		max = rumble_config_int(master, "messagesizelimit");
+		size = atoi(rumble_get_dictionary_value(session->sender->flags, "SIZE"));
+		if ( max != 0 && size != 0 && size > max ) {
+			rumble_free_address(session->sender);
+			return 552; // message too big.
+		}
+
+		// Look for a BATV signature, and if found, confirm that it's valid
+		if ( strstr(session->sender->tag, "prvs=") ) {
+			rumbleKeyValuePair* entry;
+			cvector_element* el;
+			for ( el = master->_core.batv->first; el != NULL; el = el->next ) {
+				entry = (rumbleKeyValuePair*) el->object;
+				if ( !strcmp(entry->key, session->sender->tag) ) {
+					cvector_delete_at(master->_core.batv, el);
+					session->flags |= RUMBLE_SMTP_HAS_BATV;
+					free((char*) entry->key);
+					free(entry);
+					break;
 				}
 			}
-
-			// Check if it's a supposed (but fake or very very old) bounce
-			if ( !strlen(session->sender->domain) && !(session->flags & RUMBLE_SMTP_HAS_BATV) ) {
+			if ( !(session->flags & RUMBLE_SMTP_HAS_BATV) ) {
 				rumble_free_address(session->sender);
 				return 530; // bounce is invalid or too old.
 			}
-    
-    
-			// Fire post-processing hooks.
-			rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
-			if ( rc != RUMBLE_RETURN_OKAY ) return rc;
-    
-			session->flags |= RUMBLE_SMTP_HAS_MAIL;
-			return 250;
 		}
+
+		// Check if it's a supposed (but fake or very very old) bounce
+		if ( !strlen(session->sender->domain) && !(session->flags & RUMBLE_SMTP_HAS_BATV) ) {
+			rumble_free_address(session->sender);
+			return 530; // bounce is invalid or too old.
+		}
+    
+    
+		// Fire post-processing hooks.
+		rc = rumble_server_schedule_hooks(master,session,RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
+		if ( rc != RUMBLE_RETURN_OKAY ) return rc;
+    
+		session->flags |= RUMBLE_SMTP_HAS_MAIL;
+		return 250;
 	}
 	return 501; // Syntax error in MAIL FROM parameter
 }
@@ -258,10 +262,10 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
 	int rc;
     char* tmp = (char*) malloc(128);
-	rc = sscanf(argument, "%128[a-zA-Z0-9].%1[a-zA-Z0-9]%1[a-zA-Z0-9.]", tmp, tmp, tmp);
+	rc = sscanf(argument, "%128[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
 	if ( rc < 3 ) {
 		free(tmp);
-		return 501; // simple test for QDN
+		return 504552; // simple test for FQDN
 	}
 	free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_HELO;
@@ -272,10 +276,10 @@ ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
 	int rc;
     char* tmp = (char*) malloc(128);
-	rc = sscanf(argument, "%128[a-zA-Z0-9].%1[a-zA-Z0-9]%1[a-zA-Z0-9.]", tmp, tmp, tmp);
+	rc = sscanf(argument, "%128[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
 	if ( rc < 3 ) {
 		free(tmp);
-		return 501; // simple test for QDN
+		return 504552; // simple test for FQDN
 	}
 	free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
@@ -284,10 +288,11 @@ ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, co
     rumble_comm_send(session, "250-VRFY\r\n");
     rumble_comm_send(session, "250-PIPELINING\r\n");
     rumble_comm_send(session, "250-8BITMIME\r\n");
-    rumble_comm_send(session, "250-AUTH CRAM-MD5 DIGEST-MD5 PLAIN\r\n");
+    rumble_comm_send(session, "250-AUTH CRAM-MD5 DIGEST-MD5 PLAIN LOGIN\r\n");
     rumble_comm_send(session, "250-DELIVERBY 900\r\n");
     rumble_comm_send(session, "250-DSN\r\n");
     rumble_comm_send(session, "250-SIZE\r\n");
+	rumble_comm_send(session, "250-ENHANCEDSTATUSCODES\r\n");
     rumble_comm_send(session, "250 XVERP\r\n");
 	rsdict(session->dict, "helo", argument);
     return RUMBLE_RETURN_IGNORE;

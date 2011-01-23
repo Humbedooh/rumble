@@ -62,19 +62,16 @@ ssize_t rumble_greylist(sessionHandle* session) {
     }
     // If no such triplet, create one and add it to the vector.
     if ( n == -1 ) {
-        rumble_triplet* new = malloc(sizeof(rumble_triplet));
-        new->what = str;
-        new->when = now;
-        cvector_add(&rumble_greyList, new);
+        rumble_triplet* New = (rumble_triplet*) malloc(sizeof(rumble_triplet));
+        New->what = str;
+        New->when = now;
+        cvector_add(&rumble_greyList, New);
         n = 0;
     }
     else free(str);
     // If the check failed, we tell the client to hold off for 15 minutes.
     if ( n < GREYLIST_MIN_AGE ) {
-        char* msg = malloc(200);
-        sprintf(msg, "451 Grey-listed for %u seconds.\r\n", GREYLIST_MIN_AGE - n  );
-        rumble_comm_send(session, msg);
-        free(msg);
+        rcprintf(session, "451 4.7.1 Grey-listed for %u seconds. See http://www.greylisting.org\r\n", GREYLIST_MIN_AGE - n  );
         return RUMBLE_RETURN_IGNORE; // Tell rumble to ignore the command quietly.
     }
     // Otherwise, we just return with EXIT_SUCCESS and let the server continue.

@@ -163,8 +163,13 @@ extern "C" {
 #define RUMBLE_SMTP_HAS_RCPT            0x00000004   // Has valid RCPT
 #define RUMBLE_SMTP_HAS_EHLO            0x00000009   // Has extended HELO
 #define RUMBLE_SMTP_HAS_BATV			0x00000010	 // Has valid BATV signature
+
+// POP3 session flags
+#define RUMBLE_POP3_HAS_USER			0x00000001	 // Has provided a username (but no password)
+#define RUMBLE_POP3_HAS_AUTH			0x00000002	 // Has provided both username and password
     
-#define RUMBLE_ROAD_MASK                0x00FF0000   // Command sequence mask
+#define RUMBLE_ROAD_MASK                0x000000FF   // Command sequence mask
+
 
     
 // Thread flags
@@ -222,7 +227,9 @@ typedef struct {
     uint32_t        flags;
     uint32_t        _tflags;
     void*           _master;
+	void*			_svcHandle;
 } sessionHandle;
+
 
 typedef struct {
     const char*         title;
@@ -286,6 +293,7 @@ typedef struct {
     char*               domain;
     uint32_t            type;
     char*               arg;
+	char*				hash;
 } userAccount;
 
 typedef struct {
@@ -306,6 +314,17 @@ typedef struct {
 	cvector*		flags;
 } rumble_sendmail_response;
 
+
+typedef struct {
+	userAccount*	account;
+	cvector*		letters;
+} pop3Session;
+
+typedef struct {
+	uint32_t		id;
+	uint32_t		size;
+	char*			fid;
+} pop3Letter;
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
@@ -340,7 +359,7 @@ uint32_t rumble_config_int(masterHandle* master, const char* key);
 
 uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
-userAccount* rumble_get_account(masterHandle* master, const char* user, const char* domain);
+userAccount* rumble_account_data(sessionHandle* session, const char* user, const char* domain);
 address* rumble_parse_mail_address(const char* addr);
 rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, address* sender, address* recipient);
 

@@ -169,7 +169,7 @@ void* rumble_worker_process(void* m) {
         // Local delivery?
         if ( rumble_domain_exists(sess, item->recipient->domain)) {
             printf("%s is local domain, looking for user %s@%s\n", item->recipient->domain, item->recipient->user, item->recipient->domain);
-            user = rumble_get_account(master, item->recipient->user, item->recipient->domain);
+            user = rumble_account_data(sess, item->recipient->user, item->recipient->domain);
             if ( user ) {
                 uint32_t fsize;
                 item->account = user;
