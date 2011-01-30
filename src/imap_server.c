@@ -66,7 +66,7 @@ void* rumble_imap_init(void* m) {
         arg = (char*) malloc(1024);
         if (!cmd || !arg || !tag) merror();
         while ( rc != RUMBLE_RETURN_FAILURE ) {
-            memset(tag, , 32);
+            memset(tag, 0, 32);
             memset(cmd, 0, 32);
             memset(arg, 0, 1024);
             line = rumble_comm_read(sessptr);
@@ -162,51 +162,143 @@ void* rumble_imap_init(void* m) {
 }
 
 
-ssize_t rumble_server_imap_login(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_login(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+	char user[512], pass[512];
+	address* addr;
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	if ( sscanf(arg, "%s %s", user, pass) == 2 ) {
+		addr = rumble_parse_mail_address(user);
+		if ( addr ) {
+			imap->account = rumble_account_data(session, addr->user, addr->domain);
+			if ( imap->account ) {
+				rcprintf(session, "%s OK Welcome!\r\n", tag);
+			}
+			else {
+				rcprintf(session, "%s NO Incorrect username or password!\r\n", tag);
+			}
+		}
+		else {
+			rcprintf(session, "%s NO Incorrect username or password!\r\n", tag);
+		}
+	}
+	else {
+		rcprintf(session, "%s NO Incorrect username or password!\r\n", tag);
+	}
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_authenticate(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_authenticate(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_delete(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_subscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_unsubscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_lsub(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_status(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_append(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_delete(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_check(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_close(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_expunge(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_search(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_subscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_unsubscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 
-ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+	return RUMBLE_RETURN_IGNORE;
+}
 
-ssize_t rumble_server_imap_uid(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { }
+ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_lsub(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_status(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_append(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_check(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_close(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_expunge(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_search(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
+
+ssize_t rumble_server_imap_uid(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+
+	return RUMBLE_RETURN_IGNORE;
+}
 

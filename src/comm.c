@@ -47,7 +47,6 @@ socketHandle comm_init(masterHandle* m, const char* port)
                         fprintf(stderr, "server: failed to bind\n");
                         exit(0);
                 }
-        printf ("listening...\n");
         #else
 	int rv;
         struct addrinfo* servinfo, *p;

@@ -35,7 +35,7 @@ void rumble_master_init(masterHandle* master) {
     master->imap.init_hooks = cvector_init();
     master->imap.threads = cvector_init();
     master->imap.handles = cvector_init();
-    //master->imap.init = rumble_imap_init;
+    master->imap.init = rumble_imap_init;
     pthread_mutex_init(&master->imap.mutex,0);
     
     master->_core.modules = cvector_init();
@@ -88,6 +88,18 @@ int main(int argc, char** argv) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->pop3.threads, t);
             pthread_create(t, NULL, master->pop3.init, master);
+        }
+        printf("OK\n");
+    }
+
+	if ( rumble_config_int(master, "enableimap4") ) {
+		int n;
+        printf("Launching IMAP4 service...");
+        master->imap.socket = comm_init(master, rumble_config_str(master, "imap4port"));
+        for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
+            t = (pthread_t*) malloc(sizeof(pthread_t));
+            cvector_add(master->imap.threads, t);
+            pthread_create(t, NULL, master->imap.init, master);
         }
         printf("OK\n");
     }

@@ -382,6 +382,12 @@ typedef struct {
 	rumble_mailbag*	bag;
 } pop3Session;
 
+typedef struct {
+	rumble_mailbox*	account;
+	rumble_mailbag*	bag;
+	uint32_t		folder;
+} imap4Session;
+
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
