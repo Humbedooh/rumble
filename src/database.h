@@ -22,5 +22,9 @@
 #define rumble_database_cleanup(a) sqlite3_finalize((sqlite3_stmt*) a);
 #define RUMBLE_DB_RESULT SQLITE_ROW
 #endif
+
+extern masterHandle* rumble_database_master_handle;
+void rumble_database_update_domains();
+
 #endif	/* DATABASE_H */
 

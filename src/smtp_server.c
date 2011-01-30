@@ -2,12 +2,12 @@
 #include "servers.h"
 #include "sqlite3.h"
 #include "comm.h"
+#include "private.h"
 
 // Main loop
 void* rumble_smtp_init(void* m) {
     masterHandle* master = (masterHandle*) m;
 	
-
     // Initialize a session handle and wait for incoming connections.
     sessionHandle session;
     sessionHandle* sessptr = &session;
@@ -19,6 +19,7 @@ void* rumble_smtp_init(void* m) {
     sessionHandle* s;
 	void* pp,*tp;
 	pthread_t p = pthread_self();
+	rumble_rw_start_read(master->domains.rrw);
 	session.dict = cvector_init();
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
@@ -27,6 +28,7 @@ void* rumble_smtp_init(void* m) {
 	myName = rrdict(master->_core.conf, "servername");
 	myName = myName ? myName : "??";
 	tmp = (char*) malloc(100);
+	rumble_rw_stop_read(master->domains.rrw);
 	#if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
 		#ifdef PTW32_CDECL
 				pp = (void*) p.p;
@@ -215,7 +217,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 		}
             
 		// Check if recipient is local
-		isLocalDomain = rumble_domain_exists(session, recipient->domain);
+		isLocalDomain = rumble_domain_exists(recipient->domain);
 		isLocalUser = isLocalDomain ? rumble_account_exists(session, recipient->user, recipient->domain) : 0;
     
 		if ( isLocalUser )     {
@@ -362,8 +364,8 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
 
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
         void* state = rumble_database_prepare(master->_core.db, \
-                "INSERT INTO queue (fid, sender, user, domain, flags) VALUES (%s,%s,%s,%s,%s)", \
-                fid, session->sender->raw, el->user, el->domain, session->sender->_flags);
+                "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", \
+				fid, session->sender->raw, el->raw, session->sender->_flags);
         rumble_database_run(state);
         rumble_database_cleanup(state);
     }

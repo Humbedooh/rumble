@@ -22,6 +22,13 @@ void rumble_database_load(masterHandle* master);
 masterHandle* rumble_get_master();
 void rumble_tag_file(FILE* fp, const char* host, const char* fid, const char* usr, const char* dmn );
 uint32_t rumble_copy_mail(masterHandle* master, const char* fid, const char* usr, const char* dmn, char** pfid);
+
+rumble_readerwriter* rumble_rw_init();
+void rumble_rw_start_read(rumble_readerwriter* rrw);
+void rumble_rw_stop_read(rumble_readerwriter* rrw);
+void rumble_rw_start_write(rumble_readerwriter* rrw);
+void rumble_rw_stop_write(rumble_readerwriter* rrw);
+
 #ifdef	__cplusplus
 }
 #endif

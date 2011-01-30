@@ -28,12 +28,11 @@ address* rumble_parse_mail_address(const char* addr) {
 	usr->_flags = (char*) calloc(1,128);
 	tmp = (char*) calloc(1,256);
 	
-	addr = strchr(addr, '<');
-	if ( addr ) {
+	if ( strchr(addr, '<') ) {
+		addr = strchr(addr, '<');
 		// First, try to scan for "stuff <user@domain> FLAGS"
 		if ( sscanf(addr, "<%256[^@]@%128[^>]>%128[A-Z= %-]", tmp, usr->domain, usr->_flags) < 2) {
 			// Then, try scanning for "<> FLAGS" (bounce message)
-			printf("not regular addy, trying bouncy\n");
 			sscanf(addr, "<%128[^>]>%128[A-Z= %-]", tmp, usr->_flags);
 		}
 		// Parse any flags we find
@@ -47,6 +46,9 @@ address* rumble_parse_mail_address(const char* addr) {
 		}
 		sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags);
 	}
+	else if ( addr && strlen(addr) ) {
+		sscanf(addr, "%256[^@]@%128c", usr->user, usr->domain);
+	}
 	free(tmp);
 	return usr;
 	
@@ -57,8 +59,9 @@ char* rumble_comm_read(sessionHandle* session) {
     ssize_t rc = 0;
     uint32_t p;
 	struct timeval t;
-	char* ret = (char*) calloc(1,1025);
 	signed int f;
+	char* ret = (char*) calloc(1,1025);
+	
 	if (!ret) { perror("Calloc failed!"); exit(1);}
 
 	t.tv_sec = 5;

@@ -1,4 +1,5 @@
 #include "rumble.h"
+#include "private.h"
 
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
 	#undef malloc
@@ -82,4 +83,65 @@ uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, con
 		*pfid = nfid;
     }
     return fsize;
+}
+
+
+/* rumble_readerwriter:
+ * A simple reader/writer mechanism that allows multiple readers to access the same memory, but grants
+ * exclusive access whenever a writer requests write access.
+ */
+
+rumble_readerwriter* rumble_rw_init() {
+	rumble_readerwriter* rrw = (rumble_readerwriter*) malloc(sizeof(rumble_readerwriter));
+	if (!rrw) merror();
+	rrw->readers = 0;
+	rrw->writers = 0;
+	pthread_mutex_init(&rrw->mutex,0);
+	pthread_cond_init(&rrw->reading,0);
+	pthread_cond_init(&rrw->writing,0);
+	return rrw;
+}
+
+void rumble_rw_start_read(rumble_readerwriter* rrw) {
+	pthread_mutex_lock(&rrw->mutex);
+	/* Wait for any writers working (or queued for work) to do their stuff. */
+	while ( rrw->writers ) {
+		pthread_cond_wait(&rrw->writing, &rrw->mutex);
+	}
+	/* Announce that we're reading now. */
+	rrw->readers++;
+	pthread_mutex_unlock(&rrw->mutex);
+}
+
+void rumble_rw_stop_read(rumble_readerwriter* rrw) {
+	pthread_mutex_lock(&rrw->mutex);
+	rrw->readers--;
+	/* If a writer is waiting; Signal that we've stopped reading */
+	if (rrw->writers) pthread_cond_broadcast(&rrw->reading);
+	pthread_mutex_unlock(&rrw->mutex);
+}
+
+void rumble_rw_start_write(rumble_readerwriter* rrw) {
+	pthread_mutex_lock(&rrw->mutex);
+	/* Wait for any previous writer to finish */
+	while ( rrw->writers ) {
+		pthread_cond_wait(&rrw->writing, &rrw->mutex);
+	}
+	/* Let readers know that we want to write */
+	rrw->writers++;
+	/* Wait for all readers to quit */
+	while ( rrw->readers ) {
+		pthread_cond_wait(&rrw->reading, &rrw->mutex);
+	}
+	pthread_mutex_unlock(&rrw->mutex);
+}
+
+void rumble_rw_stop_write(rumble_readerwriter* rrw) {
+	pthread_mutex_lock(&rrw->mutex);
+	if ( rrw->writers ) {
+		rrw->writers--;
+	}
+	/* Signal that we've stopped writing now */
+	pthread_cond_broadcast(&rrw->writing);
+	pthread_mutex_unlock(&rrw->mutex);
 }

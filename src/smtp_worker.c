@@ -61,6 +61,9 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 	
 	c.socket = comm_open(master, mailserver, 25);
 	me = rumble_get_dictionary_value(master->_core.conf, "servername");
+
+	FD_ZERO(&c.fd);
+	FD_SET(c.socket, &c.fd);
 	
 	// Append BATV (unless we already have BATV or VERP)
 	if ( !strlen(sender->tag) ) {
@@ -136,7 +139,7 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 void* rumble_worker_process(void* m) {
     mqueue* item;
 	char* tmp;
-    userAccount* user;
+    rumble_mailbox* user;
 	void* state;
     ssize_t rc;
     masterHandle* master = (masterHandle*) m;
@@ -167,7 +170,7 @@ void* rumble_worker_process(void* m) {
 		}
 
         // Local delivery?
-        if ( rumble_domain_exists(sess, item->recipient->domain)) {
+        if ( rumble_domain_exists(item->recipient->domain)) {
             printf("%s is local domain, looking for user %s@%s\n", item->recipient->domain, item->recipient->user, item->recipient->domain);
             user = rumble_account_data(sess, item->recipient->user, item->recipient->domain);
             if ( user ) {
@@ -178,11 +181,13 @@ void* rumble_worker_process(void* m) {
                 rc = rumble_server_schedule_hooks(master, (sessionHandle*)item, RUMBLE_HOOK_PARSER); // hack, hack, hack
                 if ( rc == RUMBLE_RETURN_OKAY ) {
                     if ( user->type & RUMBLE_MTYPE_MBOX ) { // mail box
+						
 						char *ofilename, *nfilename;
                         const char* path;
 
+						printf("Delivering to mailbox %s @ %s...\n", user->user, user->domain->name);
 						// Start by making a copy of the letter
-						fsize = rumble_copy_mail(master, item->fid,user->user,user->domain, (char**) &item->fid);
+						fsize = rumble_copy_mail(master, item->fid,user->user,user->domain->name, (char**) &item->fid);
 						if ( !item->fid || !fsize ) { fprintf(stderr, "<smtp::worker> Bad mail file, aborting\n"); continue;}
 
                         // move file to user's inbox
@@ -210,28 +215,24 @@ void* rumble_worker_process(void* m) {
                     if ( user->type & RUMBLE_MTYPE_ALIAS ) { // mail alias
                         if ( strlen(user->arg)) {
                             char* pch = strtok(user->arg," ");
-                            char* usr = (char*) calloc(1,128);
-                            char* dmn = (char*) calloc(1,128);
+                            char* email = (char*) calloc(1,256);
                             while ( pch != NULL ) {
-                                memset(usr,0,128);
-                                memset(dmn,0,128);
+                                memset(email,0,128);
                                 if ( strlen(pch) >= 3 ) {
 									char* loops = (char*) calloc(1,4);
 									sprintf(loops,"%u",item->loops);
-                                    if (sscanf(pch, "%128[^@]@%128c", usr, dmn)) {
-                                        rumble_string_lower(dmn);
-                                        rumble_string_lower(usr);
+                                    if (sscanf(pch, "%256c", email)) {
+                                        rumble_string_lower(email);
 										state = rumble_database_prepare(master->_core.db, \
-										"INSERT INTO queue (loops, fid, sender, user, domain, flags) VALUES (%s,%s,%s,%s,%s,%s)", \
-                                         loops, item->fid, item->sender->raw, usr, dmn, item->flags);
+										"INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)", \
+                                         loops, item->fid, item->sender->raw, email, item->flags);
 										rumble_database_run(state);
 										rumble_database_cleanup(state);
                                     }
                                 }
                                 pch = strtok(NULL, " ");
                             }
-							free(usr);
-							free(dmn);
+							free(email);
                         }
                         // done here!
                     }
@@ -282,8 +283,8 @@ void* rumble_worker_process(void* m) {
 				
 				sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
 				state = rumble_database_prepare( master->_core.db, \
-                        "INSERT INTO queue (time, loops, fid, sender, user, domain, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)", \
-						item->loops, item->fid, tmp, item->recipient->user, item->recipient->domain, item->flags);
+                        "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)", \
+						item->loops, item->fid, tmp, item->recipient->raw, item->flags);
                 rumble_database_run(state);
 				rumble_database_cleanup(state);
 				memset(tmp, 0, 256);
@@ -307,7 +308,7 @@ void* rumble_worker_init(void* m) {
     int x;
 	char tmp[1024];
     const char* ignmx;
-    const char* statement = "SELECT time, loops, fid, sender, user, domain, flags, id FROM queue WHERE time <= strftime('%s','now') LIMIT 1";
+    const char* statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= strftime('%s','now') LIMIT 1";
 	int rc;
     sqlite3_stmt* state;
     sqlite3_prepare_v2((sqlite3*) master->_core.db, statement, -1, &state, NULL);
@@ -344,20 +345,23 @@ void* rumble_worker_init(void* m) {
                 memcpy((char*) item->fid, sqlite3_column_text(state,2), l);
             
                 // sender
+				memset(tmp, 0, 1024);
                 l = sqlite3_column_bytes(state,3);
-				item->sender = rumble_parse_mail_address((const char*) sqlite3_column_text(state,3));
+                memcpy((char*) tmp, sqlite3_column_text(state,3), l);
+				item->sender = rumble_parse_mail_address(tmp);
 				            
                 // recipient
-				sprintf(tmp, "<%s@%s>", (const char*) sqlite3_column_text(state,4), (const char*) sqlite3_column_text(state,5));
-				item->recipient = rumble_parse_mail_address(tmp);
 				memset(tmp, 0, 1024);
+				l = sqlite3_column_bytes(state,4);
+				memcpy((char*) tmp, sqlite3_column_text(state,4), l);
+				item->recipient = rumble_parse_mail_address(tmp);
             
                 //flags
-                l = sqlite3_column_bytes(state,6);
+                l = sqlite3_column_bytes(state,5);
                 item->flags = (char*) calloc(1,1);
-                memcpy((char*) item->flags, sqlite3_column_text(state,6), l);
+                memcpy((char*) item->flags, sqlite3_column_text(state,5), l);
             
-                mid = sqlite3_column_int(state, 7);
+                mid = sqlite3_column_int(state, 6);
             
                 sqlite3_reset(state);
                 sql = (char*) calloc(1,128);

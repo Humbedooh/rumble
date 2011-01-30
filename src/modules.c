@@ -26,6 +26,7 @@ void rumble_modules_load(masterHandle* master) {
     
 	rumble_module_info* modinfo;
 	char* error = 0;
+
     for ( line = master->_core.conf->first; line != NULL; line = line->next ) {
         el = (rumbleKeyValuePair*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
@@ -77,5 +78,21 @@ void rumble_modules_load(masterHandle* master) {
             modinfo->file = el->value;
             //dlclose(handle);
         }
+#ifdef RUMBLE_LUA
+		else if ( !strcmp(el->key, "loadscript")) {
+			lua_State* L;
+			master->_core.lua = (lua_State*) luaL_newstate();
+			L = (lua_State*) master->_core.lua;
+			luaL_openlibs(L);
+			lua_newtable((lua_State*) master->_core.lua);
+			if ( luaL_loadfile(L, el->value) ) {
+				fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
+			}
+			if ( lua_pcall(L, 0, LUA_MULTRET, 0) ) {
+				fprintf(stderr, "Failed to run script: %s\n", lua_tostring(L, -1));
+			}
+
+		}
+#endif
     }
 }

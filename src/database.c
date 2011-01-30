@@ -1,8 +1,10 @@
 #include "rumble.h"
+#include "private.h"
 #include "database.h"
 #include <stdarg.h>
+masterHandle* rumble_database_master_handle = 0;
 
-
+/* Database constructors and wrappers */
 
 void rumble_database_load(masterHandle* master) {
     char* dbpath = (char*) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
@@ -22,124 +24,6 @@ void rumble_database_load(masterHandle* master) {
     free(mailpath);
     printf("OK\n");    
 }
-
-
-void rumble_free_account(userAccount* user) {
-    if ( user->arg ) free(user->arg);
-    if ( user->domain) free(user->domain);
-    if ( user->user) free(user->user);
-	if ( user->hash) free(user->hash);
-    user->arg = 0;
-    user->domain = 0;
-    user->user = 0;
-}
-
-uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
-	int rc;
-    void* state;
-	masterHandle* master = (masterHandle*) session->_master;
-	state = rumble_database_prepare(master->_core.db,
-		"SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
-		domain, user);
-    rc = rumble_database_run(state);
-    rumble_database_cleanup(state);
-    return ( rc == RUMBLE_DB_RESULT) ? 1 : 0;
-}
-
-userAccount* rumble_account_data(sessionHandle* session, const char* user, const char* domain) {
-	int rc;
-    void* state;
-	char* tmp;
-	userAccount* acc;
-	masterHandle* master = (masterHandle*) session->_master;
-	state = rumble_database_prepare(master->_core.db,
-		"SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
-		domain, user);
-    rc = rumble_database_run(state);
-    acc = NULL;
-	if ( rc == RUMBLE_DB_RESULT ) { 
-		int l;
-		acc = (userAccount*) malloc(sizeof(userAccount));
-		if (!acc) merror();
-		printf("got a result, fetching it...\n");
-		// Account UID
-		acc->uid = sqlite3_column_int((sqlite3_stmt*) state, 0);
-
-		// Account Domain
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
-		acc->domain = (char*) calloc(1,l+1);
-		memcpy((char*) acc->domain, sqlite3_column_text((sqlite3_stmt*) state,1), l);
-
-		// Account Username
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,2);
-		acc->user = (char*) calloc(1,l+1);
-		memcpy((char*) acc->user, sqlite3_column_text((sqlite3_stmt*) state,2), l);
-
-		// Password (hashed)
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,3);
-		acc->hash = (char*) calloc(1,l+1);
-		memcpy((char*) acc->hash, sqlite3_column_text((sqlite3_stmt*) state,3), l);
-
-		// Account type
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,4);
-        tmp = (char*) calloc(1,l+1);
-		if (!tmp) merror();
-        memcpy((char*) tmp, sqlite3_column_text((sqlite3_stmt*) state,4), l);
-        rumble_string_lower(tmp);
-        acc->type = RUMBLE_MTYPE_MBOX;
-        if (!strcmp(tmp, "alias")) acc->type = RUMBLE_MTYPE_ALIAS;
-        else if (!strcmp(tmp, "mod")) acc->type = RUMBLE_MTYPE_MOD;
-        else if (!strcmp(tmp, "feed")) acc->type = RUMBLE_MTYPE_FEED;
-        free(tmp);
-
-		// Account args
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,5);
-		acc->arg = (char*) calloc(1,l);
-		memcpy((char*) acc->arg, sqlite3_column_text((sqlite3_stmt*) state,5), l);
-
-	}
-	else printf("no such user or something: %u\n", rc);
-	rumble_database_cleanup(state);
-
-    return acc;
-}
-
-void rumble_pop3_populate(sessionHandle* session, pop3Session* pops) {
-	int rc,l;
-    void* state;
-	char* tmp;
-	pop3Letter* letter;
-	masterHandle* master = (masterHandle*) session->_master;
-	state = rumble_database_prepare(master->_core.db, "SELECT id, fid, size FROM mbox WHERE uid = %u", pops->account->uid);
-    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
-		letter = (pop3Letter*) malloc(sizeof(pop3Letter));
-
-		// Letter ID
-		letter->id = sqlite3_column_int((sqlite3_stmt*) state, 0);
-
-		// Letter File ID
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
-		letter->fid = (char*) calloc(1,l+1);
-		memcpy((char*) letter->fid, sqlite3_column_text((sqlite3_stmt*) state,1), l);
-
-		// Letter Size
-		letter->size = sqlite3_column_int((sqlite3_stmt*) state, 2);
-
-		cvector_add(pops->letters, letter);
-	}
-	rumble_database_cleanup(state);
-}
-
-uint32_t rumble_domain_exists(sessionHandle* session, const char* domain) {
-	masterHandle* master = (masterHandle*) session->_master;
-	int rc;
-    void* state;
-	state = rumble_database_prepare(master->_core.db, "SELECT 1 FROM domains WHERE domain = %s LIMIT 1", domain);
-    rc = rumble_database_run(state);
-    rumble_database_cleanup(state);
-    return ( rc == RUMBLE_DB_RESULT) ? 1 : 0;
-}
-
 
 // Wrapper for the SQL prepare statement
 void* rumble_database_prepare(void* db, const char* statement, ...) {
@@ -211,3 +95,272 @@ void* rumble_database_prepare(void* db, const char* statement, ...) {
 	va_end(vl);
 	return returnObject;
 }
+
+
+void rumble_free_account(rumble_mailbox* user) {
+    if ( user->arg ) free(user->arg);
+    if ( user->user) free(user->user);
+	if ( user->hash) free(user->hash);
+	if ( user->domain ) {
+		if (user->domain->name) free(user->domain->name);
+		if (user->domain->path) free(user->domain->path);
+		free(user->domain);
+	}
+    user->arg = 0;
+    user->domain = 0;
+    user->user = 0;
+}
+
+uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain) {
+	int rc;
+    void* state;
+	masterHandle* master = (masterHandle*) session->_master;
+	state = rumble_database_prepare(master->_core.db,
+		"SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
+		domain, user);
+    rc = rumble_database_run(state);
+    rumble_database_cleanup(state);
+    return ( rc == RUMBLE_DB_RESULT) ? 1 : 0;
+}
+
+rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, const char* domain) {
+	int rc;
+    void* state;
+	char* tmp;
+	rumble_mailbox* acc;
+	masterHandle* master = (masterHandle*) session->_master;
+	state = rumble_database_prepare(master->_core.db,
+		"SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",\
+		domain, user);
+    rc = rumble_database_run(state);
+    acc = NULL;
+	if ( rc == RUMBLE_DB_RESULT ) { 
+		int l;
+		acc = (rumble_mailbox*) malloc(sizeof(rumble_mailbox));
+		if (!acc) merror();
+		
+		// Account UID
+		acc->uid = sqlite3_column_int((sqlite3_stmt*) state, 0);
+
+		// Account Domain struct
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		acc->domain = rumble_domain_copy((const char*) sqlite3_column_text((sqlite3_stmt*) state,1));
+
+		// Account Username
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,2);
+		acc->user = (char*) calloc(1,l+1);
+		memcpy((char*) acc->user, sqlite3_column_text((sqlite3_stmt*) state,2), l);
+
+		// Password (hashed)
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,3);
+		acc->hash = (char*) calloc(1,l+1);
+		memcpy((char*) acc->hash, sqlite3_column_text((sqlite3_stmt*) state,3), l);
+
+		// Account type
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,4);
+        tmp = (char*) calloc(1,l+1);
+		if (!tmp) merror();
+        memcpy((char*) tmp, sqlite3_column_text((sqlite3_stmt*) state,4), l);
+        rumble_string_lower(tmp);
+        acc->type = RUMBLE_MTYPE_MBOX;
+        if (!strcmp(tmp, "alias")) acc->type = RUMBLE_MTYPE_ALIAS;
+        else if (!strcmp(tmp, "mod")) acc->type = RUMBLE_MTYPE_MOD;
+        else if (!strcmp(tmp, "feed")) acc->type = RUMBLE_MTYPE_FEED;
+        free(tmp);
+
+		// Account args
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,5);
+		acc->arg = (char*) calloc(1,l+1);
+		memcpy((char*) acc->arg, sqlite3_column_text((sqlite3_stmt*) state,5), l);
+
+	}
+	rumble_database_cleanup(state);
+
+    return acc;
+}
+
+
+/* rumble_domain_exists: Checks if a domain exists in the database. Returns 1 if true, 0 if false. */
+uint32_t rumble_domain_exists(const char* domain) {
+	uint32_t rc;
+	rumble_domain* dmn;
+	rc = 0;
+	rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
+	for ( dmn = (rumble_domain*) cvector_first(rumble_database_master_handle->domains.list); dmn != NULL; dmn = (rumble_domain*) cvector_next(rumble_database_master_handle->domains.list) ) {
+		if ( !strcmp(dmn->name, domain) ) { rc = 1; break; }
+	}
+	rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
+	return rc;
+}
+
+/* rumble_domain_copy: Returns a copy of the domain info */
+rumble_domain* rumble_domain_copy(const char* domain) {
+	rumble_domain *dmn, *rc;
+	rc = (rumble_domain*) malloc(sizeof(rumble_domain));
+	rc->id = 0;
+	rc->path = 0;
+	rc->name = 0;
+
+	rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
+	for ( dmn = (rumble_domain*) cvector_first(rumble_database_master_handle->domains.list); dmn != NULL; dmn = (rumble_domain*) cvector_next(rumble_database_master_handle->domains.list) ) {
+		if ( !strcmp(dmn->name, domain) ) { 
+			rc->name = (char*) calloc(1, strlen(dmn->name)+1);
+			rc->path = (char*) calloc(1, strlen(dmn->path)+1);
+			strcpy(rc->name, dmn->name);
+			strcpy(rc->path, dmn->path);
+			rc->id = dmn->id;
+			break;
+		}
+	}
+	rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
+	return rc;
+}
+
+
+
+/* LETTER HANDLING FUNCTIONS FOR SMTP, POP3 & IMAP4 */
+
+/* rumble_letters_retreive: Retreives all letters for an account and stores them in a mail bag struct */
+rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
+	int rc,l;
+    void* state;
+	rumble_mailbag* bag;
+	rumble_letter* letter;
+	bag = (rumble_mailbag*) malloc(sizeof(rumble_mailbag));
+	bag->size = 0;
+	bag->account = acc;
+	bag->contents = cvector_init();
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, read, delivered, folder, flags FROM mbox WHERE uid = %u", acc->uid);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		letter = (rumble_letter*) malloc(sizeof(rumble_letter));
+
+		// Letter ID
+		letter->id = sqlite3_column_int((sqlite3_stmt*) state, 0);
+
+		// Letter File ID
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		letter->fid = (char*) calloc(1,l+1);
+		memcpy((char*) letter->fid, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		// Letter Size
+		letter->size = sqlite3_column_int((sqlite3_stmt*) state, 2);
+
+		// Read?
+		letter->read = sqlite3_column_int((sqlite3_stmt*) state, 3) ? 1 : 0;
+
+		// Delivery date
+		letter->delivered = sqlite3_column_int((sqlite3_stmt*) state, 4);
+
+		// Folder
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,5);
+		letter->folder = (char*) calloc(1,l+1);
+		memcpy((char*) letter->folder, sqlite3_column_text((sqlite3_stmt*) state,5), l);
+
+		// Flags
+		letter->flags = sqlite3_column_int((sqlite3_stmt*) state, 6);
+
+		// UID
+		letter->uid = acc->uid;
+		
+		cvector_add(bag->contents, letter);
+		bag->size++;
+	}
+	rumble_database_cleanup(state);
+	bag->letters = (rumble_letter**) malloc(sizeof(rumble_letter)*bag->size);
+	l = 0;
+	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
+		bag->letters[l++] = letter;
+	}
+	return bag;
+}
+
+/* rumble_letters_purge: purges the mailbag, removing letters marked for deletion */
+uint32_t rumble_letters_purge(rumble_mailbag* bag) {
+	int r;
+	void* state;
+	const char* path;
+	rumble_letter* letter;
+	char tmp[256];
+	if (!bag) return 0;
+	path = strlen(bag->account->domain->path) ? bag->account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+	r = 0;
+	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
+		if ( letter->flags & RUMBLE_LETTER_DELETENOW ) { /* Delete it? */
+			sprintf(tmp, "%s/%s.msg", path, letter->fid);
+			unlink(tmp);
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %u", letter->id);
+			rumble_database_run(state);
+			rumble_database_cleanup(state);
+			r++;
+			free(letter->fid);
+			free(letter->folder);
+			free(letter);
+			cvector_delete(bag->contents);
+		}
+	}
+	return r;
+}
+
+/* rumble_letters_flush: Flushes a mail bag, freeing up memory. */
+void rumble_letters_flush(rumble_mailbag* bag) {
+	rumble_letter* letter;
+	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
+		free(letter->fid);
+		free(letter->folder);
+		free(letter);
+	}
+	cvector_flush(bag->contents);
+	free(bag->letters);
+	bag->account = 0;
+	bag->letters = 0;
+	free(bag);
+}
+
+/* rumble_letters_open: Opens a letter as a file handle */
+FILE* rumble_letters_open(rumble_letter* letter) {
+	char file[512];
+	sprintf(file, "%s/%s.msg", strlen(letter->folder) ? letter->folder : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"), letter->fid);
+	return fopen(file, "rb");
+}
+
+
+/* Internal database functions (not for use by modules) */
+
+/* rumble_database_update_domains: Updates the list of domains from the db */
+void rumble_database_update_domains() {
+	int rc,l;
+    void* state;
+	rumble_domain* domain;
+
+	/* Clean up the old list */
+	rumble_rw_start_write(rumble_database_master_handle->domains.rrw);
+	for ( domain = (rumble_domain*) cvector_first(rumble_database_master_handle->domains.list); domain != NULL; domain = (rumble_domain*) cvector_next(rumble_database_master_handle->domains.list) ) {
+		free(domain->name);
+		free(domain->path);
+		free(domain);
+	}
+	cvector_flush(rumble_database_master_handle->domains.list);
+
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, domain, storagepath FROM domains WHERE 1");
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		domain = (rumble_domain*) malloc(sizeof(rumble_domain));
+
+		/* Domain ID */
+		domain->id = sqlite3_column_int((sqlite3_stmt*) state, 0);
+		
+		/* Domain name */
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		domain->name = (char*) calloc(1,l+1);
+		memcpy(domain->name, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		/* Optional domain specific storage path */
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,2);
+		domain->path = (char*) calloc(1,l+1);
+		memcpy(domain->path, sqlite3_column_text((sqlite3_stmt*) state,2), l);
+
+		cvector_add(rumble_database_master_handle->domains.list, domain);
+	}
+	rumble_rw_stop_write(rumble_database_master_handle->domains.rrw);
+	rumble_database_cleanup(state);
+}
+

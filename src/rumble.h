@@ -7,6 +7,7 @@
 #ifndef RUMBLE_H
 #define	RUMBLE_H
 //#define FORCE_WIN
+#define RUMBLE_LUA
 
 #ifdef	__cplusplus
 extern "C" {
@@ -97,6 +98,11 @@ extern "C" {
 #include <time.h>
 #include "cvector.h"
 #include "reply_codes.h"
+#ifdef RUMBLE_LUA
+	#include <lua.h>
+	#include <lualib.h>
+	#include <lauxlib.h>
+#endif
 
 #define RUMBLE_DEBUG_HOOKS              0x00100000
 #define RUMBLE_DEBUG_THREADS            0x02000000
@@ -185,6 +191,16 @@ extern "C" {
 #define RUMBLE_MTYPE_ALIAS              0x00000002   // Alias to somewhere else
 #define RUMBLE_MTYPE_MOD                0x00000004   // Mail goes into a module
 #define RUMBLE_MTYPE_FEED               0x00000008   // Mail is fed to an external program or URL
+
+// Letter flags (for POP3/IMAP4)
+#define RUMBLE_LETTER_UNSEEN			0x00000000
+#define RUMBLE_LETTER_UNREAD			0x00000001
+#define RUMBLE_LETTER_READ				0x00000002
+#define RUMBLE_LETTER_DELETED			0x00000010
+#define RUMBLE_LETTER_DELETENOW			0x00000030
+#define RUMBLE_LETTER_ANSWERED			0x00000100
+#define RUMBLE_LETTER_FLAGGED			0x00001000
+#define RUMBLE_LETTER_DRAFT				0x00010000
     
     
 // Structure definitions
@@ -209,6 +225,34 @@ typedef struct {
     char						addr[46]; // INET6_ADDRSTRLEN
 	fd_set						fd; // for select()
 } clientHandle;
+
+typedef struct {
+		uint32_t				readers;
+		uint32_t				writers;
+		pthread_cond_t          reading;
+		pthread_cond_t          writing;
+        pthread_mutex_t         mutex;
+} rumble_readerwriter;
+
+
+/* INTERNAL DOMAIN AND USER ACCOUNT STRUCTS */
+
+typedef struct {
+	char*		name;		/* Name (or glob) of domain */
+	char*		path;		/* Optional storage path for letters */
+	uint32_t	id;			/* Domain ID */
+} rumble_domain;
+
+typedef struct {
+    uint32_t            uid;
+    char*               user;	/* mailbox name */
+    rumble_domain*      domain;	/* Pointer to domain struct */
+    uint32_t            type;	/* type of mbox (mbox, alias, feed, mod) */
+    char*               arg;	/* If it's of type alias, feed or mod, arg gives the args */
+	char*				hash;	/* password hash */
+} rumble_mailbox;
+
+
 
 typedef struct {
     char*           user;
@@ -270,10 +314,15 @@ typedef struct {
         void*                   db;
         void*                   mail;
 		cvector*				batv; // BATV handles for bounce control
+		void*					lua;
     }               _core;
     rumbleService       smtp;
     rumbleService       pop3;
     rumbleService       imap;
+	struct {
+		rumble_readerwriter*	rrw;
+		cvector*				list;
+	} domains;
     const char*         cfgdir;
 } masterHandle;
 
@@ -287,14 +336,7 @@ typedef struct {
     unsigned int    preference;
 } mxRecord;
 
-typedef struct {
-    uint32_t            uid;
-    char*               user;
-    char*               domain;
-    uint32_t            type;
-    char*               arg;
-	char*				hash;
-} userAccount;
+
 
 typedef struct {
     address*        sender;
@@ -302,7 +344,7 @@ typedef struct {
     const char*     fid;
     const char*     flags;
     uint32_t        date;
-    userAccount*    account;
+    rumble_mailbox*    account;
 	uint32_t		loops;
 	char			mType; // 0 = regular mail, 1 = bounce
 } mqueue;
@@ -315,16 +357,31 @@ typedef struct {
 } rumble_sendmail_response;
 
 
-typedef struct {
-	userAccount*	account;
-	cvector*		letters;
-} pop3Session;
 
 typedef struct {
-	uint32_t		id;
-	uint32_t		size;
-	char*			fid;
-} pop3Letter;
+	uint32_t		id;			/* Letter ID */
+	uint32_t		uid;		/* User ID */
+	char*			fid;		/* File ID */
+	uint32_t		size;		/* Size of letter */
+	unsigned char	read;		/* Read? 0 = no, 1 = yes */
+	uint32_t		delivered;	/* Time of delivery */
+	char*			folder;		/* Folder name (for IMAP4) */
+	uint32_t		flags;		/* Various flags */
+} rumble_letter;
+
+typedef struct {
+	rumble_mailbox*		account;	/* Pointer to account */
+	cvector*			contents;	/* cvector with letters */
+	rumble_letter**		letters;	/* post-defined array of letters for fast access */
+	uint32_t			size;		/* Number of letters */
+} rumble_mailbag;
+
+
+typedef struct {
+	rumble_mailbox*	account;
+	rumble_mailbag*	bag;
+} pop3Session;
+
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
@@ -345,7 +402,7 @@ const char* rumble_get_dictionary_value(cvector* dict, const char* flag);
 void rumble_add_dictionary_value(cvector* dict, const char* key, const char* value);
 uint32_t rumble_has_dictionary_value(cvector* dict, const char* flag);
 void rumble_free_address(address* a);
-void rumble_free_account(userAccount* user);
+void rumble_free_account(rumble_mailbox* user);
 
 const char* rumble_smtp_reply_code(unsigned int code);
 //const char* rumble_pop3_reply_code(unsigned int code);
@@ -357,12 +414,21 @@ char* rumble_comm_read(sessionHandle* session);
 const char* rumble_config_str(masterHandle* master, const char* key);
 uint32_t rumble_config_int(masterHandle* master, const char* key);
 
-uint32_t rumble_domain_exists(sessionHandle* session, const char* domain);
-uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
-userAccount* rumble_account_data(sessionHandle* session, const char* user, const char* domain);
+
 address* rumble_parse_mail_address(const char* addr);
 rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, address* sender, address* recipient);
 
+/* Account and domain handling */
+uint32_t rumble_domain_exists(const char* domain);
+rumble_domain* rumble_domain_copy(const char* domain);
+uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
+rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, const char* domain);
+
+/* Mailbox handling */
+rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc);
+uint32_t rumble_letters_purge(rumble_mailbag* bag);
+void rumble_letters_flush(rumble_mailbag* bag);
+FILE* rumble_letters_open(rumble_letter* letter);
 
 // Shortcuts to common functions
 #define rrdict   rumble_get_dictionary_value // read dict

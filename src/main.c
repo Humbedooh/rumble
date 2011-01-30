@@ -14,6 +14,7 @@
 
 #define RUMBLE_INITIAL_THREADS 1
 
+extern masterHandle* rumble_database_master_handle;
 
 void rumble_master_init(masterHandle* master) {
     master->smtp.cue_hooks = cvector_init();
@@ -42,6 +43,10 @@ void rumble_master_init(masterHandle* master) {
     master->_core.feed_hooks = cvector_init();
 	master->_core.parser_hooks = cvector_init();
 	master->_core.batv = cvector_init();
+
+	rumble_database_master_handle = master;
+	master->domains.list = cvector_init();
+	master->domains.rrw = rumble_rw_init();
 }
 
 int main(int argc, char** argv) {
@@ -59,6 +64,7 @@ int main(int argc, char** argv) {
     rumble_master_init(master);
     rumble_database_load(master);
     rumble_modules_load(master);
+	rumble_database_update_domains();
 
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
