@@ -103,7 +103,7 @@ void* rumble_pop3_init(void* m) {
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
-		rumble_letters_purge(pops->bag); /* delete any letters marked for deletion */
+		rumble_letters_expunge(pops->bag); /* delete any letters marked for deletion */
 		rumble_letters_flush(pops->bag); /* flush the mail bag from memory */
 		if ( pops->account ) rumble_free_account(pops->account);
 		/* End cleanup */
@@ -227,7 +227,7 @@ ssize_t rumble_server_pop3_dele(masterHandle* master, sessionHandle* session, co
 	found = 0;
 	if ( i <= pops->bag->size && i > 0 ) {
 		letter = pops->bag->letters[i-1];
-		letter->flags |= RUMBLE_LETTER_DELETENOW;
+		letter->flags |= RUMBLE_LETTER_EXPUNGE;
 		found = 1;
 	}
 	if ( found ) rcsend(session, "+OK\r\n");
@@ -249,7 +249,7 @@ ssize_t rumble_server_pop3_retr(masterHandle* master, sessionHandle* session, co
 	if ( i <= pops->bag->size && i > 0 ) {
 		letter = pops->bag->letters[i-1];
 		found = 1;
-		fp = rumble_letters_open(letter);
+		fp = rumble_letters_open(pops->account, letter);
 		if (fp) {
 			rcsend(session, "+OK\r\n");
 			while (!feof(fp)) {
@@ -277,7 +277,7 @@ ssize_t rumble_server_pop3_top(masterHandle* master, sessionHandle* session, con
 	if ( sscanf(argument, "%i %i", &i, &lines) == 2 ) {
 		found = 0;
 		if ( i > 0 && i <= pops->bag->size ) {
-			fp = rumble_letters_open(pops->bag->letters[i-1]);
+			fp = rumble_letters_open(pops->account, pops->bag->letters[i-1]);
 			if (fp) {
 				rcsend(session, "+OK\r\n");
 				while (!feof(fp) && lines) {

@@ -16,18 +16,19 @@ void* rumble_imap_init(void* m) {
     int x = 0;
     time_t now;
     sessionHandle* s;
-    pop3Session* pops;
+    imap4Session* pops;
     void* pp,*tp;
     pthread_t p = pthread_self();
     session.dict = cvector_init();
     session.recipients = cvector_init();
-    session._svcHandle = (pop3Session*) malloc(sizeof(pop3Session));
+    session._svcHandle = (imap4Session*) malloc(sizeof(imap4Session));
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
     session._master = m;
-    pops = (pop3Session*) session._svcHandle;
+    pops = (imap4Session*) session._svcHandle;
     pops->account = 0;
     pops->bag = 0;
-    session._tflags = RUMBLE_THREAD_POP3; // Identify the thread/session as POP3
+	pops->folder = 0;
+    session._tflags = RUMBLE_THREAD_IMAP; // Identify the thread/session as IMAP4
     myName = rrdict(master->_core.conf, "servername");
     myName = myName ? myName : "??";
     tmp = (char*) malloc(100);
@@ -41,10 +42,10 @@ void* rumble_imap_init(void* m) {
     #endif
 	
     while (1) {
-        comm_accept(master->pop3.socket, session.client);
-        pthread_mutex_lock(&master->pop3.mutex);
-        cvector_add(master->pop3.handles, (void*) sessptr);
-        pthread_mutex_unlock(&master->pop3.mutex);
+        comm_accept(master->imap.socket, session.client);
+        pthread_mutex_lock(&master->imap.mutex);
+        cvector_add(master->imap.handles, (void*) sessptr);
+        pthread_mutex_unlock(&master->imap.mutex);
         session.flags = 0;
         session._tflags += 0x00100000; // job count ( 0 through 4095)
         session.sender = 0;
@@ -57,8 +58,8 @@ void* rumble_imap_init(void* m) {
         
         // Check for hooks on accept()
         rc = RUMBLE_RETURN_OKAY;
-        rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_POP3 );
-		if ( rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_pop3_reply_code(101), myName); // Hello!
+        rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_IMAP );
+		if ( rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, "* OK <%s> IMAP4rev1 Service Ready\r\n", myName); // Hello!
         
         // Parse incoming commands
         tag = (char*) malloc(32);
@@ -73,7 +74,7 @@ void* rumble_imap_init(void* m) {
             rc = 421;
             if ( !line ) break;
             rc = 105; // default return code is "500 unknown command thing"
-            if (sscanf(line, "%32c %32c %1000[^\r\n]", tag, cmd, arg)) {
+            if (sscanf(line, "%32s %32s %1000[^\r\n]", tag, cmd, arg)) {
                 rumble_string_upper(cmd);
                 if (!strcmp(cmd, "QUIT")) break; // bye!
                 else if (!strcmp(cmd, "LOGIN"))         rc = rumble_server_imap_login(master, &session, tag, arg);
@@ -116,7 +117,10 @@ void* rumble_imap_init(void* m) {
         printf("<debug::comm> [%s] Closing connection from %s on IMAP4\n", tmp, session.client->addr);
         #endif
         if ( rc == 421 ) rcprintf(&session, "%s BAD Session timed out!\r\n", tag);// timeout!
-        else rcsend(&session, "IMAP BYE bye!\r\n"); // bye!
+        else {
+			rcsend(&session, "* BYE bye!\r\n");
+			rcprintf(&session, "%s OK <%s> signing off for now.\r\n", tag, myName);
+		}
 		
         close(session.client->socket);
 
@@ -124,7 +128,7 @@ void* rumble_imap_init(void* m) {
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
-        rumble_letters_purge(pops->bag); /* delete any letters marked for deletion */
+        //rumble_letters_expunge(pops->bag); /* delete any letters marked for deletion */
         rumble_letters_flush(pops->bag); /* flush the mail bag from memory */
         if ( pops->account ) rumble_free_account(pops->account);
         /* End cleanup */
@@ -188,12 +192,15 @@ ssize_t rumble_server_imap_login(masterHandle* master, sessionHandle* session, c
 }
 
 ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	rcprintf(session, "%s OK Doin' nothin'...\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	if ( !(session->flags & RUMBLE_IMAP4_HAS_TLS) ) rcsend(session, "* CAPABILITY IMAP4rev1 STARTTLS LOGINDISABLED\r\n");
+	else rcsend(session, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\r\n");
+	rcprintf(session, "%s OK CAPABILITY completed.\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
 }
 
@@ -208,12 +215,84 @@ ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session
 }
 
 ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	uint32_t exists, recent, first,i;
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	rumble_letter* letter;
+	/* Are we authed? */
+	if ( imap->account ) {
+		/* Do we already have a mailbox open? */
+		if ( !(session->flags & RUMBLE_IMAP4_HAS_SELECT) ) {
+			imap->bag = rumble_letters_retreive(imap->account);
+			session->flags |= RUMBLE_IMAP4_HAS_SELECT;
+			session->flags |= RUMBLE_IMAP4_HAS_READWRITE;
+			imap->folder = 0;
+			exists = 0;
+			recent = 0;
+			first = 0;
+			for ( i = 0; i < imap->bag->size; i++ ) {
+				letter = imap->bag->letters[i];
+				if ( letter->folder == imap->folder ) {
+					exists++;
+					if ( !first && ( (letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT) ) ) first = exists;
+					if (letter->flags == RUMBLE_LETTER_RECENT) {
+						letter->flags |= RUMBLE_LETTER_UNREAD;
+						recent++;
+					}
+				}
+			}
+			rcprintf(session, "* %u EXISTS\r\n", exists);
+			rcsend(session, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n");
+			if (recent) rcprintf(session, "* %u RECENT.\r\n", recent);
+			if (first) rcprintf(session, "* OK [UNSEEN %u] Message %u is the first unseen message.\r\n", first, first);
+			rcprintf(session, "%s OK [READ-WRITE] SELECT completed.\r\n", tag);
+			rumble_letters_update(imap->bag); // Update letter flags if needed.
+		}
+		else {
+			rcprintf(session, "%s NO Mailbox already selected. Use CLOSE to close your current mailbox first.\r\n", tag);
+		}
+	}
+	else {
+		rcprintf(session, "%s NO Not logged in yet!\r\n", tag);
+	}
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	uint32_t exists, recent, first,i;
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	rumble_letter* letter;
+	/* Are we authed? */
+	if ( imap->account ) {
+		/* Do we already have a mailbox open? */
+		if ( !(session->flags & RUMBLE_IMAP4_HAS_SELECT) ) {
+			imap->bag = rumble_letters_retreive(imap->account);
+			session->flags |= RUMBLE_IMAP4_HAS_SELECT;
+			session->flags |= RUMBLE_IMAP4_HAS_READONLY;
+			imap->folder = 0;
+			exists = 0;
+			recent = 0;
+			first = 0;
+			for ( i = 0; i < imap->bag->size; i++ ) {
+				letter = imap->bag->letters[i];
+				if ( letter->folder == imap->folder ) {
+					exists++;
+					if ( !first && ( (letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT) ) ) first = exists;
+					if (letter->flags == RUMBLE_LETTER_RECENT) recent++;
+				}
+			}
+			rcprintf(session, "* %u EXISTS\r\n", exists);
+			rcsend(session, "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n");
+			if (recent) rcprintf(session, "* %u RECENT.\r\n", recent);
+			if (first) rcprintf(session, "* OK [UNSEEN %u] Message %u is the first unseen message.\r\n", first, first);
+			rcprintf(session, "%s OK [READ-ONLY] SELECT completed.\r\n", tag);
+		}
+		else {
+			rcprintf(session, "%s NO Mailbox already selected. Use CLOSE to close your current mailbox first.\r\n", tag);
+		}
+	}
+	else {
+		rcprintf(session, "%s NO Not logged in yet!\r\n", tag);
+	}
 	return RUMBLE_RETURN_IGNORE;
 }
 
@@ -268,12 +347,24 @@ ssize_t rumble_server_imap_check(masterHandle* master, sessionHandle* session, c
 }
 
 ssize_t rumble_server_imap_close(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	if ( imap->account && (session->flags & RUMBLE_IMAP4_HAS_SELECT) ) {
+		rumble_letters_expunge(imap->bag);
+		session->flags -= RUMBLE_IMAP4_HAS_SELECT; // clear select flag.
+		imap->folder = 0;
+		rcprintf(session, "%s OK Expunged and closed the mailbox.\r\n", tag);
+	}
+	else rcprintf(session, "%s NO No mailbox selected yet!\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_imap_expunge(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	if ( imap->account && (session->flags & RUMBLE_IMAP4_HAS_SELECT) ) {
+		rumble_letters_expunge(imap->bag);
+		rcprintf(session, "%s OK Expunged them letters.\r\n", tag);
+	}
+	else rcprintf(session, "%s NO No mailbox selected yet!\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
 }
 

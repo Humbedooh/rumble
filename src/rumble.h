@@ -173,6 +173,12 @@ extern "C" {
 // POP3 session flags
 #define RUMBLE_POP3_HAS_USER			0x00000001	 // Has provided a username (but no password)
 #define RUMBLE_POP3_HAS_AUTH			0x00000002	 // Has provided both username and password
+
+// IMAP4 session flags
+#define RUMBLE_IMAP4_HAS_SELECT			0x00000001	 // Has selected a mailbox
+#define RUMBLE_IMAP4_HAS_TLS			0x00000002	 // Has established TLS or SSL
+#define RUMBLE_IMAP4_HAS_READWRITE		0x00000010	 // Read/Write session (SELECT)
+#define RUMBLE_IMAP4_HAS_READONLY		0x00000020	 // Read-only session (EXAMINE)
     
 #define RUMBLE_ROAD_MASK                0x000000FF   // Command sequence mask
 
@@ -193,14 +199,15 @@ extern "C" {
 #define RUMBLE_MTYPE_FEED               0x00000008   // Mail is fed to an external program or URL
 
 // Letter flags (for POP3/IMAP4)
-#define RUMBLE_LETTER_UNSEEN			0x00000000
+#define RUMBLE_LETTER_RECENT			0x00000000
 #define RUMBLE_LETTER_UNREAD			0x00000001
 #define RUMBLE_LETTER_READ				0x00000002
 #define RUMBLE_LETTER_DELETED			0x00000010
-#define RUMBLE_LETTER_DELETENOW			0x00000030
+#define RUMBLE_LETTER_EXPUNGE			0x00000030
 #define RUMBLE_LETTER_ANSWERED			0x00000100
 #define RUMBLE_LETTER_FLAGGED			0x00001000
 #define RUMBLE_LETTER_DRAFT				0x00010000
+#define RUMBLE_LETTER_UPDATED			0x00100000
     
     
 // Structure definitions
@@ -365,8 +372,9 @@ typedef struct {
 	uint32_t		size;		/* Size of letter */
 	unsigned char	read;		/* Read? 0 = no, 1 = yes */
 	uint32_t		delivered;	/* Time of delivery */
-	char*			folder;		/* Folder name (for IMAP4) */
+	uint32_t		folder;		/* Folder name (for IMAP4) */
 	uint32_t		flags;		/* Various flags */
+	uint32_t		_flags;		/* Original copy of flags (for update checks) */
 } rumble_letter;
 
 typedef struct {
@@ -432,9 +440,10 @@ rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, co
 
 /* Mailbox handling */
 rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc);
-uint32_t rumble_letters_purge(rumble_mailbag* bag);
+uint32_t rumble_letters_expunge(rumble_mailbag* bag);
 void rumble_letters_flush(rumble_mailbag* bag);
-FILE* rumble_letters_open(rumble_letter* letter);
+FILE* rumble_letters_open(rumble_mailbox* mbox, rumble_letter* letter);
+uint32_t rumble_letters_update(rumble_mailbag* bag);
 
 // Shortcuts to common functions
 #define rrdict   rumble_get_dictionary_value // read dict
@@ -445,7 +454,7 @@ FILE* rumble_letters_open(rumble_letter* letter);
 #define rcsend   rumble_comm_send
 #define rcprintf rumble_comm_printf
 #define rcread	 rumble_comm_read
-#define merror() {printf("Memory allocation failed, this is bad!\n");exit(1);}
+#define merror() {fprintf(stderr, "Memory allocation failed, this is bad!\n");exit(1);}
 
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
 	void* xalloc(size_t m);

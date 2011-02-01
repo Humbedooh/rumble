@@ -252,12 +252,11 @@ rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
 		letter->delivered = sqlite3_column_int((sqlite3_stmt*) state, 4);
 
 		// Folder
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,5);
-		letter->folder = (char*) calloc(1,l+1);
-		memcpy((char*) letter->folder, sqlite3_column_text((sqlite3_stmt*) state,5), l);
+		letter->folder = sqlite3_column_int((sqlite3_stmt*) state, 5);
 
 		// Flags
 		letter->flags = sqlite3_column_int((sqlite3_stmt*) state, 6);
+		letter->_flags = letter->flags;
 
 		// UID
 		letter->uid = acc->uid;
@@ -274,8 +273,8 @@ rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
 	return bag;
 }
 
-/* rumble_letters_purge: purges the mailbag, removing letters marked for deletion */
-uint32_t rumble_letters_purge(rumble_mailbag* bag) {
+/* rumble_letters_expunge: purges the mailbag, removing letters marked for deletion */
+uint32_t rumble_letters_expunge(rumble_mailbag* bag) {
 	int r;
 	void* state;
 	const char* path;
@@ -285,7 +284,7 @@ uint32_t rumble_letters_purge(rumble_mailbag* bag) {
 	path = strlen(bag->account->domain->path) ? bag->account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
 	r = 0;
 	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
-		if ( letter->flags & RUMBLE_LETTER_DELETENOW ) { /* Delete it? */
+		if ( (letter->flags & RUMBLE_LETTER_EXPUNGE) == RUMBLE_LETTER_EXPUNGE ) { /* Delete it? */
 			sprintf(tmp, "%s/%s.msg", path, letter->fid);
 			unlink(tmp);
 			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %u", letter->id);
@@ -293,9 +292,28 @@ uint32_t rumble_letters_purge(rumble_mailbag* bag) {
 			rumble_database_cleanup(state);
 			r++;
 			free(letter->fid);
-			free(letter->folder);
 			free(letter);
 			cvector_delete(bag->contents);
+		}
+	}
+	return r;
+}
+
+/* rumble_letters_update: Updates letters in the database if changed */
+uint32_t rumble_letters_update(rumble_mailbag* bag) {
+	int r;
+	void* state;
+	const char* path;
+	rumble_letter* letter;
+	if (!bag) return 0;
+	r = 0;
+	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
+		if ( letter->flags != letter->_flags ) {
+			if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u, folder = %u WHERE id = %u", letter->flags, letter->folder, letter->id);
+			rumble_database_run(state);
+			rumble_database_cleanup(state);
+			r++;
 		}
 	}
 	return r;
@@ -304,9 +322,9 @@ uint32_t rumble_letters_purge(rumble_mailbag* bag) {
 /* rumble_letters_flush: Flushes a mail bag, freeing up memory. */
 void rumble_letters_flush(rumble_mailbag* bag) {
 	rumble_letter* letter;
+	if (!bag || !bag->contents) return;
 	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
 		free(letter->fid);
-		free(letter->folder);
 		free(letter);
 	}
 	cvector_flush(bag->contents);
@@ -317,9 +335,9 @@ void rumble_letters_flush(rumble_mailbag* bag) {
 }
 
 /* rumble_letters_open: Opens a letter as a file handle */
-FILE* rumble_letters_open(rumble_letter* letter) {
+FILE* rumble_letters_open(rumble_mailbox* mbox, rumble_letter* letter) {
 	char file[512];
-	sprintf(file, "%s/%s.msg", strlen(letter->folder) ? letter->folder : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"), letter->fid);
+	sprintf(file, "%s/%s.msg", strlen(mbox->domain->path) ? mbox->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"), letter->fid);
 	return fopen(file, "rb");
 }
 
