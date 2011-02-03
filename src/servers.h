@@ -53,7 +53,6 @@ extern "C" {
 	ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
 	ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
 	ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_uid(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
     
     /* Hook handlers */
     ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint32_t flags);

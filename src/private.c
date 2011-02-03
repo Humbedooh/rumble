@@ -77,6 +77,9 @@ uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, con
             if ( !fwrite(buffer, rc, 1, fp)) break;
 			fsize += rc;
         }
+		fseek(fp, 0, SEEK_END);
+		fsize = ftell(fp);
+		rewind(fp);
         fclose(fp);
         fclose(ofp);
         free(buffer);

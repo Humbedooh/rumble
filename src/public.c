@@ -15,6 +15,47 @@ ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
     return send(session->client->socket, message, strlen(message),0);
 }
 
+void rumble_args_free(rumble_args* d) {
+	int p;
+	for (p = 0; p < d->argc; p++) {
+		free(d->argv[p]);
+	}
+	free(d->argv);
+	free(d);
+}
+
+rumble_args* rumble_read_words(const char* d) {
+	char* value, *s;
+	ssize_t len, a, b, c,x;
+	rumble_args* ret = (rumble_args*) malloc(sizeof(rumble_args));
+	ret->argv = (char**) calloc(1,32*sizeof(char*));
+	a = 0;
+	b = 0;
+	c = 0;
+	x = 0;
+	ret->argc = 0;
+	for ( s = (char*) d; *s; s++ ) {
+		b++;
+		if (*s == '"') c++;
+		if ( c % 2 == 0 && *s == ' ') {
+			x = (*(d+a) == '"') ? 1 : 0;
+			if ( b-a-x-1 > 0 ) {
+				ret->argv[ret->argc] = (char*) calloc(1, b-a-x);
+				strncpy(ret->argv[ret->argc++], d+a+x, b-a-x-1);
+			}
+			a = b;
+		}
+	}
+	if ( b > a ) {
+		x = (*(d+a) == '"') ? 1 : 0;
+		if ( b-a-x-1 > 0 ) {
+			ret->argv[ret->argc] = (char*) calloc(1, b-a-x+1);
+			strncpy(ret->argv[ret->argc++], d+a+x, b-a-x-1);
+		}
+	}
+	return ret;
+}
+
 address* rumble_parse_mail_address(const char* addr) {
 	
 	address* usr = (address*) malloc(sizeof(address));
@@ -64,7 +105,7 @@ char* rumble_comm_read(sessionHandle* session) {
 	
 	if (!ret) { perror("Calloc failed!"); exit(1);}
 
-	t.tv_sec = 5;
+	t.tv_sec = 50;
 	t.tv_usec = 0;
 	
     for (p = 0; p < 1024; p++) {
@@ -210,3 +251,4 @@ char* rumble_mtime() {
     //free(timeinfo);
     return txt;
 }
+

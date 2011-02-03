@@ -97,9 +97,11 @@ void* accept_connection(void* m) {
     masterHandle* master = (masterHandle*) m;
 	cvector *args, *form, *dict;
 	char* postBuffer, *URL, *rest, *now, *output;
+	char buffa[1024*32], buffb[1024*32];
+	int myPos;
 	const char* URI;
 	ssize_t rc;
-	//rumble_module_info* mod;
+	rumble_module_info* mod;
     // Initialize a session handle and wait for incoming connections.
     sessionHandle session;
     sessionHandle* s = &session;
@@ -144,14 +146,15 @@ void* accept_connection(void* m) {
         sscanf(URI, "/%200[^? ]?%200[^ ]", URL, rest);
         if ( strlen(rest)) rumble_scan_formdata(form, rest);
         if ( postBuffer) { rumble_scan_formdata(form, postBuffer); free(postBuffer); }
-        /*rcsend(s, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n");
-        rcsend(s, "<h1>Rumble admin page</h1>\n");
-        rcsend(s, "<h2>Enabled modules:</h2>");
-        for (mod = cvector_first(master->_core.modules); mod != NULL; mod = cvector_next(master->_core.modules)) {
-            rcprintf(s, "<b>%s</b>: %s (<small><font color='red'>%s</font></small>)<br/>\n", mod->title, mod->description, mod->file);
-        }*/
+
+        myPos = 0;
+        for (mod = (rumble_module_info*) cvector_first(master->_core.modules); mod != NULL; mod = (rumble_module_info*) cvector_next(master->_core.modules)) {
+            sprintf(buffa, "<b>%s</b> <small>(<font color='red'>%s</font>)</small>: <br/> %s<hr/><br/>\n", mod->title, mod->file, mod->description);
+			strncpy(&buffb[myPos], buffa, strlen(buffa));
+			myPos += strlen(buffa);
+        }
+		rsdict(dict, "modules", buffb);
         now = rumble_mtime();
-        //rcprintf(s,"<br/><br/><hr/><small>Rumble (mod_entrepreneur) v/%x on %s - %s</small>", RUMBLE_VERSION, rumble_config_str(master, "servername"), now);
         free(now);
 		output = entr_format_page(master, dict);
 		rcsend(s, output);

@@ -179,7 +179,7 @@ extern "C" {
 #define RUMBLE_IMAP4_HAS_TLS			0x00000002	 // Has established TLS or SSL
 #define RUMBLE_IMAP4_HAS_READWRITE		0x00000010	 // Read/Write session (SELECT)
 #define RUMBLE_IMAP4_HAS_READONLY		0x00000020	 // Read-only session (EXAMINE)
-    
+#define RUMBLE_IMAP4_HAS_UID			0x00000100	 // UID-type request.    
 #define RUMBLE_ROAD_MASK                0x000000FF   // Command sequence mask
 
 
@@ -339,6 +339,11 @@ typedef struct {
 } rumbleKeyValuePair;
 
 typedef struct {
+    uint32_t	    key;
+    char*			value;
+} rumbleIntValuePair;
+
+typedef struct {
     const char*     host;
     unsigned int    preference;
 } mxRecord;
@@ -370,7 +375,6 @@ typedef struct {
 	uint32_t		uid;		/* User ID */
 	char*			fid;		/* File ID */
 	uint32_t		size;		/* Size of letter */
-	unsigned char	read;		/* Read? 0 = no, 1 = yes */
 	uint32_t		delivered;	/* Time of delivery */
 	uint32_t		folder;		/* Folder name (for IMAP4) */
 	uint32_t		flags;		/* Various flags */
@@ -382,6 +386,10 @@ typedef struct {
 	cvector*			contents;	/* cvector with letters */
 	rumble_letter**		letters;	/* post-defined array of letters for fast access */
 	uint32_t			size;		/* Number of letters */
+	struct {
+		ssize_t			id;
+		cvector*		names;
+	} folder;						/* IMAP4 folder struct */
 } rumble_mailbag;
 
 
@@ -393,9 +401,22 @@ typedef struct {
 typedef struct {
 	rumble_mailbox*	account;
 	rumble_mailbag*	bag;
-	uint32_t		folder;
+	ssize_t			folder;
 } imap4Session;
 
+typedef struct {
+	char**			argv;
+	uint32_t		argc;
+} rumble_args;
+
+struct _imapFetch {
+	char*				element;
+	struct _imapFetch*	section;
+	cvector*			items;
+	uint32_t			octets;
+};
+
+//typedef _imapFetch imapFetch;
 
 // Hooking commands
 void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
@@ -404,9 +425,12 @@ rumblemodule rumble_module_check();
 // Public tool-set
 char* rumble_sha160(const unsigned char* d); //SHA1 digest (40 byte hex string)
 char* rumble_sha256(const unsigned char* d); //SHA-256 digest (64 byte hex string)
+char* rumble_decode_base64(const char* src);
 
 void  rumble_string_lower(char* d); // Converts <d> into lowercase.
 void  rumble_string_upper(char* d); // Converts <d> into uppercase.
+rumble_args* rumble_read_words(const char* d);
+void rumble_args_free(rumble_args* d);
 char* rumble_mtime(); // mail time
 
 void rumble_scan_words(cvector* dict, const char* wordlist);
@@ -437,6 +461,7 @@ uint32_t rumble_domain_exists(const char* domain);
 rumble_domain* rumble_domain_copy(const char* domain);
 uint32_t rumble_account_exists(sessionHandle* session, const char* user, const char* domain);
 rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, const char* domain);
+rumble_mailbox* rumble_account_data_auth(sessionHandle* session, const char* user, const char* domain, const char* pass);
 
 /* Mailbox handling */
 rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc);

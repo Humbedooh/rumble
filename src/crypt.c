@@ -1,5 +1,7 @@
 #include "rumble.h"
 #include <openssl/sha.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 #ifndef PRIx32
 #define PRIx32 "x"
 #endif
@@ -59,3 +61,16 @@ char* rumble_sha160(const unsigned char* d) {
     return ret;
 }
 
+char* rumble_decode_base64(const char* src) {
+	 BIO *b64, *bmem;
+	 ssize_t len;
+	 char *buffer;
+	 len = strlen(src); 
+	 buffer = (char *)calloc(1, len);
+	 b64 = BIO_new(BIO_f_base64());
+	 bmem = BIO_new_mem_buf((void*) src, len);
+	 bmem = BIO_push(b64, bmem);
+	 BIO_read(bmem, buffer, len);
+	 BIO_free_all(bmem);
+	 return buffer;
+}
