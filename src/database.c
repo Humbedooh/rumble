@@ -233,8 +233,10 @@ rumble_domain* rumble_domain_copy(const char* domain) {
 
 /* LETTER HANDLING FUNCTIONS FOR SMTP, POP3 & IMAP4 */
 
-/* rumble_letters_retreive: Retreives all letters for an account and stores them in a mail bag struct */
-rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
+/* rumble_letters_retrieve: retrieves all letters for an account and stores them in a mail bag struct */
+
+
+rumble_mailbag* rumble_letters_retrieve_folder(rumble_mailbox* acc, ssize_t folder) {
 	int rc,l;
     void* state;
 	rumble_mailbag* bag;
@@ -244,9 +246,7 @@ rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
 	bag->size = 0;
 	bag->account = acc;
 	bag->contents = cvector_init();
-	bag->folder.id = -1;
-	bag->folder.names = cvector_init();
-	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, folder, flags FROM mbox WHERE uid = %u", acc->uid);
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags FROM mbox WHERE folder = %u AND uid = %u", folder, acc->uid);
     while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
 		letter = (rumble_letter*) malloc(sizeof(rumble_letter));
 
@@ -264,11 +264,8 @@ rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
 		// Delivery date
 		letter->delivered = sqlite3_column_int((sqlite3_stmt*) state, 3);
 
-		// Folder
-		letter->folder = sqlite3_column_int((sqlite3_stmt*) state, 4);
-
 		// Flags
-		letter->flags = sqlite3_column_int((sqlite3_stmt*) state, 5);
+		letter->flags = sqlite3_column_int((sqlite3_stmt*) state, 4);
 		letter->_flags = letter->flags;
 
 		// UID
@@ -284,22 +281,6 @@ rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc) {
 		bag->letters[l++] = letter;
 	}
 
-	/* Folder names (if any) */
-	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE uid = %u", acc->uid);
-    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
-		pair = (rumbleIntValuePair*) malloc(sizeof(rumbleIntValuePair));
-
-		// Folder ID
-		pair->key = sqlite3_column_int((sqlite3_stmt*) state, 0);
-
-		// Folder name
-		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
-		pair->value = (char*) calloc(1,l+1);
-		memcpy((char*) pair->value, sqlite3_column_text((sqlite3_stmt*) state,1), l);
-
-		cvector_add(bag->folder.names, pair);
-	}
-	rumble_database_cleanup(state);
 	return bag;
 }
 
@@ -351,14 +332,14 @@ uint32_t rumble_letters_expunge(rumble_mailbag* bag) {
 uint32_t rumble_letters_update(rumble_mailbag* bag) {
 	int r;
 	void* state;
-	const char* path;
 	rumble_letter* letter;
 	if (!bag) return 0;
 	r = 0;
 	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
 		if ( letter->flags != letter->_flags ) {
+			printf("Updating letter no. %u (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 			if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u, folder = %u WHERE id = %u", letter->flags, letter->folder, letter->id);
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %u", letter->flags, letter->id);
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
 			r++;
@@ -380,15 +361,43 @@ void rumble_letters_flush(rumble_mailbag* bag) {
 	free(bag->letters);
 	bag->account = 0;
 	bag->letters = 0;
-	if (bag->folder.names) {
-		for ( pair = (rumbleIntValuePair*) cvector_first(bag->folder.names); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(bag->folder.names)) {
+	free(bag);
+}
+
+cvector* rumble_folders_retrieve(rumble_mailbox* acc) {
+	cvector* folders;
+	rumbleIntValuePair* pair;
+	int rc,l;
+	void* state;
+	folders = cvector_init();
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE uid = %u", acc->uid);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		pair = (rumbleIntValuePair*) malloc(sizeof(rumbleIntValuePair));
+
+		// Folder ID
+		pair->key = sqlite3_column_int((sqlite3_stmt*) state, 0);
+
+		// Folder name
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		pair->value = (char*) calloc(1,l+1);
+		memcpy((char*) pair->value, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		cvector_add(folders, pair);
+	}
+	rumble_database_cleanup(state);
+	return folders;
+}
+
+void rumble_folders_flush(cvector* folders) {
+	rumbleIntValuePair* pair;
+	if (folders) {
+		for ( pair = (rumbleIntValuePair*) cvector_first(folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(folders)) {
 			free(pair->value);
 			free(pair);
 		}
-		cvector_flush(bag->folder.names);
-		free(bag->folder.names);
+		cvector_flush(folders);
+		free(folders);
 	}
-	free(bag);
 }
 
 /* rumble_letters_open: Opens a letter as a file handle */

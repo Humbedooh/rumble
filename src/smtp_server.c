@@ -305,21 +305,12 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
 	const char *sf;
 	FILE* fp;
 	address* el;
-	pthread_t p = pthread_self();
-        void* pp;
-#ifdef PTW32_CDECL
-        pp = (void*) p.p;
-#else
-        pp = p;
-#endif
 	
     // First, check for the right sequence of commands.
     if ( !(session->flags & RUMBLE_SMTP_HAS_RCPT) ) return 503;
     
     // Make a unique filename and try to open the storage folder for writing.
-    fid = (char*) calloc(1,25);
-	if (!fid) merror();
-	sprintf(fid, "%x%x%x", (uint32_t) pp, (uint32_t) time(0), (uint32_t) rand());
+    fid = rumble_create_filename();
     sf = rumble_config_str(master, "storagefolder");
     filename = (char*) calloc(1, strlen(sf) + 26);
 	if (!filename) merror();
@@ -339,7 +330,7 @@ ssize_t rumble_server_smtp_data(masterHandle* master, sessionHandle* session, co
     log = (char*) calloc(1,1024);
 	if (!log) merror();
     now = rumble_mtime();
-	sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTP id %s; %s\r\n", rumble_get_dictionary_value(session->dict, "helo"), session->client->addr, rumble_config_str(master, "servername"), fid, now);
+	sprintf(log, "Received: from %s <%s> by %s (rumble) with ESMTPA id <%s>; %s\r\n", rumble_get_dictionary_value(session->dict, "helo"), session->client->addr, rumble_config_str(master, "servername"), fid, now);
     free(now);
     fwrite(log, strlen(log), 1, fp);
     rumble_comm_send(session, rumble_smtp_reply_code(354));

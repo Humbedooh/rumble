@@ -40,12 +40,12 @@ rumble_args* rumble_read_words(const char* d) {
 		if ( c % 2 == 0 && *s == ' ') {
 			x = (*(d+a) == '"') ? 1 : 0;
 			if ( b-a-x-1 > 0 ) {
-				ret->argv[ret->argc] = (char*) calloc(1, b-a-x);
-				strncpy(ret->argv[ret->argc++], d+a+x, b-a-x-1);
+				ret->argv[ret->argc] = (char*) calloc(1, b-a-x+1);
+				strncpy(ret->argv[ret->argc++], d+a+x, b-a-x-x-1);
 			}
 			a = b;
 		}
-	}
+	} 
 	if ( b > a ) {
 		x = (*(d+a) == '"') ? 1 : 0;
 		if ( b-a-x-1 > 0 ) {
@@ -252,3 +252,19 @@ char* rumble_mtime() {
     return txt;
 }
 
+char* rumble_create_filename() {
+	char* name;
+	unsigned char *p;
+	int y[4],x;
+	name = (char*) calloc(1,17);
+	srand(time(0));
+	y[0] = time(0);
+	y[1] = rand()*rand();
+	y[2] = (int) &y - rand();
+	y[3] = (int) rumble_mtime * rand();
+	p = (unsigned char*) y;
+	for (x = 0; x < 16; x++) {
+		name[x] = (p[x] % 26) + 'a';
+	}
+	return name;
+}

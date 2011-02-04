@@ -386,10 +386,6 @@ typedef struct {
 	cvector*			contents;	/* cvector with letters */
 	rumble_letter**		letters;	/* post-defined array of letters for fast access */
 	uint32_t			size;		/* Number of letters */
-	struct {
-		ssize_t			id;
-		cvector*		names;
-	} folder;						/* IMAP4 folder struct */
 } rumble_mailbag;
 
 
@@ -401,20 +397,14 @@ typedef struct {
 typedef struct {
 	rumble_mailbox*	account;
 	rumble_mailbag*	bag;
-	ssize_t			folder;
+	cvector*		folders;
+	signed int		folder;
 } imap4Session;
 
 typedef struct {
 	char**			argv;
 	uint32_t		argc;
 } rumble_args;
-
-struct _imapFetch {
-	char*				element;
-	struct _imapFetch*	section;
-	cvector*			items;
-	uint32_t			octets;
-};
 
 //typedef _imapFetch imapFetch;
 
@@ -432,6 +422,7 @@ void  rumble_string_upper(char* d); // Converts <d> into uppercase.
 rumble_args* rumble_read_words(const char* d);
 void rumble_args_free(rumble_args* d);
 char* rumble_mtime(); // mail time
+char* rumble_create_filename(); /* Generates random 16-letter filenames */
 
 void rumble_scan_words(cvector* dict, const char* wordlist);
 void rumble_scan_flags(cvector* dict, const char* flags);
@@ -464,11 +455,16 @@ rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, co
 rumble_mailbox* rumble_account_data_auth(sessionHandle* session, const char* user, const char* domain, const char* pass);
 
 /* Mailbox handling */
-rumble_mailbag* rumble_letters_retreive(rumble_mailbox* acc);
 uint32_t rumble_letters_expunge(rumble_mailbag* bag);
 void rumble_letters_flush(rumble_mailbag* bag);
 FILE* rumble_letters_open(rumble_mailbox* mbox, rumble_letter* letter);
 uint32_t rumble_letters_update(rumble_mailbag* bag);
+
+rumble_mailbag* rumble_letters_retrieve_folder(rumble_mailbox* acc, ssize_t folder);
+cvector* rumble_folders_retrieve(rumble_mailbox* acc);
+void rumble_folders_flush(cvector* folders);
+
+
 
 // Shortcuts to common functions
 #define rrdict   rumble_get_dictionary_value // read dict
@@ -480,6 +476,10 @@ uint32_t rumble_letters_update(rumble_mailbag* bag);
 #define rcprintf rumble_comm_printf
 #define rcread	 rumble_comm_read
 #define merror() {fprintf(stderr, "Memory allocation failed, this is bad!\n");exit(1);}
+
+#define and &&
+#define or ||
+#define rivp (rumbleIntValuePair*)
 
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_MEMORY)
 	void* xalloc(size_t m);

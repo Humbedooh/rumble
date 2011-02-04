@@ -34,20 +34,14 @@ void rumble_clean_session(sessionHandle* session) {
 
 uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, const char* dmn, char** pfid) {
     const char* path = rumble_config_str(m, "storagefolder");
-    char* nfid = (char*) calloc(1,25);
+    char* nfid;
     char* filename = (char*) calloc(1, strlen(path) + 26);
     char* ofilename = (char*) calloc(1, strlen(path) + 26);
 	FILE *fp, *ofp;
 	uint32_t fsize = 0;
-	pthread_t p = pthread_self();
-        void* pp;
-#ifdef PTW32_CDECL
-        pp = (void*) p.p;
-#else
-        pp = p;
-#endif
+
 	if (!filename || !nfid || !ofilename) merror();
-	sprintf(nfid, "%x%x%x", (uint32_t) pp, (uint32_t) time(0), (uint32_t) rand());
+	nfid = rumble_create_filename();
     sprintf(filename, "%s/%s", path, nfid);
     sprintf(ofilename, "%s/%s", path, fid);
     fp = fopen(filename, "wb");
@@ -69,7 +63,7 @@ uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, con
         char* now = rumble_mtime();
         void* buffer = (char*) calloc(1,4096);
         if (!now || !buffer) merror();
-        fprintf(fp, "Received: from localhost by %s (rumble) for %s@%s with ESMTP id %s; %s\r\n", rumble_config_str(m,"servername"), usr, dmn, nfid, now);
+        fprintf(fp, "Received: from localhost by %s (rumble) for %s@%s with ESMTPA id <%s>; %s\r\n", rumble_config_str(m,"servername"), usr, dmn, nfid, now);
         free(now);
         while (!feof(ofp)) {
             size_t rc = fread(buffer, 1, 4096, ofp);

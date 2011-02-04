@@ -53,23 +53,26 @@ int main(int argc, char** argv) {
 	int x;
 	pthread_t* t;
 	masterHandle* master;
-	rumble_args* test;
+	char *test;
 	cvector* args = cvector_init();
     master = (masterHandle*) malloc(sizeof(masterHandle));
 	if (!master) merror();
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }
-	
+	srand(time(0));
     rumble_config_load(master, args);
     rumble_master_init(master);
     rumble_database_load(master);
     rumble_modules_load(master);
 	rumble_database_update_domains();
 
-	test = rumble_read_words("This is \"a t// ''est\" and stuff!");
-	printf("I found %u words, no. 3 is: %s, no. 5 is: %s\r\n", test->argc, test->argv[2], test->argv[4]);
-	rumble_args_free(test);
+	for (x = 0; x < 10; x++) {
+		test = rumble_create_filename();
+		printf("no. %u: %s\r\n", x+1,test);
+		free(test);
+	}
+
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
         printf("Launching SMTP service...");

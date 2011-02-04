@@ -181,7 +181,7 @@ ssize_t rumble_server_pop3_pass(masterHandle* master, sessionHandle* session, co
 			}
 			free(usr); free(dmn); free(tmp);
 			session->flags |= RUMBLE_POP3_HAS_AUTH;
-			pops->bag = rumble_letters_retreive(pops->account);
+			pops->bag = rumble_letters_retrieve_folder(pops->account,0);
 			return 104;
 		}
 	}
