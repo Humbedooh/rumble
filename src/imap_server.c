@@ -110,6 +110,8 @@ void* rumble_imap_init(void* m) {
 				else if (!strcmp(cmd, "FETCH"))         rc = rumble_server_imap_fetch(master, &session, tag, arg);
 				else if (!strcmp(cmd, "STORE"))         rc = rumble_server_imap_store(master, &session, tag, arg);
 				else if (!strcmp(cmd, "COPY"))			rc = rumble_server_imap_copy(master, &session, tag, arg);
+
+				else if (!strcmp(cmd, "IDLE"))			rc = rumble_server_imap_idle(master, &session, tag, arg);
             }
             free(line);
             if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
@@ -207,7 +209,7 @@ ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, co
 
 ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
-	if ( !(session->flags & RUMBLE_IMAP4_HAS_TLS) ) rcsend(session, "* CAPABILITY IMAP4rev1 STARTTLS AUTH=PLAIN LOGINDISABLED\r\n");
+	if ( !(session->flags & RUMBLE_IMAP4_HAS_TLS) ) rcsend(session, "* CAPABILITY IMAP4rev1 IDLE STARTTLS AUTH=PLAIN LOGINDISABLED\r\n");
 	else rcsend(session, "* CAPABILITY IMAP4rev1 AUTH=PLAIN\r\n");
 	rcprintf(session, "%s OK CAPABILITY completed.\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
@@ -258,7 +260,7 @@ ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session
 ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 	uint32_t exists, recent, first,i,found;
 	rumble_args* folder;
-	rumbleIntValuePair* pair;
+	rumble_folder* pair;
 	char* selector;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	rumble_letter* letter;
@@ -268,8 +270,8 @@ ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, 
 		folder = rumble_read_words(arg);
 		found = 0;
 		selector = folder->argc ? folder->argv[0] : "";
-		for ( pair = (rumbleIntValuePair*) cvector_first(imap->folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(imap->folders) ) {
-			if ( !strcmp(selector, pair->value) ) { imap->folder = pair->key; found++; break; }
+		for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+			if ( !strcmp(selector, pair->name) ) { imap->folder = pair->id; found++; break; }
 		}
 		if (!found && !strcmp(selector, "INBOX") ) { imap->folder = 0; found++; }
 		if ( found ) {
@@ -317,7 +319,7 @@ ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, 
 ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 	uint32_t exists, recent, first,i,found;
 	rumble_args* folder;
-	rumbleIntValuePair* pair;
+	rumble_folder* pair;
 	char* selector;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	rumble_letter* letter;
@@ -327,8 +329,8 @@ ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session,
 		folder = rumble_read_words(arg);
 		found = 0;
 		selector = folder->argc ? folder->argv[0] : "";
-		for ( pair = (rumbleIntValuePair*) cvector_first(imap->folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(imap->folders) ) {
-			if ( !strcmp(selector, pair->value) ) { imap->folder = pair->key; found++; break; }
+		for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+			if ( !strcmp(selector, pair->name) ) { imap->folder = pair->id; found++; break; }
 		}
 		if (!found && !strcmp(selector, "INBOX") ) { imap->folder = 0; found++; }
 		if ( found ) {
@@ -373,7 +375,7 @@ ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, 
 	rumble_args* args;
 	char *newName;
 	void* state;
-	rumbleIntValuePair* pair, *newFolder;
+	rumble_folder *pair, *newFolder;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	args = rumble_read_words(arg);
 	newFolder = 0;
@@ -382,8 +384,8 @@ ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, 
 		imap->folders = rumble_folders_retrieve(imap->account);
 		newName = args->argv[0];
 		
-		for (pair = rivp cvector_first(imap->folders); pair != NULL; pair = rivp cvector_next(imap->folders)) {
-			if ( !strcmp(pair->value, newName) ) newFolder = pair;
+		for (pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders)) {
+			if ( !strcmp(pair->name, newName) ) newFolder = pair;
 		}
 		if ( newFolder ) rcprintf(session, "%s NO CREATE failed: Duplicate folder name.\r\n", tag);
 		else {
@@ -408,7 +410,7 @@ ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, 
 	rumble_args* args;
 	char *oldName, *newName;
 	void* state;
-	rumbleIntValuePair* pair, *oldFolder, *newFolder;
+	rumble_folder *pair, *oldFolder, *newFolder;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	args = rumble_read_words(arg);
 	oldFolder = 0;
@@ -419,19 +421,19 @@ ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, 
 		oldName = args->argv[0];
 		newName = args->argv[1];
 		
-		for (pair = rivp cvector_first(imap->folders); pair != NULL; pair = rivp cvector_next(imap->folders)) {
-			if ( !strcmp(pair->value, oldName) ) oldFolder = pair;
-			if ( !strcmp(pair->value, newName) ) newFolder = pair;
+		for (pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders)) {
+			if ( !strcmp(pair->name, oldName) ) oldFolder = pair;
+			if ( !strcmp(pair->name, newName) ) newFolder = pair;
 		}
 		if ( newFolder ) rcprintf(session, "%s NO RENAME failed: Duplicate folder name.\r\n", tag);
 		else if ( !oldFolder ) rcprintf(session, "%s NO RENAME failed: No such folder <%s>\r\n", tag, oldName);
 		else {
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->key );
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id );
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
-			free(oldFolder->value);
-			oldFolder->value = (char*) calloc(1, strlen(newName)+1);
-			strncpy(oldFolder->value, newName, strlen(newName));
+			free(oldFolder->name);
+			oldFolder->name = (char*) calloc(1, strlen(newName)+1);
+			strncpy(oldFolder->name, newName, strlen(newName));
 			rcprintf(session, "%s OK RENAME completed\r\n", tag);
 		}
 	}
@@ -440,19 +442,69 @@ ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, 
 }
 
 ssize_t rumble_server_imap_subscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	rumble_args* args;
+	char *folderName;
+	void* state;
+	rumble_folder *pair, *folder;
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	args = rumble_read_words(arg);
+	folder = 0;
+	if (args && args->argc == 1) {
+		rumble_folders_flush(imap->folders);
+		imap->folders = rumble_folders_retrieve(imap->account);
+		folderName = args->argv[0];
+		
+		for (pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders)) {
+			if ( !strcmp(pair->name, folderName) ) folder = pair;
+		}
+		if ( !folder ) rcprintf(session, "%s NO SUBSCRIBE failed: No such folder <%s>\r\n", tag, folderName);
+		else {
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id );
+			rumble_database_run(state);
+			rumble_database_cleanup(state);
+			folder->subscribed = 1;
+			rcprintf(session, "%s OK SUBSCRIBE completed\r\n", tag);
+		}
+	}
+	else rcprintf(session, "%s BAD Invalid SUBSCRIBE syntax!\r\n", tag);
+	rumble_args_free(args);
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_imap_unsubscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	rumble_args* args;
+	char *folderName;
+	void* state;
+	rumble_folder *pair, *folder;
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	args = rumble_read_words(arg);
+	folder = 0;
+	if (args && args->argc == 1) {
+		rumble_folders_flush(imap->folders);
+		imap->folders = rumble_folders_retrieve(imap->account);
+		folderName = args->argv[0];
+		
+		for (pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders)) {
+			if ( !strcmp(pair->name, folderName) ) folder = pair;
+		}
+		if ( !folder ) rcprintf(session, "%s NO UNSUBSCRIBE failed: No such folder <%s>\r\n", tag, folderName);
+		else {
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id );
+			rumble_database_run(state);
+			rumble_database_cleanup(state);
+			folder->subscribed = 0;
+			rcprintf(session, "%s OK UNSUBSCRIBE completed\r\n", tag);
+		}
+	}
+	else rcprintf(session, "%s BAD Invalid SUBSCRIBE syntax!\r\n", tag);
+	rumble_args_free(args);
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 	rumble_args* args;
 	char* mbox, *pattern, *pfolder;
-	rumbleIntValuePair* pair;
+	rumble_folder* pair;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	args = rumble_read_words(arg);
 	if (args && args->argc == 2) {
@@ -462,12 +514,12 @@ ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, co
 		pattern = args->argv[1];
 		if ( imap->folder == -1 ) { rcsend(session, "* LIST (\\Noselect) \"\" \"\"\r\n"); rcsend(session, "* LIST () \"\" \"INBOX\"\r\n"); }
 		if ( imap->folder != -1) {
-			for ( pair = (rumbleIntValuePair*) cvector_first(imap->folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(imap->folders) ) {
-				if ( pair->key == imap->folder ) pfolder = pair->value; break;
+			for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+				if ( pair->id == imap->folder ) pfolder = pair->name; break;
 			}
 		}
-		for ( pair = (rumbleIntValuePair*) cvector_first(imap->folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(imap->folders) ) {
-			rcprintf(session, "* LIST () \"\" \"%s\"\r\n", pair->value);
+		for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+			rcprintf(session, "* LIST () \"\" \"%s\"\r\n", pair->name);
 		}
 		
 		rcprintf(session, "%s OK LIST completed\r\n", tag);
@@ -477,7 +529,30 @@ ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_imap_lsub(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-	rcprintf(session, "%s OK I r not here!!\r\n", tag);
+	rumble_args* args;
+	char* mbox, *pattern, *pfolder;
+	rumble_folder* pair;
+	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	args = rumble_read_words(arg);
+	if (args && args->argc == 2) {
+		rumble_folders_flush(imap->folders);
+		imap->folders = rumble_folders_retrieve(imap->account);
+		mbox = args->argv[0];
+		pattern = args->argv[1];
+//		if ( imap->folder == -1 ) { rcsend(session, "* LSUB () \"\" \"INBOX\"\r\n"); }
+		if ( imap->folder != -1) {
+			for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+				if ( pair->id == imap->folder ) pfolder = pair->name; break;
+			}
+		}
+		for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+			if (pair->subscribed) rcprintf(session, "* LSUB () \"\" \"%s\"\r\n", pair->name);
+		}
+		
+		rcprintf(session, "%s OK LSUB completed\r\n", tag);
+	}
+	else rcprintf(session, "%s BAD Invalid LSUB syntax!\r\n", tag);
+	rumble_args_free(args);
 	return RUMBLE_RETURN_IGNORE;
 }
 
@@ -684,7 +759,7 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 	int first, last,a,b,useUID,destination;
 	rumble_letter* letter;
 	rumble_args* parts;
-	rumbleIntValuePair* pair;
+	rumble_folder* pair;
 	char folder[100], *filename, path[256], *opath;
 	FILE *in, *out;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
@@ -706,8 +781,8 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 	}
 
 	/* Check if folder exists */
-	for ( pair = (rumbleIntValuePair*) cvector_first(imap->folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(imap->folders) ) {
-		if ( !strcmp(folder, pair->value) ) { destination = pair->key; break; }
+	for ( pair = (rumble_folder*) cvector_first(imap->folders); pair != NULL; pair = (rumble_folder*) cvector_next(imap->folders) ) {
+		if ( !strcmp(folder, pair->name) ) { destination = pair->id; break; }
 	}
 	if (!destination && !strcmp(folder, "INBOX") ) destination = 0;
 
@@ -745,5 +820,11 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 	else {
 		rcprintf(session, "%s NO COPY [TRYCREATE] failed: Destination folder doesn't exist!\r\n", tag);
 	}
+	return RUMBLE_RETURN_IGNORE;
+}
+
+
+ssize_t rumble_server_imap_idle(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
+	rcprintf(session, "%s OK IDLE completed\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
 }

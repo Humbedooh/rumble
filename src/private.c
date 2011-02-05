@@ -40,7 +40,7 @@ uint32_t rumble_copy_mail(masterHandle* m, const char* fid, const char* usr, con
 	FILE *fp, *ofp;
 	uint32_t fsize = 0;
 
-	if (!filename || !nfid || !ofilename) merror();
+	if (!filename || !ofilename) merror();
 	nfid = rumble_create_filename();
     sprintf(filename, "%s/%s", path, nfid);
     sprintf(ofilename, "%s/%s", path, fid);

@@ -366,21 +366,24 @@ void rumble_letters_flush(rumble_mailbag* bag) {
 
 cvector* rumble_folders_retrieve(rumble_mailbox* acc) {
 	cvector* folders;
-	rumbleIntValuePair* pair;
+	rumble_folder* pair;
 	int rc,l;
 	void* state;
 	folders = cvector_init();
-	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE uid = %u", acc->uid);
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", acc->uid);
     while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
-		pair = (rumbleIntValuePair*) malloc(sizeof(rumbleIntValuePair));
+		pair = (rumble_folder*) malloc(sizeof(rumble_folder));
 
 		// Folder ID
-		pair->key = sqlite3_column_int((sqlite3_stmt*) state, 0);
+		pair->id = sqlite3_column_int((sqlite3_stmt*) state, 0);
 
 		// Folder name
 		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
-		pair->value = (char*) calloc(1,l+1);
-		memcpy((char*) pair->value, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+		pair->name = (char*) calloc(1,l+1);
+		memcpy((char*) pair->name, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		// Subscribed?
+		pair->subscribed = sqlite3_column_int((sqlite3_stmt*) state, 2);
 
 		cvector_add(folders, pair);
 	}
@@ -389,10 +392,10 @@ cvector* rumble_folders_retrieve(rumble_mailbox* acc) {
 }
 
 void rumble_folders_flush(cvector* folders) {
-	rumbleIntValuePair* pair;
+	rumble_folder* pair;
 	if (folders) {
-		for ( pair = (rumbleIntValuePair*) cvector_first(folders); pair != NULL; pair = (rumbleIntValuePair*) cvector_next(folders)) {
-			free(pair->value);
+		for ( pair = (rumble_folder*) cvector_first(folders); pair != NULL; pair = (rumble_folder*) cvector_next(folders)) {
+			free(pair->name);
 			free(pair);
 		}
 		cvector_flush(folders);

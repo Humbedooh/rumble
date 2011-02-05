@@ -53,7 +53,6 @@ int main(int argc, char** argv) {
 	int x;
 	pthread_t* t;
 	masterHandle* master;
-	char *test;
 	cvector* args = cvector_init();
     master = (masterHandle*) malloc(sizeof(masterHandle));
 	if (!master) merror();
@@ -67,12 +66,6 @@ int main(int argc, char** argv) {
     rumble_modules_load(master);
 	rumble_database_update_domains();
 
-	for (x = 0; x < 10; x++) {
-		test = rumble_create_filename();
-		printf("no. %u: %s\r\n", x+1,test);
-		free(test);
-	}
-
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
         printf("Launching SMTP service...");
@@ -83,8 +76,6 @@ int main(int argc, char** argv) {
             pthread_create(t, NULL, master->smtp.init, master);
         }
         printf("OK\n");
-        
-        
     }
 
 	if ( rumble_config_int(master, "enablepop3") ) {

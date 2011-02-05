@@ -110,7 +110,7 @@ extern "C" {
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00020500 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00030501 // Internal version for module checks
 
 
 // Return codes for modules
@@ -388,6 +388,11 @@ typedef struct {
 	uint32_t			size;		/* Number of letters */
 } rumble_mailbag;
 
+typedef struct {
+	uint32_t			id;
+	char*				name;
+	int					subscribed;
+} rumble_folder;
 
 typedef struct {
 	rumble_mailbox*	account;

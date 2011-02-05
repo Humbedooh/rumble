@@ -105,7 +105,7 @@ char* rumble_comm_read(sessionHandle* session) {
 	
 	if (!ret) { perror("Calloc failed!"); exit(1);}
 
-	t.tv_sec = 50;
+	t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
 	t.tv_usec = 0;
 	
     for (p = 0; p < 1024; p++) {
@@ -257,7 +257,7 @@ char* rumble_create_filename() {
 	unsigned char *p;
 	int y[4],x;
 	name = (char*) calloc(1,17);
-	srand(time(0));
+	srand(time(0)*rand());
 	y[0] = time(0);
 	y[1] = rand()*rand();
 	y[2] = (int) &y - rand();
