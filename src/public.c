@@ -101,13 +101,14 @@ char* rumble_comm_read(sessionHandle* session) {
     uint32_t p;
 	struct timeval t;
 	signed int f;
+	time_t z;
 	char* ret = (char*) calloc(1,1025);
 	
 	if (!ret) { perror("Calloc failed!"); exit(1);}
 
 	t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
 	t.tv_usec = 0;
-	
+	z = time(0);
     for (p = 0; p < 1024; p++) {
 		f = select(session->client->socket+1, &session->client->fd, NULL, NULL, &t);
 		if ( f > 0 ) {
@@ -117,13 +118,14 @@ char* rumble_comm_read(sessionHandle* session) {
 			if ( b == '\n' ) break;
 		}
 		else {
-			free(ret); return NULL;
+			z = time(0) - z;
+			free(ret); printf("timeout after %u secs!\r\n", z); return NULL;
 		}
 	}
 	return ret;
 }
 
-void  rumble_string_lower(char* d) {
+void rumble_string_lower(char* d) {
     int a,b;
     b = strlen(d);
     for (a = 0; a < b; a++) {
@@ -131,7 +133,7 @@ void  rumble_string_lower(char* d) {
     }
 }
 
-void  rumble_string_upper(char* d) {
+void rumble_string_upper(char* d) {
     int a,b;
     b = strlen(d);
     for (a = 0; a < b; a++) {

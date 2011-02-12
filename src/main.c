@@ -12,7 +12,7 @@
 #include "servers.h"
 #include "private.h"
 
-#define RUMBLE_INITIAL_THREADS 1
+#define RUMBLE_INITIAL_THREADS 10
 
 extern masterHandle* rumble_database_master_handle;
 
@@ -94,6 +94,7 @@ int main(int argc, char** argv) {
 		int n;
         printf("Launching IMAP4 service...");
         master->imap.socket = comm_init(master, rumble_config_str(master, "imap4port"));
+		master->imap.sharedObjects = cvector_init();
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->imap.threads, t);

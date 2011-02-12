@@ -9,6 +9,19 @@
 //#define FORCE_WIN
 #define RUMBLE_LUA
 
+#if __STDC_VERSION__ >= 199901L
+  /* "inline" is a keyword */
+#else
+#define inline static
+//#pragma message("Non-C99 compliant compiler used, boooooo!")
+#endif
+
+#ifndef _MSC_VER
+#  define __cdecl    /* nothing */
+#  define __stdcall  /* nothing */
+#  define __fastcall /* nothing */
+#endif /* _MSC_VER */
+
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -22,9 +35,6 @@ extern "C" {
 	#include <Windows.h>
 	#include <winsock.h>
 	#include <windns.h> // for DnsQuery_A instead of res_query
-	//#include <WinCrypt.h>
-	//#pragma comment (lib, "Crypt32");
-	//#include <sys/types.h>
         #if !defined(__CYGWIN__)
                 #include "pthreads-win32/include/pthread.h"
         #else
@@ -37,6 +47,7 @@ extern "C" {
 		typedef unsigned int uint32_t;
 		typedef unsigned long long uint64_t;
 		typedef signed int ssize_t;
+		typedef long long int64_t;
 
 	#endif
 	#define sleep(a) Sleep(a*1000)
@@ -102,6 +113,7 @@ extern "C" {
 	#include <lua.h>
 	#include <lualib.h>
 	#include <lauxlib.h>
+
 #endif
 
 #define RUMBLE_DEBUG_HOOKS              0x00100000
@@ -110,7 +122,7 @@ extern "C" {
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00030501 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00040503 // Internal version for module checks
 
 
 // Return codes for modules
@@ -197,6 +209,7 @@ extern "C" {
 #define RUMBLE_MTYPE_ALIAS              0x00000002   // Alias to somewhere else
 #define RUMBLE_MTYPE_MOD                0x00000004   // Mail goes into a module
 #define RUMBLE_MTYPE_FEED               0x00000008   // Mail is fed to an external program or URL
+#define RUMBLE_MTYPE_RELAY				0x00000010	 // Mail is being relayed to another server
 
 // Letter flags (for POP3/IMAP4)
 #define RUMBLE_LETTER_RECENT			0x00000000
@@ -211,7 +224,9 @@ extern "C" {
     
     
 // Structure definitions
-
+#ifndef PRIu64
+	#define PRIu64 "llu"
+#endif
 #define socketHandle int
 #ifndef _SS_PAD2SIZE
 	#define _SS_MAXSIZE 128			/* Maximum size. */
@@ -306,6 +321,7 @@ typedef struct {
         pthread_mutex_t mutex;
         cvector*        handles;
         void*           (*init)(void*);
+		cvector*		sharedObjects;
     } rumbleService;
 
 typedef struct {
@@ -371,12 +387,12 @@ typedef struct {
 
 
 typedef struct {
-	uint32_t		id;			/* Letter ID */
+	uint64_t		id;			/* Letter ID */
 	uint32_t		uid;		/* User ID */
 	char*			fid;		/* File ID */
 	uint32_t		size;		/* Size of letter */
 	uint32_t		delivered;	/* Time of delivery */
-	uint32_t		folder;		/* Folder name (for IMAP4) */
+	int64_t			folder;		/* Folder name (for IMAP4) */
 	uint32_t		flags;		/* Various flags */
 	uint32_t		_flags;		/* Original copy of flags (for update checks) */
 } rumble_letter;
@@ -399,17 +415,34 @@ typedef struct {
 	rumble_mailbag*	bag;
 } pop3Session;
 
+
 typedef struct {
-	rumble_mailbox*	account;
-	rumble_mailbag*	bag;
-	cvector*		folders;
-	signed int		folder;
-} imap4Session;
+	int64_t				id;
+	time_t				updated;
+	uint64_t			lastMessage;
+	char*				name;
+	int					subscribed;
+	cvector*			letters;
+} rumble_imap4_shared_folder;
+
+typedef struct {
+	cvector*			 folders;
+	rumble_readerwriter* rrw;
+	uint32_t			 sessions;
+	uint32_t			 uid;
+} rumble_imap4_shared_bag;
 
 typedef struct {
 	char**			argv;
 	uint32_t		argc;
 } rumble_args;
+
+typedef struct {
+	rumble_mailbox*				account;
+	rumble_imap4_shared_bag*	bag;
+	int64_t						folder;
+} imap4Session;
+
 
 //typedef _imapFetch imapFetch;
 
@@ -422,8 +455,8 @@ char* rumble_sha160(const unsigned char* d); //SHA1 digest (40 byte hex string)
 char* rumble_sha256(const unsigned char* d); //SHA-256 digest (64 byte hex string)
 char* rumble_decode_base64(const char* src);
 
-void  rumble_string_lower(char* d); // Converts <d> into lowercase.
-void  rumble_string_upper(char* d); // Converts <d> into uppercase.
+void rumble_string_lower(char* d); // Converts <d> into lowercase.
+void rumble_string_upper(char* d); // Converts <d> into uppercase.
 rumble_args* rumble_read_words(const char* d);
 void rumble_args_free(rumble_args* d);
 char* rumble_mtime(); // mail time
@@ -469,6 +502,11 @@ rumble_mailbag* rumble_letters_retrieve_folder(rumble_mailbox* acc, ssize_t fold
 cvector* rumble_folders_retrieve(rumble_mailbox* acc);
 void rumble_folders_flush(cvector* folders);
 
+/* IMAP4 specific functions */
+rumble_imap4_shared_folder* rumble_imap4_current_folder(imap4Session* sess);
+rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc);
+void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag);
+uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* folder);
 
 
 // Shortcuts to common functions

@@ -76,7 +76,7 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
         #else
                 pp = t;
         #endif
-		sprintf(batv, "%x%x", rand()*pp, time(0)+pp);
+		sprintf(batv, "%x%llu", rand()*pp, time(0)+pp);
 		sprintf(sender->tag, "prvs=%s", batv);
 		el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
 		if (!el) merror();

@@ -77,6 +77,11 @@ void* rumble_database_prepare(void* db, const char* statement, ...) {
 				rc = sqlite3_bind_int((sqlite3_stmt*) returnObject, at+1, va_arg(vl, signed int));
 				#endif
 				break;
+			case 'l':
+				#ifdef RUMBLE_USING_SQLITE3
+				rc = sqlite3_bind_int64((sqlite3_stmt*) returnObject, at+1, va_arg(vl, signed int));
+				#endif
+				break;
 			case 'f':
 				#ifdef RUMBLE_USING_SQLITE3
 				rc = sqlite3_bind_double((sqlite3_stmt*) returnObject, at+1, va_arg(vl, double));
@@ -166,6 +171,7 @@ rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, co
         if (!strcmp(tmp, "alias")) acc->type = RUMBLE_MTYPE_ALIAS;
         else if (!strcmp(tmp, "mod")) acc->type = RUMBLE_MTYPE_MOD;
         else if (!strcmp(tmp, "feed")) acc->type = RUMBLE_MTYPE_FEED;
+		else if (!strcmp(tmp, "relay")) acc->type = RUMBLE_MTYPE_FEED;
         free(tmp);
 
 		// Account args
@@ -283,6 +289,12 @@ rumble_mailbag* rumble_letters_retrieve_folder(rumble_mailbox* acc, ssize_t fold
 
 	return bag;
 }
+
+
+/* rumble_letters_retrieve: retrieves all letters for an account and stores them in a mail bag struct */
+
+
+
 
 /* rumble_letters_expunge: purges the mailbag, removing letters marked for deletion */
 uint32_t rumble_letters_expunge(rumble_mailbag* bag) {
@@ -451,3 +463,211 @@ void rumble_database_update_domains() {
 	rumble_database_cleanup(state);
 }
 
+
+
+
+
+/* NEW IMAP4 STUFF GOES HERE */
+
+/* rumble_letters_retrieve_shared(acc):
+ * Retrieves a completed, shared instance of a mailbag for IMAP4 use.
+ * The bag can be shared across multiple connections for faster processing.
+*/
+rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
+	int rc,l;
+    void* state;
+	rumble_imap4_shared_bag* bag;
+	rumble_letter* letter;
+	rumble_imap4_shared_folder* folder;
+	bag = (rumble_imap4_shared_bag*) malloc(sizeof(rumble_imap4_shared_bag));
+	bag->folders = cvector_init();
+	bag->rrw = rumble_rw_init();
+
+	/* Add the default inbox */
+	folder = (rumble_imap4_shared_folder*) malloc(sizeof(rumble_imap4_shared_folder));
+	folder->id = 0;
+	folder->letters = cvector_init();
+	folder->lastMessage = 0;
+	folder->updated = time(0);
+	folder->subscribed = 1;
+	folder->name = (char*) calloc(1,32); strcpy(folder->name, "INBOX");
+	cvector_add(bag->folders, folder);
+
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", acc->uid);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		folder = (rumble_imap4_shared_folder*) malloc(sizeof(rumble_imap4_shared_folder));
+
+		// Folder ID
+		folder->id = sqlite3_column_int64((sqlite3_stmt*) state, 0);
+
+		// Folder name
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		folder->name = (char*) calloc(1,l+1);
+		strncpy(folder->name, (char*) sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		// Subscribed?
+		folder->subscribed = sqlite3_column_int((sqlite3_stmt*) state, 2);
+
+		folder->letters = cvector_init();
+		folder->updated = time(0);
+		folder->lastMessage = 0;
+		cvector_add(bag->folders, folder);
+				printf("Added folder: %s (%u)\n", folder->name, folder->id);
+	}
+	rumble_database_cleanup(state);
+
+
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u", acc->uid);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		letter = (rumble_letter*) malloc(sizeof(rumble_letter));
+
+		// Letter ID
+		letter->id = sqlite3_column_int64((sqlite3_stmt*) state, 0);
+
+		// Letter File ID
+		l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+		letter->fid = (char*) calloc(1,l+1);
+		memcpy((char*) letter->fid, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+		// Letter Size
+		letter->size = sqlite3_column_int((sqlite3_stmt*) state, 2);
+
+		// Delivery date
+		letter->delivered = sqlite3_column_int((sqlite3_stmt*) state, 3);
+
+		// Flags
+		letter->flags = sqlite3_column_int((sqlite3_stmt*) state, 4);
+		letter->_flags = letter->flags;
+
+		// UID
+		letter->uid = acc->uid;
+
+		letter->folder = sqlite3_column_int64((sqlite3_stmt*) state, 5);
+		l = 0;
+		for ( folder = (rumble_imap4_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(bag->folders) ) {
+			if ( folder->id == letter->folder ) { 
+				l++;
+				cvector_add(folder->letters, letter);
+				folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
+				break;
+			}
+		}
+		if (!l) {
+			free(letter->fid);
+			free(letter);
+		}
+	}
+	rumble_database_cleanup(state);
+
+	return bag;
+}
+
+rumble_imap4_shared_folder* rumble_imap4_current_folder(imap4Session* sess) {
+	rumble_imap4_shared_folder* folder;
+	for ( folder = (rumble_imap4_shared_folder*) cvector_first(sess->bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(sess->bag->folders) ) {
+		if ( folder->id == sess->folder ) return folder;
+	}
+	printf("<curfolder> Couldn't find folder no. %lld(?)\n", sess->folder);
+	return 0;
+}
+
+
+/* rumble_imap4_update_folders: Updates the list of folders in the mail account */
+void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag) {
+	rumble_imap4_shared_folder* folder;
+	int rc,l, folder_id, found;
+	void* state;
+
+	rumble_rw_start_write(bag->rrw); // Lock bag for writing
+	
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", bag->uid);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+
+		// Get the folder ID
+		folder_id = sqlite3_column_int((sqlite3_stmt*) state, 0);
+
+		// Match against our existing folders and add if not there.
+		found = 0;
+		for ( folder = (rumble_imap4_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(bag->folders)) {
+			if ( folder->id == folder_id ) { found++; break; }
+		}
+
+		if (!found) {
+			folder = (rumble_imap4_shared_folder*) malloc(sizeof(rumble_imap4_shared_folder));
+			folder->id = folder_id;
+
+			// Folder name
+			l = sqlite3_column_bytes((sqlite3_stmt*) state,1);
+			folder->name = (char*) calloc(1,l+1);
+			memcpy((char*) folder->name, sqlite3_column_text((sqlite3_stmt*) state,1), l);
+
+			// Subscribed?
+			folder->subscribed = sqlite3_column_int((sqlite3_stmt*) state, 2);
+			cvector_add(bag->folders, folder);
+		}
+	}
+	rumble_database_cleanup(state);
+
+
+	rumble_rw_stop_write(bag->rrw); // Unlock bag again.
+}
+
+
+
+uint32_t rumble_imap4_scan_incoming(rumble_imap4_shared_folder* folder) {
+	int r,rc,exists;
+	void* state;
+	rumble_letter* letter;
+	if (!folder) return 0;
+	r = 0;
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %u", folder->id, folder->lastMessage);
+    while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
+		r++;
+		exists = 0;
+		
+	}
+	rumble_database_run(state);
+	rumble_database_cleanup(state);
+
+	return r;
+}
+
+
+/* rumble_imap4_commit: Commits any changes done to the folder, deleting deleted letters and updating any flags set */
+uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* folder) {
+	int r,x,y;
+	void* state;
+	const char* path;
+	rumble_letter* letter, **letters;
+	char tmp[256];
+	if (!folder) return 0;
+	path = strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+	r = 0;
+
+	rumble_rw_start_write(imap->bag->rrw); // Lock the bag
+
+	for ( letter = (rumble_letter*) cvector_first(folder->letters); letter != NULL; letter = (rumble_letter*) cvector_next(folder->letters)) {
+		if ( (letter->flags & RUMBLE_LETTER_EXPUNGE)  ) { /* Delete it? */
+			sprintf(tmp, "%s/%s.msg", path, letter->fid);
+			unlink(tmp);
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %l", letter->id);
+			rumble_database_run(state);
+			rumble_database_cleanup(state);
+			r++;
+			free(letter->fid);
+			free(letter);
+			cvector_delete(folder->letters);
+		}
+		else if ( letter->flags != letter->_flags ) {
+			printf("Updating letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
+			if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags, letter->id);
+			rumble_database_run(state);
+			rumble_database_cleanup(state);
+			r++;
+		}
+	}
+
+	rumble_rw_stop_write(imap->bag->rrw); // Unlock the bag
+	return r;
+}

@@ -65,15 +65,15 @@ void rumble_modules_load(masterHandle* master) {
                 master->_core.currentSO = el->value;
                 cvector_add(master->_core.modules, modinfo);
                 ver = (*mcheck)();
-                if ( ver != RUMBLE_VERSION ) fprintf(stderr, "<modules> Warning: %s was compiled with librumble v%#x - current is %#x!\n<modules> Please recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
-                x = init(master, modinfo);
+                if ( ver != RUMBLE_VERSION ) fprintf(stderr, "<modules> Error: %s was compiled with librumble v%#x - current is %#x!\n<modules> Please recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
+                else x = init(master, modinfo);
                 if ( x != EXIT_SUCCESS ) { fprintf(stderr, "<modules> Error: %s failed to load!\n", el->value); 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 				FreeLibrary(handle);
 #else
 				dlclose(handle);
 #endif
-				exit(EXIT_FAILURE); }
+				 }
             }
             modinfo->file = el->value;
             //dlclose(handle);
