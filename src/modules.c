@@ -30,7 +30,7 @@ void rumble_modules_load(masterHandle* master) {
     for ( line = master->_core.conf->first; line != NULL; line = line->next ) {
         el = (rumbleKeyValuePair*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
-            printf("<modules> Loading %s...\n", el->value);
+            printf("Loading %-40s", el->value);
 #if defined(_WIN32) && !defined(__CYGWIN__)
 			handle = LoadLibraryA(el->value);
 
@@ -40,10 +40,10 @@ void rumble_modules_load(masterHandle* master) {
 #endif
             if (!handle) {
 				error = error ? error : "(no such file?)";
-                fprintf (stderr, "\n<modules> Error loading %s: %s\n", el->value, error);
+                fprintf (stderr, "\nError loading %s: %s\n", el->value, error);
                 exit(1);
             }
-            if ( error ) { printf("<modules> Warning: %s\n", error); }
+            if ( error ) { printf("Warning: %s\n", error); }
             modinfo = (rumble_module_info*) calloc(1,sizeof(rumble_module_info));
 			if (!modinfo) merror();
             modinfo->author = 0;
@@ -59,21 +59,23 @@ void rumble_modules_load(masterHandle* master) {
             error = dlerror();
 #endif
             if (error != NULL)  {
-                fprintf (stderr, "<modules> Warning: %s does not contain required module functions.\n", el->value);
+                fprintf (stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
             }
             if ( init && mcheck ) { 
                 master->_core.currentSO = el->value;
                 cvector_add(master->_core.modules, modinfo);
                 ver = (*mcheck)();
-                if ( ver != RUMBLE_VERSION ) fprintf(stderr, "<modules> Error: %s was compiled with librumble v%#x - current is %#x!\n<modules> Please recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
+                if ( ver != RUMBLE_VERSION ) fprintf(stderr, "\nError: %s was compiled with librumble v%#x - current is %#x!\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
                 else x = init(master, modinfo);
-                if ( x != EXIT_SUCCESS ) { fprintf(stderr, "<modules> Error: %s failed to load!\n", el->value); 
+                if ( x != EXIT_SUCCESS ) { fprintf(stderr, "\nError: %s failed to load!\n", el->value); 
 #if defined(_WIN32) && !defined(__CYGWIN__)
 				FreeLibrary(handle);
 #else
 				dlclose(handle);
 #endif
 				 }
+				if (x == EXIT_SUCCESS) printf("[OK]\n");
+				else printf("[BAD]\n");
             }
             modinfo->file = el->value;
             //dlclose(handle);
@@ -88,8 +90,8 @@ void rumble_modules_load(masterHandle* master) {
 			if ( luaL_loadfile(L, el->value) ) {
 				fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
 			}
-			if ( lua_pcall(L, 0, LUA_MULTRET, 0) ) {
-				fprintf(stderr, "Failed to run script: %s\n", lua_tostring(L, -1));
+			else if ( lua_pcall(L, 0, LUA_MULTRET, 0) ) {
+				fprintf(stderr, "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
 			}
 
 		}

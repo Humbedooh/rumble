@@ -4,12 +4,14 @@
 void rumble_config_load(masterHandle* master, cvector* args) {
     char* paths[3] = { "config", "/var/rumble/config", "C:/cygwin/home/Administrator/rumble/config" };
     char* cfgfile;
+	const char *cfgpath;
 	FILE* config;
 	rumbleKeyValuePair* el;
 	master->_core.conf = cvector_init();
 	cfgfile = (char*) calloc(1,1024);
+	cfgpath = rumble_get_dictionary_value(args, "--CONFIG-DIR");
 	if (!cfgfile) merror();
-    if ( strlen(rumble_get_dictionary_value(args, "--CONFIG-DIR"))) {
+    if ( strlen(cfgpath) && strcmp(cfgpath, "0")) {
         el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
 		if (!el) merror();
         el->key = "config-dir";

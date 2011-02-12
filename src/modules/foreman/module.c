@@ -19,7 +19,6 @@ ssize_t accept_hook(sessionHandle* session); // Prototype
 rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
     modinfo->title = "Foreman module";
     modinfo->description = "Standard module for dynamically managing worker pools.";
-	printf("<modules> Foreman module up and running!\r\n");
     
     // Hook the module to incoming connections on any service.
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, accept_hook);

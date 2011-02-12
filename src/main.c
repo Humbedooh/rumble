@@ -68,31 +68,31 @@ int main(int argc, char** argv) {
 
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
-        printf("Launching SMTP service...");
+        printf("%-48s", "Launching SMTP service...");
         master->smtp.socket = comm_init(master, rumble_config_str(master, "smtpport"));
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->smtp.threads, t);
             pthread_create(t, NULL, master->smtp.init, master);
         }
-        printf("OK\n");
+        printf("[OK]\n");
     }
 
 	if ( rumble_config_int(master, "enablepop3") ) {
 		int n;
-        printf("Launching POP3 service...");
+        printf("%-48s", "Launching POP3 service...");
         master->pop3.socket = comm_init(master, rumble_config_str(master, "pop3port"));
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->pop3.threads, t);
             pthread_create(t, NULL, master->pop3.init, master);
         }
-        printf("OK\n");
+        printf("[OK]\n");
     }
 
 	if ( rumble_config_int(master, "enableimap4") ) {
 		int n;
-        printf("Launching IMAP4 service...");
+        printf("%-48s", "Launching IMAP4 service...");
         master->imap.socket = comm_init(master, rumble_config_str(master, "imap4port"));
 		master->imap.sharedObjects = cvector_init();
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
             cvector_add(master->imap.threads, t);
             pthread_create(t, NULL, master->imap.init, master);
         }
-        printf("OK\n");
+        printf("[OK]\n");
     }
 
 	t = (pthread_t*) malloc(sizeof(pthread_t));

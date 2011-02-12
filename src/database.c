@@ -12,7 +12,7 @@ void rumble_database_load(masterHandle* master) {
 	if(!dbpath||!mailpath) merror();
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
-    printf("Reading database...");
+    printf("%-48s", "Loading database...");
     
     // Domains and accounts
     if (sqlite3_open(dbpath, (sqlite3**) &master->_core.db)) { fprintf(stderr, "Can't open database <%s>: %s\n", dbpath, sqlite3_errmsg((sqlite3*) master->_core.db)); exit(EXIT_FAILURE); }
@@ -22,7 +22,7 @@ void rumble_database_load(masterHandle* master) {
     
     free(dbpath);
     free(mailpath);
-    printf("OK\n");    
+    printf("[OK]\n");    
 }
 
 // Wrapper for the SQL prepare statement
