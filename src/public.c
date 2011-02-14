@@ -12,7 +12,10 @@
  */
 
 ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
-    return send(session->client->socket, message, strlen(message),0);
+	#ifndef RUMBLE_IS_LIBRARY
+	if (session->client->tls != NULL ) {printf("s -> c : %s", message); return gnutls_record_send(session->client->tls,message, strlen(message)); }
+	#endif
+    return send(session->client->socket, message, strlen(message) ,0);
 }
 
 void rumble_args_free(rumble_args* d) {
@@ -112,6 +115,10 @@ char* rumble_comm_read(sessionHandle* session) {
     for (p = 0; p < 1024; p++) {
 		f = select(session->client->socket+1, &session->client->fd, NULL, NULL, &t);
 		if ( f > 0 ) {
+			#ifndef RUMBLE_IS_LIBRARY
+			if (session->client->tls != NULL ) rc = gnutls_record_recv(session->client->tls,&b,1);
+			else
+			#endif
 			rc = recv(session->client->socket, &b, 1, 0);
 			if ( rc <= 0 ) { free(ret); return NULL; }
 			ret[p] = b;

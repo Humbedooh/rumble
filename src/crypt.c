@@ -2,6 +2,9 @@
 #include <openssl/sha.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
+#include <openssl/ssl.h>
+#include <gnutls/gnutls.h>
+#include <gnutls/extra.h>
 #ifndef PRIx32
 #define PRIx32 "x"
 #endif
@@ -64,13 +67,73 @@ char* rumble_sha160(const unsigned char* d) {
 char* rumble_decode_base64(const char* src) {
 	 BIO *b64, *bmem;
 	 ssize_t len;
-	 char *buffer;
+	 char *buffer, *copy;
 	 len = strlen(src); 
-	 buffer = (char *)calloc(1, len);
+	 buffer = (char *)calloc(1, len+1);
+	 copy = (char *)calloc(1, len+3);
+	 sprintf(copy, "%s\r\n", src);
 	 b64 = BIO_new(BIO_f_base64());
-	 bmem = BIO_new_mem_buf((void*) src, len);
+	 bmem = BIO_new_mem_buf((void*) copy, len+2);
 	 bmem = BIO_push(b64, bmem);
 	 BIO_read(bmem, buffer, len);
 	 BIO_free_all(bmem);
+	 free(copy);
 	 return buffer;
+}
+
+
+
+static gnutls_dh_params_t dh_params;
+static gnutls_rsa_params_t rsa_params;
+static int
+generate_dh_params (void)
+{
+	#ifndef RUMBLE_IS_LIBRARY
+  /* Generate Diffie-Hellman parameters - for use with DHE
+   * kx algorithms. These should be discarded and regenerated
+   * once a day, once a week or once a month. Depending on the
+   * security requirements.
+   */
+  gnutls_dh_params_init (&dh_params);
+  gnutls_dh_params_generate2 (dh_params, 1024);
+	#endif
+  return 0;
+}
+
+static int
+generate_rsa_params (void)
+{
+	#ifndef RUMBLE_IS_LIBRARY
+  gnutls_rsa_params_init (&rsa_params);
+
+  /* Generate RSA parameters - for use with RSA-export
+   * cipher suites. This is an RSA private key and should be 
+   * discarded and regenerated once a day, once every 500 
+   * transactions etc. Depends on the security requirements.
+   */
+
+  gnutls_rsa_params_generate2 (rsa_params, 1024);
+	#endif
+  return 0;
+
+}
+
+void rumble_crypt_init(masterHandle* master) {
+	int ret, sd, ii;
+	gnutls_session_t session;
+	
+	#ifndef RUMBLE_IS_LIBRARY
+	printf("%-48s", "Loading SSL...");
+	if (gnutls_global_init()) { printf("[BAD]\n"); return; }
+	if (gnutls_certificate_allocate_credentials (&master->_core.tls.credentials)) { printf("[BAD]\n"); return; }
+	
+	gnutls_certificate_set_x509_key_file (master->_core.tls.credentials, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);
+	generate_dh_params();
+	generate_rsa_params();
+	gnutls_certificate_set_dh_params (master->_core.tls.credentials, dh_params);
+	gnutls_certificate_set_rsa_export_params (master->_core.tls.credentials, rsa_params);
+	//gnutls_ia_set_server_avp_function (master->_core.tls.iacred, client_avp);
+	#endif
+	printf("[OK]\n");
+	
 }

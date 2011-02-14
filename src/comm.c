@@ -163,6 +163,10 @@ ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...) {
 	buffer = (char*) calloc(1,len);
 	if (!buffer) merror();
     vsprintf(buffer, d, vl);
+	#ifndef RUMBLE_IS_LIBRARY
+	if (session->client->tls != NULL ) len = gnutls_record_send(session->client->tls,buffer, strlen(buffer));
+	else
+	#endif
     len = send(session->client->socket, buffer, strlen(buffer) ,0);
     free(buffer);
     return len;
@@ -172,6 +176,7 @@ void comm_accept(socketHandle sock, clientHandle* client) {
     socklen_t sin_size = sizeof client->client_info;
     while(1) {  // loop through accept() till we get something worth passing along.
         client->socket = accept(sock, (struct sockaddr *)&(client->client_info), &sin_size);
+		client->tls = 0;
         if (client->socket == SOCKET_ERROR) {
                 perror("Error while attempting accept()");
                 break;
@@ -188,6 +193,57 @@ void comm_accept(socketHandle sock, clientHandle* client) {
 #endif
         break;
     }
+}
+
+
+void comm_starttls(sessionHandle* session) {
+#ifndef RUMBLE_IS_LIBRARY
+	int ret;
+	masterHandle* master = (masterHandle*) session->_master;
+	
+	printf("Setting up TLS...");
+	ret = gnutls_init (&session->client->tls, GNUTLS_SERVER);
+	printf("ret = %d\n", ret);
+	ret = gnutls_priority_set_direct (session->client->tls, "EXPORT", NULL);
+	printf("ret = %d\n", ret);
+	ret = gnutls_credentials_set (session->client->tls, GNUTLS_CRD_CERTIFICATE, master->_core.tls.credentials);
+	printf("ret = %d\n", ret);
+	gnutls_certificate_server_set_request (session->client->tls, GNUTLS_CERT_REQUEST);
+	gnutls_dh_set_prime_bits (session->client->tls, 1024);
+
+	gnutls_transport_set_ptr (session->client->tls, (gnutls_transport_ptr_t) session->client->socket);
+	printf("Handshaking...");
+
+	ret = gnutls_handshake (session->client->tls);
+
+	if (ret < 0)
+    {
+      fprintf (stderr, "*** Handshake failed\n");
+      gnutls_perror (ret);
+	  session->client->tls = 0;
+	  return;
+    }
+  else
+    {
+      printf ("- Handshake was completed\n");
+    }
+
+  
+
+	printf("SSL Done!?\n");
+
+#endif
+}
+
+void comm_stoptls(sessionHandle* session) {
+#ifndef RUMBLE_IS_LIBRARY
+	if (session->client->tls) {
+		gnutls_bye (session->client->tls, GNUTLS_SHUT_RDWR);
+		session->client->tls = 0;
+		gnutls_deinit (session->client->tls);
+		printf("Stopped TLS\n");
+	}
+#endif
 }
 
 

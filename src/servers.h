@@ -28,6 +28,7 @@ extern "C" {
     ssize_t rumble_server_smtp_vrfy(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_auth(masterHandle* master, sessionHandle* session, const char* argument);
+	ssize_t rumble_server_smtp_tls(masterHandle* master, sessionHandle* session, const char* argument);
 
 	/* IMAP4 handlers */
 	ssize_t rumble_server_imap_login(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);

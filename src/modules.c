@@ -65,6 +65,7 @@ void rumble_modules_load(masterHandle* master) {
                 master->_core.currentSO = el->value;
                 cvector_add(master->_core.modules, modinfo);
                 ver = (*mcheck)();
+				x = EXIT_SUCCESS;
                 if ( ver != RUMBLE_VERSION ) fprintf(stderr, "\nError: %s was compiled with librumble v%#x - current is %#x!\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
                 else x = init(master, modinfo);
                 if ( x != EXIT_SUCCESS ) { fprintf(stderr, "\nError: %s failed to load!\n", el->value); 

@@ -5,7 +5,7 @@ const char* rumble_smtp_reply_code(unsigned int code) {
         case 200:		return "200 OK\r\n";
         case 211:		return "211 System status, or system help reply\r\n";
         case 214:		return "214 Help message\r\n";
-        case 220:		return "220 <%s> (ESMTPA) Service ready\r\n";
+        case 220:		return "220 <%s> (ESMTPSA) Service ready\r\n";
         case 221:		return "221 <%s> Service closing transmission channel\r\n";
 		case 221220:	return "221 2.2.0 Service closing transmission channel\r\n";
         case 250:		return "250 Requested mail action okay, completed\r\n";

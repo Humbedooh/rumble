@@ -65,6 +65,7 @@ int main(int argc, char** argv) {
     rumble_database_load(master);
     rumble_modules_load(master);
 	rumble_database_update_domains();
+	rumble_crypt_init(master);
 
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;

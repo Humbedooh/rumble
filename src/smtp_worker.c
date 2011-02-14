@@ -56,9 +56,10 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 	fseek(fp, 0, SEEK_END);
 	fsize = ftell(fp);
 	rewind(fp);
-
+	res->replyCode = 250;
+	return res;
 	printf("connecting to %s...\n", mailserver);
-	
+	c.tls = 0;
 	c.socket = comm_open(master, mailserver, 25);
 	me = rumble_get_dictionary_value(master->_core.conf, "servername");
 
@@ -91,7 +92,6 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 		// Try EHLO first
 		rcprintf(&s, "EHLO %s\r\n", me);
 		get_smtp_response(&s, res);
-		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 300 ) {
 			// Or...try HELO
 			rcprintf(&s, "HELO %s\r\n", me);
@@ -107,19 +107,16 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 			rcprintf(&s, "MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
 		}
 		get_smtp_response(&s, res);
-		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 300 ) break;
 
 		// Do an RCPT TO
 		rcprintf(&s, "RCPT TO: <%s@%s>\r\n", recipient->user, recipient->domain);
 		get_smtp_response(&s, res);
-		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 300 ) break;
 
 		// Do a DATA
 		rcprintf(&s, "DATA\r\n", sender);
 		get_smtp_response(&s, res);
-		printf("<Server> [%u] %s", res->replyCode, res->replyMessage);
 		if ( res->replyCode >= 400 ) break;
 		while (!feof(fp)) {
 			memset(buffer, 0, 2000);
@@ -294,6 +291,7 @@ void* rumble_worker_process(void* m) {
 			}
 			// All done!
         }
+		
         if ( item->recipient ) rumble_free_address(item->recipient);
         if ( item->sender ) rumble_free_address(item->recipient);
         if ( item->fid) free((char*) item->fid);
@@ -358,7 +356,7 @@ void* rumble_worker_init(void* m) {
             
                 //flags
                 l = sqlite3_column_bytes(state,5);
-                item->flags = (char*) calloc(1,1);
+                item->flags = (char*) calloc(1,l+1);
                 memcpy((char*) item->flags, sqlite3_column_text(state,5), l);
             
                 mid = sqlite3_column_int(state, 6);

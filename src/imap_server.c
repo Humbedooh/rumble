@@ -24,6 +24,7 @@ void* rumble_imap_init(void* m) {
     session.recipients = cvector_init();
     session._svcHandle = (imap4Session*) malloc(sizeof(imap4Session));
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
+	session.client->tls = 0;
     session._master = m;
     pops = (imap4Session*) session._svcHandle;
     pops->account = 0;
@@ -84,7 +85,7 @@ void* rumble_imap_init(void* m) {
 				}
 				else session.flags -= (session.flags & RUMBLE_IMAP4_HAS_UID); // clear UID demand if not there.
 				printf("Client said: <%s> %s %s\r\n", tag, cmd, arg);
-				printf("Selected folder is: %lld\r\n", pops->folder);
+				//printf("Selected folder is: %lld\r\n", pops->folder);
                 if (!strcmp(cmd, "LOGIN"))				rc = rumble_server_imap_login(master, &session, tag, arg);
 				else if (!strcmp(cmd, "LOGOUT"))        break;
 				else if (!strcmp(cmd, "NOOP"))          rc = rumble_server_imap_noop(master, &session, tag, arg);
@@ -144,6 +145,9 @@ void* rumble_imap_init(void* m) {
         /* End cleanup */
 
         pthread_mutex_lock(&(master->imap.mutex));
+		if ( pops->bag ) {
+			pops->bag->sessions--;
+		}
         
         for (s = (sessionHandle*) cvector_first(master->imap.handles); s != NULL; s = (sessionHandle*) cvector_next(master->imap.handles)) {
             if (s == sessptr) { cvector_delete(master->imap.handles); x = 1; break; }
@@ -662,7 +666,7 @@ ssize_t rumble_server_imap_status(masterHandle* master, sessionHandle* session, 
 
 /* APPEND */
 ssize_t rumble_server_imap_append(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-
+	rcprintf(session, "%s NO Append completed\r\n", tag);
 	return RUMBLE_RETURN_IGNORE;
 }
 
@@ -900,6 +904,7 @@ ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, c
 /* COPY */
 ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 	int first, last,a,b,useUID;
+
 	int64_t destination;
 	rumble_letter* letter;
 	rumble_args* parts;
@@ -939,6 +944,11 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 	if (!destination && !strcmp(folderName, "INBOX") ) destination = 0;
 
 	/* Copy them letters */
+	folder = rumble_imap4_current_folder(imap);
+	#if ( RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE )
+		printf("Copying letters %u through %u (UID = %s) to %lld...\n", first, last, useUID ? "enabled" : "disabled", destination);
+		printf("Folder has %u letters\n", cvector_size(folder->letters));
+	#endif
 	opath = (char*) (strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"));
 	if ( destination != -1 ) {
 		char buffer[4096];
@@ -947,6 +957,9 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 			a++;
 			if ( useUID && (letter->id < first || (last > 0 && letter->id > last) )) continue;
 			if ( !useUID && (a < first || (last > 0 &&  a > last) )) continue;
+			#if ( RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE )
+			printf("Copying letter %llu...\n", letter->id);
+			#endif
 			filename = rumble_create_filename();
 			sprintf(path, "%s/%s.msg", opath, filename);
 

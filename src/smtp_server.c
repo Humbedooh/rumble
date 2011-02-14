@@ -23,6 +23,7 @@ void* rumble_smtp_init(void* m) {
 	session.dict = cvector_init();
     session.recipients = cvector_init();
     session.client = (clientHandle*) malloc(sizeof(clientHandle));
+	session.client->tls = 0;
     session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP; // Identify the thread/session as SMTP
 	myName = rrdict(master->_core.conf, "servername");
@@ -53,6 +54,7 @@ void* rumble_smtp_init(void* m) {
         printf("<debug::comm> [%s] Accepted connection from %s on SMTP\n", tmp, session.client->addr);
         #endif
         
+		
         // Check for hooks on accept()
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP );
@@ -69,6 +71,7 @@ void* rumble_smtp_init(void* m) {
 			rc = 421;
             if ( !line ) break;
 			rc = 500; // default return code is "500 unknown command thing"
+			printf("<Client> %s", line);
             if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
 				rumble_string_upper(cmd);
 				if (!strcmp(cmd, "QUIT")) break; // bye!
@@ -81,6 +84,7 @@ void* rumble_smtp_init(void* m) {
 				else if (!strcmp(cmd, "VRFY")) rc = rumble_server_smtp_vrfy(master, &session, arg);
 				else if (!strcmp(cmd, "RSET")) rc = rumble_server_smtp_rset(master, &session, arg);
 				else if (!strcmp(cmd, "AUTH")) rc = rumble_server_smtp_auth(master, &session, arg);
+				else if (!strcmp(cmd, "STAR")) rc = rumble_server_smtp_tls(master, &session, arg);
 			}
 			free(line);
 			if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
@@ -264,9 +268,10 @@ ssize_t rumble_server_smtp_rcpt(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, const char* argument) {
 	int rc;
     char* tmp = (char*) malloc(128);
-	rc = sscanf(argument, "%128[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
+	rc = sscanf(argument, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
 	if ( rc < 3 ) {
 		free(tmp);
+		printf("Bad HELO: %s\n", argument);
 		return 504552; // simple test for FQDN
 	}
 	free(tmp);
@@ -278,9 +283,10 @@ ssize_t rumble_server_smtp_helo(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, const char* argument) {
 	int rc;
     char* tmp = (char*) malloc(128);
-	rc = sscanf(argument, "%128[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
+	rc = sscanf(argument, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
 	if ( rc < 3 ) {
 		free(tmp);
+		printf("Bad EHLO: %s\n", argument);
 		return 504552; // simple test for FQDN
 	}
 	free(tmp);
@@ -290,7 +296,8 @@ ssize_t rumble_server_smtp_ehlo(masterHandle* master, sessionHandle* session, co
     rumble_comm_send(session, "250-VRFY\r\n");
     rumble_comm_send(session, "250-PIPELINING\r\n");
     rumble_comm_send(session, "250-8BITMIME\r\n");
-    rumble_comm_send(session, "250-AUTH CRAM-MD5 DIGEST-MD5 PLAIN LOGIN\r\n");
+	rumble_comm_send(session, "250-STARTTLS\r\n");
+    rumble_comm_send(session, "250-AUTH LOGIN PLAIN\r\n");
     rumble_comm_send(session, "250-DELIVERBY 900\r\n");
     rumble_comm_send(session, "250-DSN\r\n");
     rumble_comm_send(session, "250-SIZE\r\n");
@@ -407,5 +414,72 @@ ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_smtp_auth(masterHandle* master, sessionHandle* session, const char* argument) {
-    return 250;
+	char method[31], digest[1025], *buffer, *user, *pass, *line;
+	rumble_mailbox* OK;
+	address* addr;
+	memset(method, 0, 31);
+	memset(digest, 0, 1025);
+	printf("Got: %s\n", argument);
+	sscanf(argument, "%30s %1024s", method, digest);
+	rumble_string_lower(method);
+	pass = "";
+	addr = 0;
+	OK = 0;
+
+	/* LOGIN method */
+	if ( !strcmp(method, "login") ) {
+		/* Username */
+		rcsend(session, "334 VXNlcm5hbWU6\r\n");
+		line = rcread(session);
+		sscanf(line, "%s", digest);
+		user = rumble_decode_base64(digest);
+
+		/* Password */
+		rcsend(session, "334 UGFzc3dvcmQ6\r\n");
+		line = rcread(session);
+		sscanf(line, "%s", digest);
+		pass = rumble_decode_base64(digest);
+
+		addr = rumble_parse_mail_address(user);
+		if (addr) OK = rumble_account_data_auth(session, addr->user, addr->domain, pass);
+		free(user);
+		strcpy(digest, pass);
+		free(pass);
+		pass = digest;
+	}
+
+	/* PLAIN method */
+	if ( !strcmp(method, "plain") ) {
+		buffer = rumble_decode_base64(digest);
+		user = buffer+1;
+		pass = buffer+2 + strlen(user);
+		addr = rumble_parse_mail_address(user);
+		if (addr) OK = rumble_account_data_auth(session, addr->user, addr->domain, pass);
+		free(buffer);
+	}
+
+
+	if ( OK ) {
+		if (rumble_account_data_auth(session, addr->user, addr->domain, pass)) {
+			session->flags |= RUMBLE_SMTP_CAN_RELAY;
+			rumble_free_account(OK);
+			return 250;
+		}
+		else {
+			session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);
+			return 530;
+		}
+	}
+	
+    return 501;
+}
+
+ssize_t rumble_server_smtp_tls(masterHandle* master, sessionHandle* session, const char* argument) {
+	char b;
+	rcsend(session, "220 OK, starting TLS\r\n");
+	
+	
+	comm_starttls(session);
+	
+	return RUMBLE_RETURN_IGNORE;
 }

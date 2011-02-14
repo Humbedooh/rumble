@@ -8,7 +8,7 @@
 #define	RUMBLE_H
 //#define FORCE_WIN
 #define RUMBLE_LUA
-
+#define RUMBLE_IS_LIBRARY
 #if __STDC_VERSION__ >= 199901L
   /* "inline" is a keyword */
 #else
@@ -109,11 +109,12 @@ extern "C" {
 #include <time.h>
 #include "cvector.h"
 #include "reply_codes.h"
+#include <gnutls/gnutls.h>
+#include <gnutls/extra.h>
 #ifdef RUMBLE_LUA
 	#include <lua.h>
 	#include <lualib.h>
 	#include <lauxlib.h>
-
 #endif
 
 #define RUMBLE_DEBUG_HOOKS              0x00100000
@@ -122,7 +123,7 @@ extern "C" {
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00040503 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00050505 // Internal version for module checks
 
 
 // Return codes for modules
@@ -246,6 +247,7 @@ typedef struct {
     struct sockaddr_storage		client_info;
     char						addr[46]; // INET6_ADDRSTRLEN
 	fd_set						fd; // for select()
+	gnutls_session_t			tls;
 } clientHandle;
 
 typedef struct {
@@ -338,6 +340,10 @@ typedef struct {
         void*                   mail;
 		cvector*				batv; // BATV handles for bounce control
 		void*					lua;
+		struct {
+			gnutls_anon_server_credentials_t anoncred;
+			gnutls_certificate_credentials_t credentials;
+		} tls;
     }               _core;
     rumbleService       smtp;
     rumbleService       pop3;
@@ -480,7 +486,7 @@ char* rumble_comm_read(sessionHandle* session);
 
 const char* rumble_config_str(masterHandle* master, const char* key);
 uint32_t rumble_config_int(masterHandle* master, const char* key);
-
+void rumble_crypt_init(masterHandle* master);
 
 address* rumble_parse_mail_address(const char* addr);
 rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* mailserver, const char* filename, address* sender, address* recipient);
