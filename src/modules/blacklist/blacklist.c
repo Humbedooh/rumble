@@ -6,8 +6,9 @@
  *
  * Created on January 3, 2011, 8:08 PM
  */
-#include "../../rumble.h"
 
+#include "../../rumble.h"
+//#include <Ws2tcpip.h>
 
 cvector* blacklist_baddomains;
 cvector* blacklist_badhosts;
@@ -45,18 +46,21 @@ ssize_t rumble_blacklist_domains(sessionHandle* session) {
 }
 
 ssize_t rumble_blacklist(sessionHandle* session) {
-    // First, check if the client has been given permission to skip this check by any other modules.
-    if ( session->flags & RUMBLE_SMTP_FREEPASS ) return RUMBLE_RETURN_OKAY;
-    
     // Resolve client address name
     struct hostent* client;
     struct in6_addr IP;
+    cvector_element* el;
+    const char* addr;
+
+    // Check if the client has been given permission to skip this check by any other modules.
+    if ( session->flags & RUMBLE_SMTP_FREEPASS ) return RUMBLE_RETURN_OKAY;
+    
     inet_pton(session->client->client_info.ss_family, session->client->addr, &IP);
     client = gethostbyaddr((char *)&IP, (session->client->client_info.ss_family == AF_INET) ? 4 : 16, session->client->client_info.ss_family);
-    const char* addr = (const char*) client->h_name;
+    addr = (const char*) client->h_name;
     rumble_string_lower((char*) addr);
     
-    cvector_element* el;
+    
     // Check against pre-configured list of bad hosts
     if ( cvector_size(blacklist_badhosts)) {
         el = blacklist_badhosts->first;
@@ -86,13 +90,15 @@ ssize_t rumble_blacklist(sessionHandle* session) {
     if ( cvector_size(blacklist_dnsbl) ) {
         if ( session->client->client_info.ss_family == AF_INET ) { // I only know how to match IPv4 DNSBL :/
             unsigned int a,b,c,d;
+            char* dnshost;
             sscanf(session->client->addr, "%3u.%3u.%3u.%3u",&a,&b,&c,&d);
             el = blacklist_dnsbl->first;
-            char* dnshost = (char*) el->object;
+            dnshost = (char*) el->object;
             while ( dnshost ) {
-                char* dnsbl = calloc(1, strlen(dnshost) + strlen(addr) + 6);
+                struct hostent* bl;
+                char* dnsbl = (char*) calloc(1, strlen(dnshost) + strlen(addr) + 6);
                 sprintf(dnsbl, "%d.%d.%d.%d.%s", d,c,b,a, dnshost);
-                struct hostent* bl = gethostbyname(dnsbl);
+                bl = gethostbyname(dnsbl);
                 if ( bl) { 
                     #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
                     printf("<blacklist> %s was blacklisted by %s, closing connection!\n", addr, dnshost);
@@ -111,7 +117,7 @@ ssize_t rumble_blacklist(sessionHandle* session) {
                 } // Blacklisted, abort the connection!
                 free(dnsbl);
                 el = el->next;
-                if ( el ) dnshost = el->object;
+                if ( el ) dnshost = (char*) el->object;
                 else dnshost = NULL;
             }
         }
@@ -123,31 +129,32 @@ ssize_t rumble_blacklist(sessionHandle* session) {
 }
 
 rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
+    char* cfgfile = (char*) calloc(1,1024);
+    FILE* config;
     modinfo->title = "Blacklisting module";
     modinfo->description = "Standard blacklisting module for rumble.";
     blacklist_badhosts = cvector_init();
     blacklist_baddomains = cvector_init();
     blacklist_dnsbl = cvector_init();
-    char* cfgfile = calloc(1,1024);
     sprintf(cfgfile, "%s/blacklist.conf", ((masterHandle*) master)->cfgdir);
-    FILE* config = fopen(cfgfile, "r");
+    config = fopen(cfgfile, "r");
     if ( config ) {
-        char* buffer = malloc(4096);
         int p = 0;
         char byte;
+        char* buffer = (char*) malloc(4096);
         while (!feof(config)) {
             memset(buffer, 0, 4096);
             fgets(buffer, 4096,config);
             if ( !ferror(config) ) {
-                char* key = calloc(1,100);
-                char* val = calloc(1,3900);
+                char* key = (char*) calloc(1,100);
+                char* val = (char*) calloc(1,3900);
                 sscanf(buffer, "%100[^# \t\r\n] %3900[^\r\n]", key, val );
                 rumble_string_lower(key);
                 if ( !strcmp(key, "dnsbl") ) {
                     char* pch = strtok((char*) val," ");
                     while ( pch != NULL ) {
                         if ( strlen(pch) >= 4) {
-                            char* entry = calloc(1, strlen(pch)+1);
+                            char* entry = (char*) calloc(1, strlen(pch)+1);
                             strncpy(entry, pch, strlen(pch));
                             cvector_add(blacklist_dnsbl, entry);
                             pch = strtok(NULL, " ");
@@ -159,7 +166,7 @@ rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
                     char* pch = strtok((char*) val," ");
                     while ( pch != NULL ) {
                         if ( strlen(pch) >= 4) {
-                            char* entry = calloc(1, strlen(pch)+1);
+                            char* entry = (char*) calloc(1, strlen(pch)+1);
                             strncpy(entry, pch, strlen(pch));
                             rumble_string_lower(entry);
                             cvector_add(blacklist_badhosts, entry);
@@ -171,7 +178,7 @@ rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
                     char* pch = strtok((char*) val," ");
                     while ( pch != NULL ) {
                         if ( strlen(pch) >= 4) {
-                            char* entry = calloc(1, strlen(pch)+1);
+                            char* entry = (char*) calloc(1, strlen(pch)+1);
                             strncpy(entry, pch, strlen(pch));
                             cvector_add(blacklist_baddomains, entry);
                             pch = strtok(NULL, " ");
@@ -193,7 +200,7 @@ rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
     }
     else {
         fprintf(stderr, "<blacklist> Error: Could not read %s!\n", cfgfile);
-        //return EXIT_SUCCESS;
+        return EXIT_SUCCESS;
     }
     
     // Hook the module to new connections.

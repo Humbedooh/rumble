@@ -668,3 +668,29 @@ uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* fol
 	rumble_rw_stop_write(imap->bag->rrw); // Unlock the bag
 	return r;
 }
+
+
+
+/* rumble_imap4_free: Frees up resources used by the bag */
+void rumble_imap4_free(rumble_imap4_shared_bag* bag) {
+	rumble_letter* letter;
+    rumble_imap4_shared_folder* folder;
+	if (!bag) return;
+
+    /* Traverse folders */
+    for ( folder = (rumble_imap4_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(bag->folders) ) {
+        /* Traverse letters */
+	    for ( letter = (rumble_letter*) cvector_first(folder->letters); letter != NULL; letter = (rumble_letter*) cvector_next(folder->letters)) {
+            if (letter->fid) free(letter->fid);
+            free(letter);
+        }
+        cvector_flush(folder->letters);
+        if (folder->name) free(folder->name);
+        free(folder);
+	}
+    cvector_flush(bag->folders);
+    pthread_mutex_destroy(&bag->rrw->mutex);
+    free(bag->rrw);
+    free(bag);
+}
+

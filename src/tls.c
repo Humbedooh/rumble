@@ -30,6 +30,7 @@ void rumble_crypt_init(masterHandle* master) {
 }
 
 
+/* Generic STARTTLS handler */
 void comm_starttls(sessionHandle* session) {
 	int ret;
 	masterHandle* master = (masterHandle*) session->_master;
@@ -43,21 +44,18 @@ void comm_starttls(sessionHandle* session) {
 	gnutls_transport_set_ptr (session->client->tls, (gnutls_transport_ptr_t) session->client->socket);
 	ret = gnutls_handshake (session->client->tls);
 
-	if (ret < 0)
-    {
-      fprintf (stderr, "*** Handshake failed\n");
+	if (ret < 0) {
+      fprintf (stderr, "*** TLS Handshake failed\n");
       gnutls_perror (ret);
 	  session->client->tls = 0;
 	  return;
     }
-  else
-    {
-      printf ("- Handshake was completed\n");
-    }
-        session->client->recv = (dummySocketOp) gnutls_record_recv;
-        session->client->send = (dummySocketOp) gnutls_record_send;
+    /* Set the dummy send/recv operators */
+    session->client->recv = (dummySocketOp) gnutls_record_recv;
+    session->client->send = (dummySocketOp) gnutls_record_send;
 }
 
+/* Generic STOPTLS handler (or called when a TLS connection is closed) */
 void comm_stoptls(sessionHandle* session) {
 	if (session->client->tls) {
 		gnutls_bye (session->client->tls, GNUTLS_SHUT_RDWR);
@@ -65,3 +63,4 @@ void comm_stoptls(sessionHandle* session) {
 		gnutls_deinit (session->client->tls);
 	}
 }
+

@@ -1,3 +1,4 @@
+#include "rumble.h"
 #include "comm.h"
 #include <stdarg.h>
 

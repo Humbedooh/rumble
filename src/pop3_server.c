@@ -97,7 +97,7 @@ void* rumble_pop3_init(void* m) {
         #endif
 		if ( rc == 421 ) rumble_comm_send(sessptr, rumble_pop3_reply_code(103)); // timeout!
         else rumble_comm_send(sessptr, rumble_pop3_reply_code(102)); // bye!
-		
+		if (session.client->tls != NULL) comm_stoptls(&session); /* Close the TLS session if active */
         close(session.client->socket);
 
 		/* Start cleanup */

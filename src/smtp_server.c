@@ -100,7 +100,8 @@ void* rumble_smtp_init(void* m) {
         #endif
 		if ( rc == 421 ) rumble_comm_send(sessptr, rumble_smtp_reply_code(421422)); // timeout!
         else rumble_comm_send(sessptr, rumble_smtp_reply_code(221220)); // bye!
-		
+
+		if (session.client->tls != NULL) comm_stoptls(&session); /* Close the TLS session if active */
         close(session.client->socket);
         free(arg);
         free(cmd);

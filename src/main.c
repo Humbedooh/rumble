@@ -10,7 +10,7 @@
 #include "cvector.h"
 #include "private.h"
 
-#define RUMBLE_INITIAL_THREADS 10
+#define RUMBLE_INITIAL_THREADS 25
 
 extern masterHandle* rumble_database_master_handle;
 

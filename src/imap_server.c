@@ -132,15 +132,13 @@ void* rumble_imap_init(void* m) {
 			rcsend(&session, "* BYE bye!\r\n");
 			rcprintf(&session, "%s OK <%s> signing off for now.\r\n", tag, myName);
 		}
-		
+        if (session.client->tls != NULL) comm_stoptls(&session); /* Close the TLS session if active */
         close(session.client->socket);
 
         /* Start cleanup */
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
-        //rumble_letters_expunge(pops->bag); /* delete any letters marked for deletion */
-        //rumble_letters_flush(pops->bag); /* flush the mail bag from memory */
 
         if ( pops->account ) rumble_free_account(pops->account);
         /* End cleanup */
@@ -148,6 +146,8 @@ void* rumble_imap_init(void* m) {
         pthread_mutex_lock(&(master->imap.mutex));
 		if ( pops->bag ) {
 			pops->bag->sessions--;
+            if (pops->bag->sessions == 0) rumble_imap4_free(pops->bag);
+            pops->bag = 0;
 		}
         
         for (s = (sessionHandle*) cvector_first(master->imap.handles); s != NULL; s = (sessionHandle*) cvector_next(master->imap.handles)) {

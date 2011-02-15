@@ -41,8 +41,8 @@
     #ifdef RUMBLE_MSC
         #define RUMBLE_WINSOCK
         #define HAVE_STRUCT_TIMESPEC
-        #include <Windows.h>
-        #include <winsock.h>
+        #include <Ws2tcpip.h>
+        #include <WinSock2.h>
         #include <windns.h>
         #include "pthreads-win32/include/pthread.h"
     #else
@@ -224,42 +224,15 @@
     /****************************************************/
 
     #ifdef RUMBLE_MSC
-        struct in6_addr {
-          union {
-                  uint8_t 	  __s6_addr[16];
-                  uint16_t 	  __s6_addr16[8];
-                  uint32_t 	  __s6_addr32[4];
-                } __u6;
-        #define s6_addr		__u6.__s6_addr
-        #define s6_addr16	__u6.__s6_addr16
-        #define s6_addr32	__u6.__s6_addr32
-        };
 
         #define close(a) closesocket(a)
         typedef int socklen_t;
         typedef uint16_t sa_family_t;
         typedef uint16_t in_port_t;
         typedef uint32_t in_addr_t;
-        struct addrinfo {
-            int             ai_flags;		/* input flags */
-            int             ai_family;		/* address family of socket */
-            int             ai_socktype;	/* socket type */
-            int             ai_protocol;	/* ai_protocol */
-            socklen_t       ai_addrlen;		/* length of socket address */
-            char            *ai_canonname;	/* canonical name of service location */
-            struct sockaddr *ai_addr;		/* socket address of socket */
-            struct addrinfo *ai_next;		/* pointer to next in list */
-        };
 
 
-        struct sockaddr_in6
-        {
-            sa_family_t	  sin6_family;		/* AF_INET6 */
-            in_port_t	  sin6_port;		/* Port number. */
-            uint32_t	  sin6_flowinfo;	/* Traffic class and flow inf. */
-            struct in6_addr sin6_addr;		/* IPv6 address. */
-            uint32_t	  sin6_scope_id;	/* Set of interfaces for a scope. */
-        };
+
     #endif
 
     
@@ -555,6 +528,7 @@
     rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc);
     void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag);
     uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* folder);
+    void rumble_imap4_free(rumble_imap4_shared_bag* bag);
 
 
 
@@ -582,5 +556,4 @@
 
 
 #endif	/* RUMBLE_H */
-
 
