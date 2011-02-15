@@ -447,7 +447,7 @@ ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, 
 		if ( newFolder ) rcprintf(session, "%s NO CREATE failed: Duplicate folder name.\r\n", tag);
 		else {
 			/* Add the folder to the SQL DB */
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
+			state = rumble_database_prepare(master->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
 
@@ -497,7 +497,7 @@ ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, 
 		if ( newFolder ) rcprintf(session, "%s NO RENAME failed: Duplicate folder name.\r\n", tag);
 		else if ( !oldFolder ) rcprintf(session, "%s NO RENAME failed: No such folder <%s>\r\n", tag, oldName);
 		else {
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id );
+			state = rumble_database_prepare(master->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id );
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
 			free(oldFolder->name);
@@ -536,7 +536,7 @@ ssize_t rumble_server_imap_subscribe(masterHandle* master, sessionHandle* sessio
 		}
 		if ( !folder ) rcprintf(session, "%s NO SUBSCRIBE failed: No such folder <%s>\r\n", tag, folderName);
 		else {
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id );
+			state = rumble_database_prepare(master->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id );
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
 			folder->subscribed = 1;
@@ -572,7 +572,7 @@ ssize_t rumble_server_imap_unsubscribe(masterHandle* master, sessionHandle* sess
 		}
 		if ( !folder ) rcprintf(session, "%s NO UNSUBSCRIBE failed: No such folder <%s>\r\n", tag, folderName);
 		else {
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id );
+			state = rumble_database_prepare(master->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id );
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
 			folder->subscribed = 0;
@@ -949,7 +949,7 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 		printf("Copying letters %u through %u (UID = %s) to %lld...\n", first, last, useUID ? "enabled" : "disabled", destination);
 		printf("Folder has %u letters\n", cvector_size(folder->letters));
 	#endif
-	opath = (char*) (strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"));
+	opath = (char*) (strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
 	if ( destination != -1 ) {
 		char buffer[4096];
 		void* state;

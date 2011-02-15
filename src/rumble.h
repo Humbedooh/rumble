@@ -8,7 +8,7 @@
 #define	RUMBLE_H
 //#define FORCE_WIN
 #define RUMBLE_LUA
-#define RUMBLE_IS_LIBRARY
+//#define RUMBLE_IS_LIBRARY
 #if __STDC_VERSION__ >= 199901L
   /* "inline" is a keyword */
 #else
@@ -123,7 +123,7 @@ extern "C" {
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00050505 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00050506 // Internal version for module checks
 
 
 // Return codes for modules

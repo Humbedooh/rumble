@@ -196,55 +196,6 @@ void comm_accept(socketHandle sock, clientHandle* client) {
 }
 
 
-void comm_starttls(sessionHandle* session) {
-#ifndef RUMBLE_IS_LIBRARY
-	int ret;
-	masterHandle* master = (masterHandle*) session->_master;
-	
-	printf("Setting up TLS...");
-	ret = gnutls_init (&session->client->tls, GNUTLS_SERVER);
-	printf("ret = %d\n", ret);
-	ret = gnutls_priority_set_direct (session->client->tls, "EXPORT", NULL);
-	printf("ret = %d\n", ret);
-	ret = gnutls_credentials_set (session->client->tls, GNUTLS_CRD_CERTIFICATE, master->_core.tls.credentials);
-	printf("ret = %d\n", ret);
-	gnutls_certificate_server_set_request (session->client->tls, GNUTLS_CERT_REQUEST);
-	gnutls_dh_set_prime_bits (session->client->tls, 1024);
-
-	gnutls_transport_set_ptr (session->client->tls, (gnutls_transport_ptr_t) session->client->socket);
-	printf("Handshaking...");
-
-	ret = gnutls_handshake (session->client->tls);
-
-	if (ret < 0)
-    {
-      fprintf (stderr, "*** Handshake failed\n");
-      gnutls_perror (ret);
-	  session->client->tls = 0;
-	  return;
-    }
-  else
-    {
-      printf ("- Handshake was completed\n");
-    }
-
-  
-
-	printf("SSL Done!?\n");
-
-#endif
-}
-
-void comm_stoptls(sessionHandle* session) {
-#ifndef RUMBLE_IS_LIBRARY
-	if (session->client->tls) {
-		gnutls_bye (session->client->tls, GNUTLS_SHUT_RDWR);
-		session->client->tls = 0;
-		gnutls_deinit (session->client->tls);
-		printf("Stopped TLS\n");
-	}
-#endif
-}
 
 
 cvector* comm_mxLookup(const char* domain)
