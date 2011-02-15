@@ -67,9 +67,9 @@ void comm_starttls(sessionHandle* session) {
     {
       printf ("- Handshake was completed\n");
     }
-
-  
-
+        session->client->recv = (dummySocketOp) gnutls_record_recv;
+        session->client->send = (dummySocketOp) gnutls_record_send;
+        
 	printf("SSL Done!?\n");
 
 #endif

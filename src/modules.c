@@ -1,6 +1,9 @@
 #include "rumble.h"
 #if defined(_WIN32) && !defined(__CYGWIN__)
-
+#define WINDOWS_DLL
+#define dlclose FreeLibrary
+#define dlsym GetProcAddress
+#include <Windows.h>
 #else
 #include <dlfcn.h>
 #endif
@@ -31,9 +34,8 @@ void rumble_modules_load(masterHandle* master) {
         el = (rumbleKeyValuePair*) line->object;
         if ( !strcmp(el->key, "loadmodule")) {
             printf("Loading %-40s", el->value);
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#ifdef WINDOWS_DLL
 			handle = LoadLibraryA(el->value);
-
 #else
             handle = dlopen(el->value, RTLD_LAZY | RTLD_NODELETE);
 			error = dlerror();
@@ -49,18 +51,13 @@ void rumble_modules_load(masterHandle* master) {
             modinfo->author = 0;
             modinfo->description = 0;
             modinfo->title = 0;
-#if defined(_WIN32) && !defined(__CYGWIN__)
-			init = (rumbleModInit) GetProcAddress(handle, "rumble_module_init");
-			mcheck = (rumbleVerCheck) GetProcAddress(handle, "rumble_module_check");
+
+			init = (rumbleModInit) dlsym(handle, "rumble_module_init");
+			mcheck = (rumbleVerCheck) dlsym(handle, "rumble_module_check");
 			error = ( init == 0 || mcheck == 0 ) ? "no errors" : 0;
-#else
-            init = dlsym(handle, "rumble_module_init");
-            mcheck = dlsym(handle, "rumble_module_check");
-            error = dlerror();
-#endif
-            if (error != NULL)  {
-                fprintf (stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
-            }
+
+            if (error != NULL) fprintf (stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
+
             if ( init && mcheck ) { 
                 master->_core.currentSO = el->value;
                 cvector_add(master->_core.modules, modinfo);
@@ -71,13 +68,10 @@ void rumble_modules_load(masterHandle* master) {
 					else fprintf(stderr, "\nError: %s was compiled with an older version of librumble (v%#x).\nPlease recompile the module using the latest sources (v%#x) to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
 				}
                 else x = init(master, modinfo);
-                if ( x != EXIT_SUCCESS ) { fprintf(stderr, "\nError: %s failed to load!\n", el->value); 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-				FreeLibrary(handle);
-#else
-				dlclose(handle);
-#endif
-				 }
+                if ( x != EXIT_SUCCESS ) {
+					fprintf(stderr, "\nError: %s failed to load!\n", el->value); 
+					dlclose(handle);
+				}
 				if (x == EXIT_SUCCESS) printf("[OK]\n");
 				else printf("[BAD]\n");
             }

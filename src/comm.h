@@ -12,7 +12,6 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
-#include <gnutls/gnutls.h>
 
 #ifndef SOCKET_ERROR
 #define SOCKET_ERROR -1
@@ -22,7 +21,7 @@
 #define	COMM_H
 
 
-   void *get_in_addr(struct sockaddr *sa);
+    void *get_in_addr(struct sockaddr *sa);
     socketHandle comm_init(masterHandle* m, const char* port);
     void comm_accept(socketHandle sock, clientHandle* client);
 	void comm_starttls(sessionHandle* session);

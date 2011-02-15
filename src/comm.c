@@ -163,11 +163,8 @@ ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...) {
 	buffer = (char*) calloc(1,len);
 	if (!buffer) merror();
     vsprintf(buffer, d, vl);
-	#ifndef RUMBLE_IS_LIBRARY
-	if (session->client->tls != NULL ) len = gnutls_record_send(session->client->tls,buffer, strlen(buffer));
-	else
-	#endif
-    len = send(session->client->socket, buffer, strlen(buffer) ,0);
+	if (session->client->tls != NULL ) len = session->client->send(session->client->tls,buffer, strlen(buffer),0);
+	else len = send(session->client->socket, buffer, strlen(buffer) ,0);
     free(buffer);
     return len;
 }
@@ -197,83 +194,39 @@ void comm_accept(socketHandle sock, clientHandle* client) {
 
 
 
-
-cvector* comm_mxLookup(const char* domain)
-{ 
-    cvector* vec = cvector_init();
+char* rumble_comm_read(sessionHandle* session) {
+	char b = 0;
+    ssize_t rc = 0;
+    uint32_t p;
     
-#ifdef RUMBLE_WINSOCK // Windows MX resolver
-    DNS_STATUS status;
-    PDNS_RECORD rec, prec;
-    status = DnsQuery_A(domain, DNS_TYPE_MX, DNS_QUERY_STANDARD, 0, &rec,0);
-	prec = rec;
-    if ( !status ) {
-        while ( rec ) {
-            if ( rec->wType == DNS_TYPE_MX ) {
-				ssize_t len;
-                mxRecord* mx = (mxRecord*) malloc(sizeof(mxRecord));
-				if (!mx) merror();
-                len = strlen((char*) rec->Data.MX.pNameExchange);
-                mx->host = (char*) calloc(1,len+1);
-				if (!mx->host) merror();
-                strncpy((char*) mx->host, (char*) rec->Data.MX.pNameExchange, len);
-                mx->preference = rec->Data.MX.wPreference;
-                cvector_add(vec, mx);
-            }
-            rec = rec->pNext;
-        }
-        if ( prec) DnsRecordListFree(prec, DNS_TYPE_MX);
-    }
-    
-   
-#else // UNIX (IBM) MX resolver
-  u_char nsbuf[4096];
-  memset(nsbuf, 0, sizeof(nsbuf));
-  int  l;
-  ns_msg query_parse_msg;
-  ns_rr query_parse_rr;
+	struct timeval t;
+	signed int f;
+	time_t z;
+	char* ret = (char*) calloc(1,1025);
+	
+	if (!ret) { perror("Calloc failed!"); exit(1);}
 
-  // Try to resolve domain
-  res_init();
-  l = res_search (domain, ns_c_in, ns_t_mx, nsbuf, sizeof (nsbuf));
-  if (l < 0) { // Resolving failed
-    return NULL;
-  }
-  ns_initparse(nsbuf, l, &query_parse_msg);
-  int x;
-  for (x = 0; x < ns_msg_count(query_parse_msg, ns_s_an); x++)
-       {
-         if (ns_parserr(&query_parse_msg, ns_s_an, x, &query_parse_rr))
-         {
-             break;
-         }
-         if (ns_rr_type(query_parse_rr) == ns_t_mx)
- 	  {
-             mxRecord* mx = malloc(sizeof(mxRecord));
-             mx->preference = ns_get16((u_char *)ns_rr_rdata(query_parse_rr));
-             mx->host = calloc(1,1024);
-             if (ns_name_uncompress(ns_msg_base(query_parse_msg), ns_msg_end(query_parse_msg), (u_char  *)ns_rr_rdata(query_parse_rr)+2, (char*) mx->host, 1024) < 0) break;
-             cvector_add(vec, mx);
- 	  }
-     }
-#endif
-    // Fall back to A record if no MX exists
-    if ( cvector_size(vec) == 0 ) {
-        struct hostent* a = gethostbyname(domain);
-        if ( a ) {
-			char* b;
-			ssize_t len;
-			struct in_addr x;
-            mxRecord* mx = (mxRecord*) calloc(1,sizeof(mxRecord));
-			if (!mx) merror();
-            memcpy(&x, a->h_addr_list++, sizeof(x));
-            b = inet_ntoa(x);
-            len = strlen(b);
-            mx->host = (char*) calloc(1,len+1);
-            strncpy((char*) mx->host, b, len);
-            mx->preference = 10;
-            free(a);
-        }
-    }
-    return vec;
- }
+	t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
+	t.tv_usec = 0;
+	z = time(0);
+    for (p = 0; p < 1024; p++) {
+		f = select(session->client->socket+1, &session->client->fd, NULL, NULL, &t);
+		if ( f > 0 ) {
+			if (session->client->tls != NULL ) rc = session->client->recv(session->client->tls,&b,1,0);
+			else rc = recv(session->client->socket, &b, 1, 0);
+			if ( rc <= 0 ) { free(ret); return NULL; }
+			ret[p] = b;
+			if ( b == '\n' ) break;
+		}
+		else {
+			z = time(0) - z;
+			free(ret); printf("timeout after %u secs!\r\n", z); return NULL;
+		}
+	}
+	return ret;
+}
+
+ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
+        if (session->client->tls != NULL ) {printf("s -> c : %s", message); return session->client->send(session->client->tls,message, strlen(message),0); }
+        return send(session->client->socket, message, strlen(message) ,0);
+}

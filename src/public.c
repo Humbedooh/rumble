@@ -11,12 +11,6 @@
  * This file contains public functions for rumble (usable by both server and modules
  */
 
-ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
-	#ifndef RUMBLE_IS_LIBRARY
-	if (session->client->tls != NULL ) {printf("s -> c : %s", message); return gnutls_record_send(session->client->tls,message, strlen(message)); }
-	#endif
-    return send(session->client->socket, message, strlen(message) ,0);
-}
 
 void rumble_args_free(rumble_args* d) {
 	int p;
@@ -96,40 +90,6 @@ address* rumble_parse_mail_address(const char* addr) {
 	free(tmp);
 	return usr;
 	
-}
-
-char* rumble_comm_read(sessionHandle* session) {
-	char b = 0;
-    ssize_t rc = 0;
-    uint32_t p;
-	struct timeval t;
-	signed int f;
-	time_t z;
-	char* ret = (char*) calloc(1,1025);
-	
-	if (!ret) { perror("Calloc failed!"); exit(1);}
-
-	t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
-	t.tv_usec = 0;
-	z = time(0);
-    for (p = 0; p < 1024; p++) {
-		f = select(session->client->socket+1, &session->client->fd, NULL, NULL, &t);
-		if ( f > 0 ) {
-			#ifndef RUMBLE_IS_LIBRARY
-			if (session->client->tls != NULL ) rc = gnutls_record_recv(session->client->tls,&b,1);
-			else
-			#endif
-			rc = recv(session->client->socket, &b, 1, 0);
-			if ( rc <= 0 ) { free(ret); return NULL; }
-			ret[p] = b;
-			if ( b == '\n' ) break;
-		}
-		else {
-			z = time(0) - z;
-			free(ret); printf("timeout after %u secs!\r\n", z); return NULL;
-		}
-	}
-	return ret;
 }
 
 void rumble_string_lower(char* d) {

@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 #define rumblemodule int
-    
+
 #if (((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__)) && !defined(RUMBLE_IGNORE_WIN)) || defined(FORCE_WIN)
         #undef rumblemodule
         #define rumblemodule int __declspec(dllexport)
@@ -123,7 +123,7 @@ extern "C" {
 #define RUMBLE_DEBUG_COMM               0x00010000
 #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
 #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-#define RUMBLE_VERSION                  0x00050506 // Internal version for module checks
+#define RUMBLE_VERSION                  0x00050508 // Internal version for module checks
 
 
 // Return codes for modules
@@ -242,12 +242,21 @@ extern "C" {
 	  char			_ss_pad2[_SS_PAD2SIZE];
 	};
 #endif
+
+
+/* Dummy socket operation pointer to allow for GNUTLS operations in 
+   modules without having to include it as a library when compiling.
+   */
+typedef int (*dummySocketOp) (void* a, const void *b, int c, int d);
+
 typedef struct {
     socketHandle				socket;
     struct sockaddr_storage		client_info;
-    char						addr[46]; // INET6_ADDRSTRLEN
-	fd_set						fd; // for select()
+    char					addr[46]; // INET6_ADDRSTRLEN
+	fd_set					fd; // for select()
 	gnutls_session_t			tls;
+        dummySocketOp                           recv;
+        dummySocketOp                           send;
 } clientHandle;
 
 typedef struct {
@@ -539,6 +548,7 @@ uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* fol
 #ifdef	__cplusplus
 }
 #endif
+
 
 #endif	/* RUMBLE_H */
 
