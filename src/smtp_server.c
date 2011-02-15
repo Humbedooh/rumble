@@ -3,6 +3,7 @@
 #include "sqlite3.h"
 #include "comm.h"
 #include "private.h"
+#include "database.h"
 
 // Main loop
 void* rumble_smtp_init(void* m) {

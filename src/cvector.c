@@ -1,6 +1,5 @@
 #include "cvector.h"
-#include <stdio.h>
-#include "rumble.h"
+
 cvector* cvector_init(void) {
     cvector* c = 0;
     c = (cvector*) malloc(sizeof(cvector));

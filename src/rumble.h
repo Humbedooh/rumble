@@ -9,36 +9,40 @@
 
     /* C<99 compatibility defs */
     #if (__STDC_VERSION__ < 199901L)
-        //#define inline static
+       // #define inline static
         //#pragma message("Non-C99 compliant compiler used, boooooo!")
     #endif
 
-    /* Checks for Microsoft compiler */
-    #ifndef __cdecl
-        #define __cdecl 
-        #define __stdcall 
-        #define __fastcall 
-    #endif
+ /* Checks for Microsoft compiler */   
 
     #if (  (defined(_WIN32) && !defined(__CYGWIN__))   ||   defined(__MINGW32__)  )
         #define RUMBLE_MSC
     #endif
 
+
+    #ifndef RUMBLE_MSC
+        #ifndef __stdcall
+                #define __cdecl 
+                #define __stdcall 
+                #define __fastcall 
+        #endif
+    #endif
+
     /* INCLUDES */
+    
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
     #include <time.h>
     #include "cvector.h"
-    #include <gnutls/gnutls.h>
-    #include <gnutls/extra.h>
+    
 
     #ifdef RUMBLE_MSC
         #define RUMBLE_WINSOCK
         #define HAVE_STRUCT_TIMESPEC
         #include <Windows.h>
         #include <winsock.h>
-        #include <windns.h> // for DnsQuery_A instead of res_query
+        #include <windns.h>
         #include "pthreads-win32/include/pthread.h"
     #else
         #include <unistd.h>
@@ -58,6 +62,7 @@
         #include <lauxlib.h>
     #endif
 
+    
 
 
     /* FLAG DEFINITIONS */
@@ -196,7 +201,7 @@
     /* Dummy socket operation pointer to allow for GNUTLS operations in 
        modules without having to include it as a library when compiling.
        */
-    typedef int (*dummySocketOp) (void* a, const void *b, int c, int d);
+    typedef ssize_t (*dummySocketOp) (void* a, const void *b, int c, int d);
     typedef int socketHandle;
     
 
@@ -213,54 +218,56 @@
         #define s6_addr32	__u6.__s6_addr32
         };
 
-        #define close(a) closesocket(a);
-            typedef int socklen_t;
-            typedef uint16_t sa_family_t;
-            typedef uint16_t in_port_t;
-            typedef uint32_t in_addr_t;
-            struct addrinfo {
-              int             ai_flags;		/* input flags */
-              int             ai_family;		/* address family of socket */
-              int             ai_socktype;		/* socket type */
-              int             ai_protocol;		/* ai_protocol */
-              socklen_t       ai_addrlen;		/* length of socket address */
-              char            *ai_canonname;	/* canonical name of service location */
-              struct sockaddr *ai_addr;		/* socket address of socket */
-              struct addrinfo *ai_next;		/* pointer to next in list */
-            };
+        #define close(a) closesocket(a)
+        typedef int socklen_t;
+        typedef uint16_t sa_family_t;
+        typedef uint16_t in_port_t;
+        typedef uint32_t in_addr_t;
+        struct addrinfo {
+            int             ai_flags;		/* input flags */
+            int             ai_family;		/* address family of socket */
+            int             ai_socktype;		/* socket type */
+            int             ai_protocol;		/* ai_protocol */
+            socklen_t       ai_addrlen;		/* length of socket address */
+            char            *ai_canonname;	/* canonical name of service location */
+            struct sockaddr *ai_addr;		/* socket address of socket */
+            struct addrinfo *ai_next;		/* pointer to next in list */
+        };
 
 
-            struct sockaddr_in6
-            {
-              sa_family_t	  sin6_family;		/* AF_INET6 */
-              in_port_t	  sin6_port;		/* Port number. */
-              uint32_t	  sin6_flowinfo;	/* Traffic class and flow inf. */
-              struct in6_addr sin6_addr;		/* IPv6 address. */
-              uint32_t	  sin6_scope_id;	/* Set of interfaces for a scope. */
-            };
-        #endif
+        struct sockaddr_in6
+        {
+            sa_family_t	  sin6_family;		/* AF_INET6 */
+            in_port_t	  sin6_port;		/* Port number. */
+            uint32_t	  sin6_flowinfo;	/* Traffic class and flow inf. */
+            struct in6_addr sin6_addr;		/* IPv6 address. */
+            uint32_t	  sin6_scope_id;	/* Set of interfaces for a scope. */
+        };
+    #endif
 
-	
-	#ifndef _SS_PAD2SIZE
-		#define _SS_MAXSIZE 128
-		#define _SS_ALIGNSIZE (sizeof (uint64_t))
-		#define _SS_PAD1SIZE (_SS_ALIGNSIZE - sizeof (sa_family_t))
-		#define _SS_PAD2SIZE (_SS_MAXSIZE - (sizeof (sa_family_t) + _SS_PAD1SIZE + _SS_ALIGNSIZE))
-		struct sockaddr_storage {
-		  unsigned short		ss_family;
-		  char			_ss_pad1[_SS_PAD1SIZE];
-		  uint64_t		__ss_align;
-		  char			_ss_pad2[_SS_PAD2SIZE];
-		};
-	#endif
+    
+    #ifndef _SS_PAD2SIZE
+        #define _SS_MAXSIZE 128
+        #define _SS_ALIGNSIZE (sizeof (uint64_t))
+        #define _SS_PAD1SIZE (_SS_ALIGNSIZE - sizeof(sa_family_t))
+        #define _SS_PAD2SIZE (_SS_MAXSIZE - (sizeof(sa_family_t) + _SS_PAD1SIZE + _SS_ALIGNSIZE))
+        struct sockaddr_storage {
+          unsigned short		ss_family;
+          char			_ss_pad1[_SS_PAD1SIZE];
+          uint64_t		__ss_align;
+          char			_ss_pad2[_SS_PAD2SIZE];
+        };
+    #endif
+        #include <gnutls/gnutls.h>
+
     typedef struct {
         socketHandle				socket;
         struct sockaddr_storage		client_info;
         char						addr[46];
         fd_set						fd;
         gnutls_session_t			tls;
-        dummySocketOp                           recv;
-        dummySocketOp                           send;
+        dummySocketOp               recv;
+        dummySocketOp               send;
     } clientHandle;
 
     typedef struct {
@@ -297,7 +304,7 @@
         char*                       raw;
         cvector*                    flags;
         char*                       _flags;
-        char*			    tag;  // VERP or BATV tags
+        char*			            tag;  // VERP or BATV tags
     } address;
 
     typedef struct {
@@ -339,6 +346,7 @@
             cvector*		        sharedObjects;
         } rumbleService;
 
+
     typedef struct {
         struct __core {
             cvector*                conf;
@@ -354,7 +362,6 @@
             cvector*				batv; // BATV handles for bounce control
             void*					lua;
             struct {
-                gnutls_anon_server_credentials_t anoncred;
                 gnutls_certificate_credentials_t credentials;
             } tls;
         }                           _core;

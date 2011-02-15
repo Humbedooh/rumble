@@ -10,7 +10,6 @@
 
 
 #include "rumble.h"
-#include "database.h"
 #include <errno.h>
 #include <signal.h>
 

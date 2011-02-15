@@ -2,6 +2,7 @@
 #include "servers.h"
 #include "comm.h"
 #include "private.h"
+#include "database.h"
 
 
 // Main loop
