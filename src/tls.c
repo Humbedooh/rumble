@@ -16,31 +16,27 @@ static void generate_rsa_params() {
 }
 
 void rumble_crypt_init(masterHandle* master) {
-	#ifndef RUMBLE_IS_LIBRARY
 	printf("%-48s", "Loading SSL...");
 	if (gnutls_global_init()) { printf("[BAD]\n"); return; }
-	if (gnutls_certificate_allocate_credentials ((gnutls_certificate_credentials_t*)&master->_core.tls.credentials)) { printf("[BAD]\n"); return; }
+	if (gnutls_certificate_allocate_credentials ((gnutls_certificate_credentials_t*)&master->_core.tls_credentials)) { printf("[BAD]\n"); return; }
 	
-	gnutls_certificate_set_x509_key_file (master->_core.tls.credentials, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);
+	gnutls_certificate_set_x509_key_file (master->_core.tls_credentials, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);
 	generate_dh_params();
 	generate_rsa_params();
-	gnutls_certificate_set_dh_params (master->_core.tls.credentials, dh_params);
-	gnutls_certificate_set_rsa_export_params (master->_core.tls.credentials, rsa_params);
-	//gnutls_ia_set_server_avp_function (master->_core.tls.iacred, client_avp);
-	#endif
+	gnutls_certificate_set_dh_params (master->_core.tls_credentials, dh_params);
+	gnutls_certificate_set_rsa_export_params (master->_core.tls_credentials, rsa_params);
 	printf("[OK]\n");
-	
+
 }
 
 
 void comm_starttls(sessionHandle* session) {
-#ifndef RUMBLE_IS_LIBRARY
 	int ret;
 	masterHandle* master = (masterHandle*) session->_master;
 
     ret = gnutls_init (&session->client->tls, GNUTLS_SERVER);
 	ret = gnutls_priority_set_direct (session->client->tls, "EXPORT", NULL);
-	ret = gnutls_credentials_set (session->client->tls, GNUTLS_CRD_CERTIFICATE, master->_core.tls.credentials);
+	ret = gnutls_credentials_set (session->client->tls, GNUTLS_CRD_CERTIFICATE, master->_core.tls_credentials);
 	gnutls_certificate_server_set_request (session->client->tls, GNUTLS_CERT_REQUEST);
 	gnutls_dh_set_prime_bits (session->client->tls, 1024);
 
@@ -60,16 +56,12 @@ void comm_starttls(sessionHandle* session) {
     }
         session->client->recv = (dummySocketOp) gnutls_record_recv;
         session->client->send = (dummySocketOp) gnutls_record_send;
-
-#endif
 }
 
 void comm_stoptls(sessionHandle* session) {
-#ifndef RUMBLE_IS_LIBRARY
 	if (session->client->tls) {
 		gnutls_bye (session->client->tls, GNUTLS_SHUT_RDWR);
 		session->client->tls = 0;
 		gnutls_deinit (session->client->tls);
 	}
-#endif
 }

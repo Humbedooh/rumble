@@ -9,7 +9,7 @@
 
     /* C<99 compatibility defs */
     #if (__STDC_VERSION__ < 199901L)
-       // #define inline static
+        #define inline static
         //#pragma message("Non-C99 compliant compiler used, boooooo!")
     #endif
 
@@ -37,6 +37,7 @@
     #include "cvector.h"
     
 
+    /* Microsoft specific headers */
     #ifdef RUMBLE_MSC
         #define RUMBLE_WINSOCK
         #define HAVE_STRUCT_TIMESPEC
@@ -45,6 +46,7 @@
         #include <windns.h>
         #include "pthreads-win32/include/pthread.h"
     #else
+    /* POSIX headers */
         #include <unistd.h>
         #include <sys/types.h>
         #include <sys/socket.h>
@@ -56,6 +58,7 @@
         #include "pthread.h"
     #endif
 
+    /* Optional Lua support */
     #ifdef RUMBLE_LUA
         #include <lua.h>
         #include <lualib.h>
@@ -65,24 +68,27 @@
     
 
 
-    /* FLAG DEFINITIONS */
+    /****************************************************/
+    /*              FLAG DEFINITIONS                    */
+    /****************************************************/
 
+    /* Debug and version flags */
     #define RUMBLE_DEBUG_HOOKS              0x00100000
     #define RUMBLE_DEBUG_THREADS            0x02000000
     #define RUMBLE_DEBUG_STORAGE            0x04000000
     #define RUMBLE_DEBUG_COMM               0x00010000
     #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
     #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-    #define RUMBLE_VERSION                  0x00050508 // Internal version for module checks
+    #define RUMBLE_VERSION                  0x00060509 // Internal version for module checks
 
 
-    // Return codes for modules
+    /* Module and function return codes */
     #define RUMBLE_RETURN_OKAY              1       // Everything went fine, keep going.
     #define RUMBLE_RETURN_FAILURE           2       // Something went really wrong, abort the connection!
     #define RUMBLE_RETURN_IGNORE            3       // Module handled the return code, skip to next command.
 
     
-    // Hook flags
+    /* Flags for hooking modules to areas of rumble */
     #define RUMBLE_HOOK_ACCEPT              0x00000001
     #define RUMBLE_HOOK_COMMAND             0x00000002
     #define RUMBLE_HOOK_EXIT                0x00000004
@@ -99,7 +105,8 @@
     #define RUMBLE_HOOK_AFTER               0x00001000
     #define RUMBLE_HOOK_TIMING_MASK         0x0000F000
 
-    // Cue definitions
+
+    /* Flags for hooking modules to specific cues */
     #define RUMBLE_CUE_SMTP_HELO            0x00010000
     #define RUMBLE_CUE_SMTP_RCPT            0x00020000
     #define RUMBLE_CUE_SMTP_MAIL            0x00040000
@@ -120,7 +127,7 @@
     #define RUMBLE_CUE_MASK                 0x0FFF0000
 
     
-    // SMTP session flags
+    /* Flags pertaining to SMTP sessions */
     #define RUMBLE_SMTP_BADRFC              0x00000100   // Client is known to break RFC and requires leniency.
     #define RUMBLE_SMTP_WHITELIST           0x00000200   // Client has been whitelisted by a module.
     #define RUMBLE_SMTP_AUTHED              0x00000400   // Client is authenticated and considered known.
@@ -133,11 +140,13 @@
     #define RUMBLE_SMTP_HAS_EHLO            0x00000009   // Has extended HELO
     #define RUMBLE_SMTP_HAS_BATV			0x00000010	 // Has valid BATV signature
 
-    // POP3 session flags
+
+    /* Flags for POP3 sessions */
     #define RUMBLE_POP3_HAS_USER			0x00000001	 // Has provided a username (but no password)
     #define RUMBLE_POP3_HAS_AUTH			0x00000002	 // Has provided both username and password
 
-    // IMAP4 session flags
+
+    /* Flags for IMAP4 sessions */
     #define RUMBLE_IMAP4_HAS_SELECT			0x00000001	 // Has selected a mailbox
     #define RUMBLE_IMAP4_HAS_TLS			0x00000002	 // Has established TLS or SSL
     #define RUMBLE_IMAP4_HAS_READWRITE		0x00000010	 // Read/Write session (SELECT)
@@ -146,8 +155,7 @@
     #define RUMBLE_ROAD_MASK                0x000000FF   // Command sequence mask
 
 
-    
-    // Thread flags
+    /* Thread flags */
     #define RUMBLE_THREAD_DIE               0x00001000   // Kill signal for threads
     #define RUMBLE_THREAD_MISC              0x00010000   // Thread handles miscellaneous stuff
     #define RUMBLE_THREAD_SMTP              0x00020000   // Thread handles SMTP
@@ -155,12 +163,14 @@
     #define RUMBLE_THREAD_IMAP              0x00080000   // Thread handles IMAP
     #define RUMBLE_THREAD_SVCMASK           0x000F0000
 
-    
+
+    /* Mailbox type flags */
     #define RUMBLE_MTYPE_MBOX               0x00000001   // Regular mailbox
     #define RUMBLE_MTYPE_ALIAS              0x00000002   // Alias to somewhere else
     #define RUMBLE_MTYPE_MOD                0x00000004   // Mail goes into a module
     #define RUMBLE_MTYPE_FEED               0x00000008   // Mail is fed to an external program or URL
     #define RUMBLE_MTYPE_RELAY				0x00000010	 // Mail is being relayed to another server
+
 
     // Letter flags (for POP3/IMAP4)
     #define RUMBLE_LETTER_RECENT			0x00000000
@@ -176,7 +186,10 @@
 
 
 
-    /* TYPE DEFINITIONS */
+    /****************************************************/
+    /*              TYPE DEFINITIONS                    */
+    /****************************************************/
+
     #ifdef RUMBLE_MSC
         #define rumblemodule int __declspec(dllexport)
         #ifndef uint32_t
@@ -205,7 +218,11 @@
     typedef int socketHandle;
     
 
-    /* STRUCTURE DEFINITIONS */
+
+    /****************************************************/
+    /*               STRUCTURE DEFINITIONS              */
+    /****************************************************/
+
     #ifdef RUMBLE_MSC
         struct in6_addr {
           union {
@@ -226,8 +243,8 @@
         struct addrinfo {
             int             ai_flags;		/* input flags */
             int             ai_family;		/* address family of socket */
-            int             ai_socktype;		/* socket type */
-            int             ai_protocol;		/* ai_protocol */
+            int             ai_socktype;	/* socket type */
+            int             ai_protocol;	/* ai_protocol */
             socklen_t       ai_addrlen;		/* length of socket address */
             char            *ai_canonname;	/* canonical name of service location */
             struct sockaddr *ai_addr;		/* socket address of socket */
@@ -361,9 +378,7 @@
             void*                   mail;
             cvector*				batv; // BATV handles for bounce control
             void*					lua;
-            struct {
-                gnutls_certificate_credentials_t credentials;
-            } tls;
+            gnutls_certificate_credentials_t tls_credentials;
         }                           _core;
         rumbleService               smtp;
         rumbleService               pop3;
@@ -476,9 +491,11 @@
     #endif
 
 
-    /* FUNCTIONS */
+    /****************************************************/
+    /*              FUNCTION PROTOTYPES                 */
+    /****************************************************/
 
-    // Hooking commands
+    /* Functions for hooking into rumble */
     void rumble_hook_function(void* handle, uint32_t flags, ssize_t (*func)(sessionHandle*) );
     rumblemodule rumble_module_check();
 
@@ -504,7 +521,6 @@
     void rumble_free_account(rumble_mailbox* user);
 
     const char* rumble_smtp_reply_code(unsigned int code);
-    //const char* rumble_pop3_reply_code(unsigned int code);
 
     ssize_t rumble_comm_send(sessionHandle* session, const char* message);
     ssize_t rumble_comm_printf(sessionHandle* session, const char* d, ...);
@@ -542,7 +558,10 @@
 
 
 
-    /* SHORTCUTS */
+    /****************************************************/
+    /*                     SHORTCUTS                    */
+    /****************************************************/
+
     #define rrdict   rumble_get_dictionary_value // read dict
     #define rsdict   rumble_add_dictionary_value // set dict
     #define rfdict   rumble_flush_dictionary     // flush dict
