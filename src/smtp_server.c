@@ -475,11 +475,7 @@ ssize_t rumble_server_smtp_auth(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_smtp_tls(masterHandle* master, sessionHandle* session, const char* argument) {
-	char b;
 	rcsend(session, "220 OK, starting TLS\r\n");
-	
-	
 	comm_starttls(session);
-	
 	return RUMBLE_RETURN_IGNORE;
 }

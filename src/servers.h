@@ -28,33 +28,46 @@ extern "C" {
     ssize_t rumble_server_smtp_vrfy(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_noop(masterHandle* master, sessionHandle* session, const char* argument);
     ssize_t rumble_server_smtp_auth(masterHandle* master, sessionHandle* session, const char* argument);
-	ssize_t rumble_server_smtp_tls(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_smtp_tls(masterHandle* master, sessionHandle* session, const char* argument);
 
-	/* IMAP4 handlers */
-	ssize_t rumble_server_imap_login(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_authenticate(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_delete(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_subscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_unsubscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_lsub(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_status(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_append(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_check(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_close(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_expunge(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_search(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
-	ssize_t rumble_server_imap_idle(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    /* IMAP4 handlers */
+    ssize_t rumble_server_imap_login(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_authenticate(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_create(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_delete(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_rename(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_subscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_unsubscribe(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_list(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_lsub(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_status(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_append(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_check(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_close(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_expunge(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_search(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    ssize_t rumble_server_imap_idle(masterHandle* master, sessionHandle* session, const char* tag, const char* arg);
+    
+    /* POP3 handlers */
+    
+    ssize_t rumble_server_pop3_capa(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_user(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_pass(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_starttls(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_list(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_dele(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_top(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_retr(masterHandle* master, sessionHandle* session, const char* argument);
+    ssize_t rumble_server_pop3_uidl(masterHandle* master, sessionHandle* session, const char* argument);
+    
     
     /* Hook handlers */
     ssize_t rumble_server_execute_hooks(sessionHandle* session, cvector* hooks, uint32_t flags);

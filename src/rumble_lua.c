@@ -1,6 +1,7 @@
 #include "rumble.h"
 #include "rumble_lua.h"
 
+#ifdef RUMBLE_LUA
 #define FOO "Rumble"
 
 typedef struct Rumble {
@@ -136,3 +137,4 @@ int Foo_register (lua_State *L)
   lua_pop(L, 1);                      /* drop metatable */
   return 1;                           /* return methods on the stack */
 }
+#endif

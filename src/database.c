@@ -27,7 +27,7 @@ void rumble_database_load(masterHandle* master) {
 
 // Wrapper for the SQL prepare statement
 void* rumble_database_prepare(void* db, const char* statement, ...) {
-	char *sql, b, *tmp;
+	char *sql, b;
 	const char *p,*op;
 	char injects[32];
 	void* returnObject;
@@ -188,7 +188,6 @@ rumble_mailbox* rumble_account_data(sessionHandle* session, const char* user, co
 rumble_mailbox* rumble_account_data_auth(sessionHandle* session, const char* user, const char* domain, const char* pass) {
 	rumble_mailbox* acc;
 	char *hash;
-	masterHandle* master = (masterHandle*) session->_master;
 	acc = rumble_account_data(session, user, domain);
 	if ( acc ) {
 		hash = rumble_sha256((const unsigned char*) pass);
@@ -247,7 +246,6 @@ rumble_mailbag* rumble_letters_retrieve_folder(rumble_mailbox* acc, ssize_t fold
     void* state;
 	rumble_mailbag* bag;
 	rumble_letter* letter;
-	rumbleIntValuePair* pair;
 	bag = (rumble_mailbag*) malloc(sizeof(rumble_mailbag));
 	bag->size = 0;
 	bag->account = acc;
@@ -349,9 +347,9 @@ uint32_t rumble_letters_update(rumble_mailbag* bag) {
 	r = 0;
 	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
 		if ( letter->flags != letter->_flags ) {
-			printf("Updating letter no. %u (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
+			printf("Updating letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 			if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
-			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %u", letter->flags, letter->id);
+			state = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags, letter->id);
 			rumble_database_run(state);
 			rumble_database_cleanup(state);
 			r++;
@@ -363,7 +361,6 @@ uint32_t rumble_letters_update(rumble_mailbag* bag) {
 /* rumble_letters_flush: Flushes a mail bag, freeing up memory. */
 void rumble_letters_flush(rumble_mailbag* bag) {
 	rumble_letter* letter;
-	rumbleIntValuePair* pair;
 	if (!bag || !bag->contents) return;
 	for ( letter = (rumble_letter*) cvector_first(bag->contents); letter != NULL; letter = (rumble_letter*) cvector_next(bag->contents)) {
 		free(letter->fid);
@@ -512,7 +509,7 @@ rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
 		folder->updated = time(0);
 		folder->lastMessage = 0;
 		cvector_add(bag->folders, folder);
-				printf("Added folder: %s (%u)\n", folder->name, folder->id);
+				printf("Added folder: %s (%lld)\n", folder->name, folder->id);
 	}
 	rumble_database_cleanup(state);
 
@@ -617,7 +614,7 @@ void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag) {
 uint32_t rumble_imap4_scan_incoming(rumble_imap4_shared_folder* folder) {
 	int r,rc,exists;
 	void* state;
-	rumble_letter* letter;
+//	rumble_letter* letter;
 	if (!folder) return 0;
 	r = 0;
 	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %u", folder->id, folder->lastMessage);
@@ -635,10 +632,10 @@ uint32_t rumble_imap4_scan_incoming(rumble_imap4_shared_folder* folder) {
 
 /* rumble_imap4_commit: Commits any changes done to the folder, deleting deleted letters and updating any flags set */
 uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* folder) {
-	int r,x,y;
+	int r;
 	void* state;
 	const char* path;
-	rumble_letter* letter, **letters;
+	rumble_letter* letter;
 	char tmp[256];
 	if (!folder) return 0;
 	path = strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");

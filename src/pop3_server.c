@@ -1,7 +1,7 @@
 #include "rumble.h"
 #include "servers.h"
 #include "comm.h"
-
+#include "reply_codes.h"
 // Main loop
 void* rumble_pop3_init(void* m) {
     masterHandle* master = (masterHandle*) m;
@@ -58,7 +58,7 @@ void* rumble_pop3_init(void* m) {
         // Check for hooks on accept()
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_POP3 );
-		if ( rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_pop3_reply_code(101), myName); // Hello!
+	if ( rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_pop3_reply_code(101), myName); // Hello!
         
         // Parse incoming commands
         cmd = (char*) malloc(5);
@@ -82,6 +82,7 @@ void* rumble_pop3_init(void* m) {
 				else if (!strcmp(cmd, "DELE")) rc = rumble_server_pop3_dele(master, &session, arg);
 				else if (!strcmp(cmd, "RETR")) rc = rumble_server_pop3_retr(master, &session, arg);
 				else if (!strcmp(cmd, "LIST")) rc = rumble_server_pop3_list(master, &session, arg);
+                                else if (!strcmp(cmd, "STAR")) rc = rumble_server_pop3_starttls(master, &session, arg);
 			}
 			free(line);
 			if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
@@ -218,8 +219,6 @@ ssize_t rumble_server_pop3_uidl(masterHandle* master, sessionHandle* session, co
 
 ssize_t rumble_server_pop3_dele(masterHandle* master, sessionHandle* session, const char* argument) {
 	rumble_letter* letter;
-	char* tmp;
-	void* state;
 	int i, found;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
@@ -240,7 +239,6 @@ ssize_t rumble_server_pop3_retr(masterHandle* master, sessionHandle* session, co
 	rumble_letter* letter;
 	char buffer[2049];
 	FILE* fp;
-	void* state;
 	int i, found;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
@@ -268,9 +266,8 @@ ssize_t rumble_server_pop3_retr(masterHandle* master, sessionHandle* session, co
 }
 
 ssize_t rumble_server_pop3_top(masterHandle* master, sessionHandle* session, const char* argument) {
-	char *tmp, buffer[2049];
+	char buffer[2049];
 	FILE* fp;
-	void* state;
 	int i, found, lines;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
@@ -297,4 +294,11 @@ ssize_t rumble_server_pop3_top(masterHandle* master, sessionHandle* session, con
 		return RUMBLE_RETURN_IGNORE;
 	}
 	return 105;
+}
+
+
+ssize_t rumble_server_pop3_starttls(masterHandle* master, sessionHandle* session, const char* argument) {
+    rcsend(session, "OK, starting TLS\r\n");
+    comm_starttls(session);
+    return RUMBLE_RETURN_IGNORE;
 }

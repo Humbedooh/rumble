@@ -69,15 +69,7 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 	// Append BATV (unless we already have BATV or VERP)
 	if ( !strlen(sender->tag) ) {
 		rumbleKeyValuePair* el;
-		char *batv = (char*) calloc(1,17);
-		uint32_t pp = 0;
-		pthread_t t = pthread_self();
-        #ifdef PTW32_CDECL
-                pp = (uint32_t) t.p;
-        #else
-                pp = t;
-        #endif
-		sprintf(batv, "%x%llu", rand()*pp, time(0)+pp);
+		char *batv = rumble_create_filename();
 		sprintf(sender->tag, "prvs=%s", batv);
 		el = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
 		if (!el) merror();

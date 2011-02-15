@@ -220,7 +220,7 @@ char* rumble_comm_read(sessionHandle* session) {
 		}
 		else {
 			z = time(0) - z;
-			free(ret); printf("timeout after %u secs!\r\n", z); return NULL;
+			free(ret); printf("timeout after %ld secs!\r\n", z); return NULL;
 		}
 	}
 	return ret;

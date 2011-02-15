@@ -232,7 +232,7 @@ ssize_t rumble_server_imap_noop(masterHandle* master, sessionHandle* session, co
 
 /* CAPABILITY */
 ssize_t rumble_server_imap_capability(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-	imap4Session* imap = (imap4Session*) session->_svcHandle;
+	
 	const char *capa_plain = "* CAPABILITY IMAP4rev1 IDLE CONDSTORE UIDPLUS AUTH=PLAIN STARTTLS LOGINDISABLED\r\n";
 	const char *capa_tls = "* CAPABILITY IMAP4rev1 IDLE CONDSTORE UIDPLUS AUTH=PLAIN\r\n";
 	if ( !(session->flags & RUMBLE_IMAP4_HAS_TLS) ) rcsend(session, capa_plain);
@@ -308,13 +308,12 @@ ssize_t rumble_server_imap_starttls(masterHandle* master, sessionHandle* session
 
 /* SELECT */
 ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-	uint32_t exists, recent, first,i,found;
+	uint32_t exists, recent, first,found;
 	rumble_args* parameters;
 	rumble_imap4_shared_folder* folder;
 	char* selector;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	rumble_letter* letter;
-	rumble_imap4_shared_bag* bag;
 
 	/* Are we authed? */
 	if ( imap->account ) {
@@ -370,13 +369,12 @@ ssize_t rumble_server_imap_select(masterHandle* master, sessionHandle* session, 
 
 /* EXAMINE */
 ssize_t rumble_server_imap_examine(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
-	uint32_t exists, recent, first,i,found;
+	uint32_t exists, recent, first,found;
 	rumble_args* parameters;
 	rumble_imap4_shared_folder* folder;
 	char* selector;
 	imap4Session* imap = (imap4Session*) session->_svcHandle;
 	rumble_letter* letter;
-	rumble_imap4_shared_bag* bag;
 
 	/* Are we authed? */
 	if ( imap->account ) {
@@ -728,7 +726,7 @@ ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, c
 	rumble_imap4_shared_folder* folder;
 	int a,b,c,w_uid,first,last;
 	char line[1024];
-	const char *body, *body_peek, *rfc822;
+	const char *body, *body_peek;
 	int flags, uid, internaldate, envelope;
 	int size, text, header; // rfc822.size/text/header
 	uint32_t octets;
@@ -752,7 +750,7 @@ ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, c
 	body = strstr(arg, "BODY[");
 	parts = 0;
 	first=0;last=0;
-	if ( sscanf(arg, "%u:%c[*]", &first, &last) == 2 ) { last = -1; }
+	if ( sscanf(arg, "%u:%c[*]", &first, (char*) &last) == 2 ) { last = -1; }
 	else sscanf(arg, "%u:%u", &first, &last);
 	if ( last == 0 ) last = first;
 	if ( body ) sscanf(body, "BODY[%1000[^]]<%u>", line, &octets);
@@ -842,7 +840,6 @@ ssize_t rumble_server_imap_fetch(masterHandle* master, sessionHandle* session, c
 ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, const char* tag, const char* arg) { 
 	int first, last,silent,control,a,useUID,flag;
 	rumble_letter* letter;
-	rumble_args* parts;
 	char args[100], smurf[4];
 	
 	/* Check for selected folder */
@@ -857,7 +854,7 @@ ssize_t rumble_server_imap_store(masterHandle* master, sessionHandle* session, c
 	
 	/* Get the message range */
 	first=0;last=0;
-	if ( sscanf(arg, "%u:%1[*]", &first, &smurf) == 2 ) { last = -1; }
+	if ( sscanf(arg, "%u:%1[*]", &first, (char*) &smurf) == 2 ) { last = -1; }
 	else sscanf(arg, "%u:%u", &first, &last);
 	if ( last == 0 ) last = first;
 	useUID = session->flags & RUMBLE_IMAP4_HAS_UID;
@@ -924,7 +921,7 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 	
 	/* Get the message range */
 	first=0;last=0;
-	if ( sscanf(arg, "%u:%1[*]", &first, &last) == 2 ) { last = -1; }
+	if ( sscanf(arg, "%u:%1[*]", &first, (char*) &last) == 2 ) { last = -1; }
 	else sscanf(arg, "%u:%u", &first, &last);
 	if ( last == 0 ) last = first;
 	useUID = session->flags & RUMBLE_IMAP4_HAS_UID;
@@ -953,6 +950,7 @@ ssize_t rumble_server_imap_copy(masterHandle* master, sessionHandle* session, co
 	if ( destination != -1 ) {
 		char buffer[4096];
 		void* state;
+                a = 0;
 		for (letter = (rumble_letter*) cvector_first(folder->letters); letter != NULL; letter = (rumble_letter*) cvector_next(folder->letters)) {
 			a++;
 			if ( useUID && (letter->id < first || (last > 0 && letter->id > last) )) continue;

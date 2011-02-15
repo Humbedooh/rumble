@@ -22,8 +22,8 @@ void rumble_args_free(rumble_args* d) {
 }
 
 rumble_args* rumble_read_words(const char* d) {
-	char* value, *s;
-	ssize_t len, a, b, c,x;
+	char *s;
+	ssize_t a, b, c,x;
 	rumble_args* ret = (rumble_args*) malloc(sizeof(rumble_args));
 	ret->argv = (char**) calloc(1,32*sizeof(char*));
 	a = 0;

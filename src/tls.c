@@ -16,9 +16,6 @@ static void generate_rsa_params() {
 }
 
 void rumble_crypt_init(masterHandle* master) {
-	int ret, sd, ii;
-	gnutls_session_t session;
-	
 	#ifndef RUMBLE_IS_LIBRARY
 	printf("%-48s", "Loading SSL...");
 	if (gnutls_global_init()) { printf("[BAD]\n"); return; }
