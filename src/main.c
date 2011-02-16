@@ -10,7 +10,7 @@
 #include "cvector.h"
 #include "private.h"
 
-#define RUMBLE_INITIAL_THREADS 25
+#define RUMBLE_INITIAL_THREADS 800
 
 extern masterHandle* rumble_database_master_handle;
 
@@ -50,7 +50,9 @@ void rumble_master_init(masterHandle* master) {
 int main(int argc, char** argv) {
 	int x;
 	pthread_t* t;
+    pthread_attr_t attr;
 	masterHandle* master;
+    size_t mystacksize;
 	cvector* args = cvector_init();
     master = (masterHandle*) malloc(sizeof(masterHandle));
 	if (!master) merror();
@@ -64,7 +66,9 @@ int main(int argc, char** argv) {
     rumble_modules_load(master);
 	rumble_database_update_domains();
 	rumble_crypt_init(master);
-
+    
+    pthread_attr_init(&attr);
+    
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
         printf("%-48s", "Launching SMTP service...");
@@ -72,7 +76,7 @@ int main(int argc, char** argv) {
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->smtp.threads, t);
-            pthread_create(t, NULL, master->smtp.init, master);
+            pthread_create(t, &attr, master->smtp.init, master);
         }
         printf("[OK]\n");
     }
@@ -84,7 +88,7 @@ int main(int argc, char** argv) {
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->pop3.threads, t);
-            pthread_create(t, NULL, master->pop3.init, master);
+            pthread_create(t, &attr, master->pop3.init, master);
         }
         printf("[OK]\n");
     }
@@ -97,7 +101,7 @@ int main(int argc, char** argv) {
         for ( n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t*) malloc(sizeof(pthread_t));
             cvector_add(master->imap.threads, t);
-            pthread_create(t, NULL, master->imap.init, master);
+            pthread_create(t, &attr, master->imap.init, master);
         }
         printf("[OK]\n");
     }

@@ -228,6 +228,6 @@ char* rumble_comm_read(sessionHandle* session) {
 }
 
 ssize_t rumble_comm_send(sessionHandle* session, const char* message) {
-        if (session->client->tls != NULL ) {printf("s -> c : %s", message); return session->client->send(session->client->tls,message, strlen(message),0); }
+        if (session->client->tls != NULL ) {return session->client->send(session->client->tls,message, strlen(message),0); }
         return send(session->client->socket, message, strlen(message) ,0);
 }

@@ -64,8 +64,8 @@ void rumble_modules_load(masterHandle* master) {
                 ver = (*mcheck)();
 				x = EXIT_SUCCESS;
                 if ( ver != RUMBLE_VERSION ) {
-					if ( ver > RUMBLE_VERSION ) fprintf(stderr, "\nError: %s was compiled with a newer version of librumble (v%#x) than this server executable (v%#x).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
-					else fprintf(stderr, "\nError: %s was compiled with an older version of librumble (v%#x).\nPlease recompile the module using the latest sources (v%#x) to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
+					if ( ver > RUMBLE_VERSION ) fprintf(stderr, "\nError: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
+					else fprintf(stderr, "\nError: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);
 				}
                 else x = init(master, modinfo);
                 if ( x != EXIT_SUCCESS ) {

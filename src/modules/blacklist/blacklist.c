@@ -140,7 +140,6 @@ rumblemodule rumble_module_init(void* master, rumble_module_info* modinfo) {
     config = fopen(cfgfile, "r");
     if ( config ) {
         int p = 0;
-        char byte;
         char* buffer = (char*) malloc(4096);
         while (!feof(config)) {
             memset(buffer, 0, 4096);

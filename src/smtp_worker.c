@@ -61,6 +61,8 @@ rumble_sendmail_response* rumble_send_email(masterHandle* master, const char* ma
 	printf("connecting to %s...\n", mailserver);
 	c.tls = 0;
 	c.socket = comm_open(master, mailserver, 25);
+    c.recv = (dummySocketOp) recv;
+    c.send = (dummySocketOp) send;
 	me = rumble_get_dictionary_value(master->_core.conf, "servername");
 
 	FD_ZERO(&c.fd);

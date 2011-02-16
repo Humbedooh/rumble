@@ -79,7 +79,7 @@
     #define RUMBLE_DEBUG_COMM               0x00010000
     #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
     #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-    #define RUMBLE_VERSION                  0x00060509 // Internal version for module checks
+    #define RUMBLE_VERSION                  0x0006050B // Internal version for module checks
 
 
     /* Module and function return codes */
@@ -248,14 +248,13 @@
           char			_ss_pad2[_SS_PAD2SIZE];
         };
     #endif
-        #include <gnutls/gnutls.h>
 
     typedef struct {
         socketHandle				socket;
         struct sockaddr_storage		client_info;
         char						addr[46];
         fd_set						fd;
-        gnutls_session_t			tls;
+        void*           			tls;
         dummySocketOp               recv;
         dummySocketOp               send;
     } clientHandle;
@@ -351,7 +350,7 @@
             void*                   mail;
             cvector*				batv; // BATV handles for bounce control
             void*					lua;
-            gnutls_certificate_credentials_t tls_credentials;
+            void*                   tls_credentials;
         }                           _core;
         rumbleService               smtp;
         rumbleService               pop3;
