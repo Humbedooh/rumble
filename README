@@ -1,11 +1,30 @@
-Rumble is a mail server for SMTP, POP3 and IMAP with an Apache-like approach to its structure.
-The server itself is quite small and - albeit ingenous and all that - rather basic.
-
-This is however made up for by the modular approach to services, which enables users to easilly 
-write their own plugins or simply use one or more of the existing plugins such as the 
-white/grey/black-listing modules, mailing list module, load balancing and so on and so forth.
+Rumble is a mail server for SMTP(ESMTPA), POP3 and IMAP4rev1.
+On top of the basic services, Rumble offers an extensive API for attaching modules in either
+C/C++ or Lua to any aspect of mail handling, such as the included (default) 
+white/grey/black-listing modules, mailing list module and load balancing module
 
 Obviously, you're not gonna download this piece of rubbish just yet, as it's far from done.
 
-Rumble is compliant with both IPv4/IPv6 and most ESMTP extensions (EXPN, PIPELINING, 8BITMIME,
-AUTH (CRAM-MD5 DIGEST-MD5 PLAIN), DELIVERBY, DSN, SIZE, XVERP)
+Rumble works with both IPv4 and IPv6 as well as the following service extensions:
+
+SMTP:
+- EXPN
+- PIPELINING
+- 8BITMIME
+- AUTH (LOGIN, PLAIN)
+- DELIVERBY
+- DSN
+- SIZE
+- XVERP
+- STARTTLS
+- BATV
+
+POP3:
+- PIPELINING
+- UIDL
+- STARTTLS
+
+IMAP4:
+- UIDPLUS
+- LEMONADE compliance (CONDSTORE, IDLE)
+- STARTTLS
