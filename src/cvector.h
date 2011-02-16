@@ -23,6 +23,7 @@ struct _cvector_element {
     void* object;
 };
 typedef struct _cvector_element cvector_element;
+#define citerator cvector_element*
 
 typedef struct _cvector {
     cvector_element* first;
@@ -50,6 +51,7 @@ void* cvector_shift(cvector* parent);
 void* cvector_pop(cvector* parent);
 unsigned int cvector_size(cvector* parent);
 void cvector_flush(cvector* parent);
+void* cvector_foreach(cvector* parent, citerator* iter);
 
 #ifdef	__cplusplus
 }

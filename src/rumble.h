@@ -79,7 +79,7 @@
     #define RUMBLE_DEBUG_COMM               0x00010000
     #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
     #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-    #define RUMBLE_VERSION                  0x0006050B // Internal version for module checks
+    #define RUMBLE_VERSION                  0x0007050B // Internal version for module checks
 
 
     /* Module and function return codes */
@@ -147,11 +147,11 @@
 
 
     /* Flags for IMAP4 sessions */
-    #define RUMBLE_IMAP4_HAS_SELECT			0x00000001	 // Has selected a mailbox
-    #define RUMBLE_IMAP4_HAS_TLS			0x00000002	 // Has established TLS or SSL
-    #define RUMBLE_IMAP4_HAS_READWRITE		0x00000010	 // Read/Write session (SELECT)
-    #define RUMBLE_IMAP4_HAS_READONLY		0x00000020	 // Read-only session (EXAMINE)
-    #define RUMBLE_IMAP4_HAS_UID			0x00000100	 // UID-type request.    
+    #define rumble_mailman_HAS_SELECT			0x00000001	 // Has selected a mailbox
+    #define rumble_mailman_HAS_TLS			0x00000002	 // Has established TLS or SSL
+    #define rumble_mailman_HAS_READWRITE		0x00000010	 // Read/Write session (SELECT)
+    #define rumble_mailman_HAS_READONLY		0x00000020	 // Read-only session (EXAMINE)
+    #define rumble_mailman_HAS_UID			0x00000100	 // UID-type request.    
     #define RUMBLE_ROAD_MASK                0x000000FF   // Command sequence mask
 
 
@@ -332,7 +332,6 @@
             pthread_mutex_t         mutex;
             cvector*                handles;
             void*                   (*init)(void*);
-            cvector*		        sharedObjects;
         } rumbleService;
 
 
@@ -359,6 +358,10 @@
             rumble_readerwriter*	rrw;
             cvector*				list;
         } domains;
+        struct {
+            rumble_readerwriter*	rrw;
+            cvector*				list;
+        } mailboxes;
         const char*                 cfgdir;
     } masterHandle;
 
@@ -423,11 +426,6 @@
         int					        subscribed;
     } rumble_folder;
 
-    typedef struct {
-        rumble_mailbox*	            account;
-        rumble_mailbag*	            bag;
-    } pop3Session;
-
 
     typedef struct {
         int64_t				        id;
@@ -436,14 +434,14 @@
         char*				        name;
         int					        subscribed;
         cvector*			        letters;
-    } rumble_imap4_shared_folder;
+    } rumble_mailman_shared_folder;
 
     typedef struct {
         cvector*			        folders;
         rumble_readerwriter*        rrw;
         uint32_t			        sessions;
         uint32_t			        uid;
-    } rumble_imap4_shared_bag;
+    } rumble_mailman_shared_bag;
 
     typedef struct {
         char**			            argv;
@@ -452,10 +450,12 @@
 
     typedef struct {
         rumble_mailbox*				account;
-        rumble_imap4_shared_bag*	bag;
+        rumble_mailman_shared_bag*	bag;
         int64_t						folder;
-    } imap4Session;
+    } accountSession;
 
+    typedef accountSession imap4Session;
+    typedef accountSession pop3Session;
 
 
     #ifdef	__cplusplus
@@ -522,12 +522,15 @@
     cvector* rumble_folders_retrieve(rumble_mailbox* acc);
     void rumble_folders_flush(cvector* folders);
 
+    rumble_mailman_shared_bag* rumble_mailman_open_bag(uint32_t uid);
+    void rumble_mailman_close_bag(rumble_mailman_shared_bag* bag);
+
     /* IMAP4 specific functions */
-    rumble_imap4_shared_folder* rumble_imap4_current_folder(imap4Session* sess);
-    rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc);
-    void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag);
-    uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* folder);
-    void rumble_imap4_free(rumble_imap4_shared_bag* bag);
+    rumble_mailman_shared_folder* rumble_mailman_current_folder(accountSession* sess);
+    rumble_mailman_shared_bag* rumble_letters_retrieve_shared(uint32_t uid);
+    void rumble_mailman_update_folders(rumble_mailman_shared_bag* bag);
+    uint32_t rumble_mailman_commit(imap4Session* imap, rumble_mailman_shared_folder* folder);
+    void rumble_mailman_free(rumble_mailman_shared_bag* bag);
 
 
 

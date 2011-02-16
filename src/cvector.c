@@ -183,3 +183,12 @@ void cvector_flush(cvector* parent) {
     parent->current = 0;
     parent->size = 0;
 }
+
+
+void* cvector_foreach(cvector* parent, citerator* iter) {
+    if (*iter == 0) *iter = parent->first;
+    if (*iter == 0) return 0;
+    if ((*iter)->next == NULL) return 0;
+    *iter = (*iter)->next;
+    return (*iter)->previous;
+}

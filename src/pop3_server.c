@@ -2,6 +2,7 @@
 #include "servers.h"
 #include "comm.h"
 #include "reply_codes.h"
+#include "private.h"
 // Main loop
 void* rumble_pop3_init(void* m) {
     masterHandle* master = (masterHandle*) m;
@@ -82,7 +83,7 @@ void* rumble_pop3_init(void* m) {
 				else if (!strcmp(cmd, "DELE")) rc = rumble_server_pop3_dele(master, &session, arg);
 				else if (!strcmp(cmd, "RETR")) rc = rumble_server_pop3_retr(master, &session, arg);
 				else if (!strcmp(cmd, "LIST")) rc = rumble_server_pop3_list(master, &session, arg);
-                                else if (!strcmp(cmd, "STAR")) rc = rumble_server_pop3_starttls(master, &session, arg);
+                else if (!strcmp(cmd, "STAR")) rc = rumble_server_pop3_starttls(master, &session, arg);
 			}
 			free(line);
 			if ( rc == RUMBLE_RETURN_IGNORE ) continue; // Skip to next line.
@@ -104,9 +105,8 @@ void* rumble_pop3_init(void* m) {
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
-		rumble_letters_expunge(pops->bag); /* delete any letters marked for deletion */
-		rumble_letters_flush(pops->bag); /* flush the mail bag from memory */
-		if ( pops->account ) rumble_free_account(pops->account);
+		rumble_free_account(pops->account);
+        rumble_mailman_close_bag(pops->bag);
 		/* End cleanup */
 
         pthread_mutex_lock(&(master->pop3.mutex));
@@ -146,6 +146,7 @@ ssize_t rumble_server_pop3_capa(masterHandle* master, sessionHandle* session, co
 	rcsend(session, "TOP\r\n");
 	rcsend(session, "UIDL\r\n");
 	rcsend(session, "USER\r\n");
+    rcsend(session, "STARTTLS\r\n");
 	rcsend(session, "PIPELINING\r\n");
 	rcsend(session, "IMPLEMENTATION Rumble Mail Server\r\n");
 	rcsend(session, ".\r\n");
@@ -182,7 +183,8 @@ ssize_t rumble_server_pop3_pass(masterHandle* master, sessionHandle* session, co
 			}
 			free(usr); free(dmn); free(tmp);
 			session->flags |= RUMBLE_POP3_HAS_AUTH;
-			pops->bag = rumble_letters_retrieve_folder(pops->account,0);
+			pops->bag = rumble_mailman_open_bag(pops->account->uid);
+            pops->folder = 0; /* 0 = INBOX */
 			return 104;
 		}
 	}
@@ -192,13 +194,23 @@ ssize_t rumble_server_pop3_pass(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_pop3_list(masterHandle* master, sessionHandle* session, const char* argument) {
 	rumble_letter* letter;
 	uint32_t i;
+    rumble_mailman_shared_folder* folder;
+    citerator iter;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	rcsend(session, "+OK\r\n");
-	for ( i = 0; i < pops->bag->size; i++ ) {
-		letter = pops->bag->letters[i];
+
+    
+	rumble_rw_start_read(pops->bag->rrw);
+    folder = rumble_mailman_current_folder(pops);
+    
+    i = 0;
+    iter = 0;
+    while ( (letter = (rumble_letter*) cvector_foreach(folder->letters, &iter)) ) {
+        i++;
 		if (! (letter->flags & RUMBLE_LETTER_DELETED) ) rcprintf(session, "%u %u\r\n", i+1, letter->size);
 	}
+    rumble_rw_stop_read(pops->bag->rrw);
 	rcsend(session, ".\r\n");
 	return RUMBLE_RETURN_IGNORE;
 }
@@ -206,29 +218,47 @@ ssize_t rumble_server_pop3_list(masterHandle* master, sessionHandle* session, co
 ssize_t rumble_server_pop3_uidl(masterHandle* master, sessionHandle* session, const char* argument) {
 	rumble_letter* letter;
 	uint32_t i;
+    rumble_mailman_shared_folder* folder;
+    citerator iter;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	rcsend(session, "+OK\r\n");
-	for ( i = 0; i < pops->bag->size; i++ ) {
-		letter = pops->bag->letters[i];
-		if (! (letter->flags & RUMBLE_LETTER_DELETED) ) rcprintf(session, "%u %s\r\n", i+1, letter->fid);
+	rumble_rw_start_read(pops->bag->rrw);
+    folder = rumble_mailman_current_folder(pops);
+    
+    i = 0;
+    for (iter = 0; (letter = (rumble_letter*) cvector_foreach(folder->letters, &iter)); ) {
+        i++;
+        if (! (letter->flags & RUMBLE_LETTER_DELETED) ) rcprintf(session, "%u %s\r\n", i+1, letter->fid);
 	}
+    rumble_rw_stop_read(pops->bag->rrw);
 	rcsend(session, ".\r\n");
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_pop3_dele(masterHandle* master, sessionHandle* session, const char* argument) {
 	rumble_letter* letter;
-	int i, found;
+    rumble_mailman_shared_folder* folder;
+	int j,i, found;
+    citerator iter;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	i = atoi(argument);
 	found = 0;
-	if ( i <= pops->bag->size && i > 0 ) {
-		letter = pops->bag->letters[i-1];
-		letter->flags |= RUMBLE_LETTER_EXPUNGE;
-		found = 1;
+	rumble_rw_start_write(pops->bag->rrw);
+    folder = rumble_mailman_current_folder(pops);
+    
+    j = 0;
+    for (iter = 0; (letter = (rumble_letter*) cvector_foreach(folder->letters, &iter)); ) {
+        j++;
+        if (j == i) {
+            letter->flags |= RUMBLE_LETTER_DELETED;
+            found = 1;
+            break;
+        }
 	}
+    rumble_rw_stop_write(pops->bag->rrw);
+
 	if ( found ) rcsend(session, "+OK\r\n");
 	else rcsend(session, "-ERR No such letter.\r\n");
 	return RUMBLE_RETURN_IGNORE;
@@ -239,58 +269,79 @@ ssize_t rumble_server_pop3_retr(masterHandle* master, sessionHandle* session, co
 	rumble_letter* letter;
 	char buffer[2049];
 	FILE* fp;
-	int i, found;
+	int j,i, found;
+    citerator iter;
+    rumble_mailman_shared_folder* folder;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	i = atoi(argument);
 	found = 0;
-	if ( i <= pops->bag->size && i > 0 ) {
-		letter = pops->bag->letters[i-1];
-		found = 1;
-		fp = rumble_letters_open(pops->account, letter);
-		if (fp) {
-			rcsend(session, "+OK\r\n");
-			while (!feof(fp)) {
-				fgets(buffer, 2048, fp);
-				rcsend(session, buffer);
-			}
-			fclose(fp);
-			rcsend(session, ".\r\n");
-		}
-		else {
-			rcsend(session, "-ERR Internal I/O error while accessing mail file.\r\n");
-		}
+	rumble_rw_start_read(pops->bag->rrw);
+    folder = rumble_mailman_current_folder(pops);
+    
+    j = 0;
+    for (iter = 0; (letter = (rumble_letter*) cvector_foreach(folder->letters, &iter)); ) {
+        j++;
+        if (j == i) {
+            fp = rumble_letters_open(pops->account, letter);
+            found = 1;
+            break;
+        }
 	}
-	if (!found) rcsend(session, "-ERR No such letter.\r\n");
+    rumble_rw_stop_read(pops->bag->rrw);
+		
+	if (fp) {
+		rcsend(session, "+OK\r\n");
+		while (!feof(fp)) {
+			fgets(buffer, 2048, fp);
+			rcsend(session, buffer);
+		}
+		fclose(fp);
+		rcsend(session, ".\r\n");
+	}
+	else {
+		rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n",i);
+	}
 	return RUMBLE_RETURN_IGNORE;
 }
 
 ssize_t rumble_server_pop3_top(masterHandle* master, sessionHandle* session, const char* argument) {
 	char buffer[2049];
 	FILE* fp;
-	int i, found, lines;
+	int i, found, lines,j;
+    rumble_mailman_shared_folder* folder;
+    rumble_letter* letter;
+    citerator iter;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	if ( sscanf(argument, "%i %i", &i, &lines) == 2 ) {
 		found = 0;
-		if ( i > 0 && i <= pops->bag->size ) {
-			fp = rumble_letters_open(pops->account, pops->bag->letters[i-1]);
-			if (fp) {
-				rcsend(session, "+OK\r\n");
-				while (!feof(fp) && lines) {
-					lines--;
-					fgets(buffer, 2048, fp);
-					rcsend(session, buffer);
-				}
-				fclose(fp);
-				rcsend(session, ".\r\n");
-			}
-			else {
-				rcsend(session, "-ERR Internal I/O error while accessing mail file.\r\n");
-			}
-			return RUMBLE_RETURN_IGNORE;
-		}
-		if (!found) rcsend(session, "-ERR No such letter.\r\n");
+		rumble_rw_start_read(pops->bag->rrw);
+        folder = rumble_mailman_current_folder(pops);
+        
+        j = 0;
+        for (iter = 0; (letter = (rumble_letter*) cvector_foreach(folder->letters, &iter)); ) {
+            j++;
+            if (j == i) {
+                fp = rumble_letters_open(pops->account, letter);
+                found = 1;
+                break;
+            }
+	    }
+        rumble_rw_stop_read(pops->bag->rrw);
+        if (fp) {
+		    rcsend(session, "+OK\r\n");
+		    while (!feof(fp) && lines) {
+                lines--;
+			    fgets(buffer, 2048, fp);
+			    rcsend(session, buffer);
+		    }
+		    fclose(fp);
+		    rcsend(session, ".\r\n");
+	    }
+	    else {
+		    rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n",i);
+	    }
 		return RUMBLE_RETURN_IGNORE;
 	}
 	return 105;

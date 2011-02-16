@@ -103,6 +103,7 @@ void* rumble_database_prepare(void* db, const char* statement, ...) {
 
 
 void rumble_free_account(rumble_mailbox* user) {
+    if (!user) return;
     if ( user->arg ) free(user->arg);
     if ( user->user) free(user->user);
 	if ( user->hash) free(user->hash);
@@ -470,18 +471,18 @@ void rumble_database_update_domains() {
  * Retrieves a completed, shared instance of a mailbag for IMAP4 use.
  * The bag can be shared across multiple connections for faster processing.
 */
-rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
+rumble_mailman_shared_bag* rumble_letters_retrieve_shared(uint32_t uid) {
 	int rc,l;
     void* state;
-	rumble_imap4_shared_bag* bag;
+	rumble_mailman_shared_bag* bag;
 	rumble_letter* letter;
-	rumble_imap4_shared_folder* folder;
-	bag = (rumble_imap4_shared_bag*) malloc(sizeof(rumble_imap4_shared_bag));
+	rumble_mailman_shared_folder* folder;
+	bag = (rumble_mailman_shared_bag*) malloc(sizeof(rumble_mailman_shared_bag));
 	bag->folders = cvector_init();
 	bag->rrw = rumble_rw_init();
 
 	/* Add the default inbox */
-	folder = (rumble_imap4_shared_folder*) malloc(sizeof(rumble_imap4_shared_folder));
+	folder = (rumble_mailman_shared_folder*) malloc(sizeof(rumble_mailman_shared_folder));
 	folder->id = 0;
 	folder->letters = cvector_init();
 	folder->lastMessage = 0;
@@ -490,9 +491,9 @@ rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
 	folder->name = (char*) calloc(1,32); strcpy(folder->name, "INBOX");
 	cvector_add(bag->folders, folder);
 
-	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", acc->uid);
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", uid);
     while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
-		folder = (rumble_imap4_shared_folder*) malloc(sizeof(rumble_imap4_shared_folder));
+		folder = (rumble_mailman_shared_folder*) malloc(sizeof(rumble_mailman_shared_folder));
 
 		// Folder ID
 		folder->id = sqlite3_column_int64((sqlite3_stmt*) state, 0);
@@ -514,7 +515,7 @@ rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
 	rumble_database_cleanup(state);
 
 
-	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u", acc->uid);
+	state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u", uid);
     while ( (rc = rumble_database_run(state)) == RUMBLE_DB_RESULT ) {
 		letter = (rumble_letter*) malloc(sizeof(rumble_letter));
 
@@ -537,11 +538,11 @@ rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
 		letter->_flags = letter->flags;
 
 		// UID
-		letter->uid = acc->uid;
+		letter->uid = uid;
 
 		letter->folder = sqlite3_column_int64((sqlite3_stmt*) state, 5);
 		l = 0;
-		for ( folder = (rumble_imap4_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(bag->folders) ) {
+		for ( folder = (rumble_mailman_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_mailman_shared_folder*) cvector_next(bag->folders) ) {
 			if ( folder->id == letter->folder ) { 
 				l++;
 				cvector_add(folder->letters, letter);
@@ -559,9 +560,9 @@ rumble_imap4_shared_bag* rumble_letters_retrieve_shared(rumble_mailbox* acc) {
 	return bag;
 }
 
-rumble_imap4_shared_folder* rumble_imap4_current_folder(imap4Session* sess) {
-	rumble_imap4_shared_folder* folder;
-	for ( folder = (rumble_imap4_shared_folder*) cvector_first(sess->bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(sess->bag->folders) ) {
+rumble_mailman_shared_folder* rumble_mailman_current_folder(accountSession* sess) {
+	rumble_mailman_shared_folder* folder;
+	for ( folder = (rumble_mailman_shared_folder*) cvector_first(sess->bag->folders); folder != NULL; folder = (rumble_mailman_shared_folder*) cvector_next(sess->bag->folders) ) {
 		if ( folder->id == sess->folder ) return folder;
 	}
 	printf("<curfolder> Couldn't find folder no. %lld(?)\n", sess->folder);
@@ -569,9 +570,9 @@ rumble_imap4_shared_folder* rumble_imap4_current_folder(imap4Session* sess) {
 }
 
 
-/* rumble_imap4_update_folders: Updates the list of folders in the mail account */
-void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag) {
-	rumble_imap4_shared_folder* folder;
+/* rumble_mailman_update_folders: Updates the list of folders in the mail account */
+void rumble_mailman_update_folders(rumble_mailman_shared_bag* bag) {
+	rumble_mailman_shared_folder* folder;
 	int rc,l, folder_id, found;
 	void* state;
 
@@ -585,12 +586,12 @@ void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag) {
 
 		// Match against our existing folders and add if not there.
 		found = 0;
-		for ( folder = (rumble_imap4_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(bag->folders)) {
+		for ( folder = (rumble_mailman_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_mailman_shared_folder*) cvector_next(bag->folders)) {
 			if ( folder->id == folder_id ) { found++; break; }
 		}
 
 		if (!found) {
-			folder = (rumble_imap4_shared_folder*) malloc(sizeof(rumble_imap4_shared_folder));
+			folder = (rumble_mailman_shared_folder*) malloc(sizeof(rumble_mailman_shared_folder));
 			folder->id = folder_id;
 
 			// Folder name
@@ -611,7 +612,7 @@ void rumble_imap4_update_folders(rumble_imap4_shared_bag* bag) {
 
 
 
-uint32_t rumble_imap4_scan_incoming(rumble_imap4_shared_folder* folder) {
+uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder* folder) {
 	int r,rc,exists;
 	void* state;
 //	rumble_letter* letter;
@@ -630,8 +631,8 @@ uint32_t rumble_imap4_scan_incoming(rumble_imap4_shared_folder* folder) {
 }
 
 
-/* rumble_imap4_commit: Commits any changes done to the folder, deleting deleted letters and updating any flags set */
-uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* folder) {
+/* rumble_mailman_commit: Commits any changes done to the folder, deleting deleted letters and updating any flags set */
+uint32_t rumble_mailman_commit(imap4Session* imap, rumble_mailman_shared_folder* folder) {
 	int r;
 	void* state;
 	const char* path;
@@ -671,26 +672,53 @@ uint32_t rumble_imap4_commit(imap4Session* imap, rumble_imap4_shared_folder* fol
 
 
 
-/* rumble_imap4_free: Frees up resources used by the bag */
-void rumble_imap4_free(rumble_imap4_shared_bag* bag) {
+/* rumble_mailman_close_bag: Frees up resources used by the bag */
+void rumble_mailman_close_bag(rumble_mailman_shared_bag* bag) {
 	rumble_letter* letter;
-    rumble_imap4_shared_folder* folder;
+    rumble_mailman_shared_folder* folder;
 	if (!bag) return;
 
-    /* Traverse folders */
-    for ( folder = (rumble_imap4_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_imap4_shared_folder*) cvector_next(bag->folders) ) {
-        /* Traverse letters */
-	    for ( letter = (rumble_letter*) cvector_first(folder->letters); letter != NULL; letter = (rumble_letter*) cvector_next(folder->letters)) {
-            if (letter->fid) free(letter->fid);
-            free(letter);
-        }
-        cvector_flush(folder->letters);
-        if (folder->name) free(folder->name);
-        free(folder);
-	}
-    cvector_flush(bag->folders);
-    pthread_mutex_destroy(&bag->rrw->mutex);
-    free(bag->rrw);
-    free(bag);
+    rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);
+    bag->sessions--;
+
+    if ( bag->sessions <= 0) {
+        /* Traverse folders */
+        for ( folder = (rumble_mailman_shared_folder*) cvector_first(bag->folders); folder != NULL; folder = (rumble_mailman_shared_folder*) cvector_next(bag->folders) ) {
+            /* Traverse letters */
+	        for ( letter = (rumble_letter*) cvector_first(folder->letters); letter != NULL; letter = (rumble_letter*) cvector_next(folder->letters)) {
+                if (letter->fid) free(letter->fid);
+                free(letter);
+            }
+            cvector_flush(folder->letters);
+            if (folder->name) free(folder->name);
+            free(folder);
+	    }
+        cvector_flush(bag->folders);
+        pthread_mutex_destroy(&bag->rrw->mutex);
+        free(bag->rrw);
+        free(bag);
+    }
+    rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);
 }
 
+
+/* rumble_mailman_open_bag: Opens up an existing mail bag or creates a new instance of one */
+rumble_mailman_shared_bag* rumble_mailman_open_bag(uint32_t uid) {
+    rumble_mailman_shared_bag *tmpbag, *bag = 0;
+    rumble_rw_start_read(rumble_database_master_handle->mailboxes.rrw);
+
+    /* Check if we have a shared mailbox instance available */
+    for (tmpbag = (rumble_mailman_shared_bag*) cvector_first(rumble_database_master_handle->mailboxes.list); tmpbag != NULL; tmpbag = (rumble_mailman_shared_bag*) cvector_next(rumble_database_master_handle->mailboxes.list) ) {
+		if ( tmpbag->uid == uid ) {bag = tmpbag; bag->sessions++; break;}
+	}
+
+	/* If not, create a new shared object */
+	if (!bag) {
+		bag = rumble_letters_retrieve_shared(uid);
+		bag->sessions = 1;
+		cvector_add(rumble_database_master_handle->mailboxes.list, bag);
+	}
+
+	rumble_rw_stop_read(rumble_database_master_handle->mailboxes.rrw);
+    return bag;
+}

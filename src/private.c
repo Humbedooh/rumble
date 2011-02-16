@@ -23,7 +23,8 @@
 #endif
 
 void rumble_clean_session(sessionHandle* session) {
-	address* el;
+    address* el;
+    if (!session) return;
     rumble_free_address(session->sender);
     for ( el = (address*) cvector_first(session->recipients); el != NULL; el = (address*) cvector_next(session->recipients)) {
         rumble_free_address(el);
