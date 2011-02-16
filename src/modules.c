@@ -62,6 +62,7 @@ void rumble_modules_load(masterHandle* master) {
                 master->_core.currentSO = el->value;
                 cvector_add(master->_core.modules, modinfo);
                 ver = (*mcheck)();
+                ver = (ver & 0xFFFFFF00) + (RUMBLE_VERSION & 0x000000FF);
 				x = EXIT_SUCCESS;
                 if ( ver != RUMBLE_VERSION ) {
 					if ( ver > RUMBLE_VERSION ) fprintf(stderr, "\nError: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n", el->value, ver, RUMBLE_VERSION);

@@ -79,7 +79,7 @@
     #define RUMBLE_DEBUG_COMM               0x00010000
     #define RUMBLE_DEBUG_MEMORY				0x00001000 //reroutes malloc and calloc for debugging
     #define RUMBLE_DEBUG                    (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM) // debug output flags
-    #define RUMBLE_VERSION                  0x0007050B // Internal version for module checks
+    #define RUMBLE_VERSION                  0x0008051A // Internal version for module checks
 
 
     /* Module and function return codes */
@@ -555,6 +555,10 @@
     #ifdef	__cplusplus
     }
     #endif
+
+#define RUMBLE_MAJOR (RUMBLE_VERSION & 0xFF000000) >> 24
+#define RUMBLE_MINOR (RUMBLE_VERSION & 0x00FF0000) >> 16
+#define RUMBLE_REV   (RUMBLE_VERSION & 0x0000FFFF)
 
 
 #endif	/* RUMBLE_H */

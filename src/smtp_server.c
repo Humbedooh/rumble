@@ -72,7 +72,7 @@ void* rumble_smtp_init(void* m) {
 			rc = 421;
             if ( !line ) break;
 			rc = 500; // default return code is "500 unknown command thing"
-			printf("<Client> %s", line);
+			/*printf("<Client> %s", line);*/
             if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
 				rumble_string_upper(cmd);
 				if (!strcmp(cmd, "QUIT")) break; // bye!

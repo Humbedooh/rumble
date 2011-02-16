@@ -98,23 +98,26 @@ void* rumble_pop3_init(void* m) {
         #endif
 		if ( rc == 421 ) rumble_comm_send(sessptr, rumble_pop3_reply_code(103)); // timeout!
         else rumble_comm_send(sessptr, rumble_pop3_reply_code(102)); // bye!
-		if (session.client->tls != NULL) comm_stoptls(&session); /* Close the TLS session if active */
+		
+        /* Shut down socket */
+        comm_stoptls(&session); /* Close the TLS session if active */
         close(session.client->socket);
 
-		/* Start cleanup */
+		/* Start cleaning up after the session */
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
 		rumble_free_account(pops->account);
         rumble_mailman_close_bag(pops->bag);
-		/* End cleanup */
+		
 
+        /* Update the thread stats */
         pthread_mutex_lock(&(master->pop3.mutex));
-        
         for (s = (sessionHandle*) cvector_first(master->pop3.handles); s != NULL; s = (sessionHandle*) cvector_next(master->pop3.handles)) {
             if (s == sessptr) { cvector_delete(master->pop3.handles); x = 1; break; }
         }
-        // Check if we were told to go kill ourself :(
+
+        /* Check if we were told to go kill ourself :( */
         if ( session._tflags & RUMBLE_THREAD_DIE ) {
             #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
             printf("<pop3::threads>I (%#x) was told to die :(\n", (uintptr_t) pthread_self());
@@ -148,7 +151,7 @@ ssize_t rumble_server_pop3_capa(masterHandle* master, sessionHandle* session, co
 	rcsend(session, "USER\r\n");
     rcsend(session, "STARTTLS\r\n");
 	rcsend(session, "PIPELINING\r\n");
-	rcsend(session, "IMPLEMENTATION Rumble Mail Server\r\n");
+    rcprintf(session, "IMPLEMENTATION Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
 	rcsend(session, ".\r\n");
 	return RUMBLE_RETURN_IGNORE;
 }
@@ -273,6 +276,7 @@ ssize_t rumble_server_pop3_retr(masterHandle* master, sessionHandle* session, co
     citerator iter;
     rumble_mailman_shared_folder* folder;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
+        fp = 0;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	i = atoi(argument);
 	found = 0;
@@ -313,6 +317,7 @@ ssize_t rumble_server_pop3_top(masterHandle* master, sessionHandle* session, con
     rumble_letter* letter;
     citerator iter;
 	pop3Session* pops = (pop3Session*) session->_svcHandle;
+        fp = 0;
 	if ( ! (session->flags & RUMBLE_POP3_HAS_AUTH) ) return 105; // Not authed?! :(
 	if ( sscanf(argument, "%i %i", &i, &lines) == 2 ) {
 		found = 0;

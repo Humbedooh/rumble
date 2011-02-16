@@ -11,7 +11,7 @@
     //#define RUMBLE_USING_MYSQL // uncomment to use MySQL instead of Sqlite
 
     #include "rumble.h"
-    #include "sqlite3.h"
+    #include <sqlite3.h>
 
     sqlite3_stmt* rumble_sql_inject(sqlite3* db, const char* statement, ...);
     void* rumble_database_prepare(void* db, const char* statement, ...);

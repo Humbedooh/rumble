@@ -10,7 +10,7 @@
 #include "cvector.h"
 #include "private.h"
 
-#define RUMBLE_INITIAL_THREADS 800
+#define RUMBLE_INITIAL_THREADS 20
 
 extern masterHandle* rumble_database_master_handle;
 
@@ -52,13 +52,13 @@ int main(int argc, char** argv) {
 	pthread_t* t;
     pthread_attr_t attr;
 	masterHandle* master;
-    size_t mystacksize;
 	cvector* args = cvector_init();
     master = (masterHandle*) malloc(sizeof(masterHandle));
 	if (!master) merror();
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }
+    printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
 	srand(time(0));
     rumble_config_load(master, args);
     rumble_master_init(master);
@@ -68,6 +68,12 @@ int main(int argc, char** argv) {
 	rumble_crypt_init(master);
     
     pthread_attr_init(&attr);
+
+    printf("%-48s", "Launching core service...");
+	t = (pthread_t*) malloc(sizeof(pthread_t));
+        cvector_add(master->_core.workers, t);
+        pthread_create(t, NULL, rumble_worker_init, master);
+    printf("[OK]\n");
     
     if ( rumble_config_int(master, "enablesmtp") ) {
 		int n;
@@ -105,10 +111,6 @@ int main(int argc, char** argv) {
         printf("[OK]\n");
     }
 
-	t = (pthread_t*) malloc(sizeof(pthread_t));
-        cvector_add(master->_core.workers, t);
-        pthread_create(t, NULL, rumble_worker_init, master);
- 
     
     sleep(999999);
     return (EXIT_SUCCESS);

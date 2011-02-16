@@ -138,6 +138,7 @@ void* rumble_worker_process(void* m) {
     if (!sess) merror();
     sess->_master = m;
     tmp = (char*) calloc(1,256);
+    sleep(5);
     while (1) {
         pthread_mutex_lock(&master->_core.workmutex);
         pthread_cond_wait(&master->_core.workcond, &master->_core.workmutex);
