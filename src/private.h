@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-/*$T private.h GC 1.140 02/16/11 21:04:56 */
-
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /*
  * File: private.h Author: Administrator Private functions for rumble Created on
  * January 9, 2011, 6:53 PM
@@ -15,7 +10,6 @@
 extern "C"
 {
 #   endif
-<<<<<<< HEAD
 void                rumble_config_load(masterHandle *master, cvector *args);
 void                rumble_master_init(masterHandle *master);
 void                rumble_modules_load(masterHandle *master);
@@ -28,20 +22,6 @@ void                rumble_rw_start_read(rumble_readerwriter *rrw);
 void                rumble_rw_stop_read(rumble_readerwriter *rrw);
 void                rumble_rw_start_write(rumble_readerwriter *rrw);
 void                rumble_rw_stop_write(rumble_readerwriter *rrw);
-=======
-    void                rumble_config_load(masterHandle *master, cvector *args);
-    void                rumble_master_init(masterHandle *master);
-    void                rumble_modules_load(masterHandle *master);
-    void                rumble_database_load(masterHandle *master);
-    masterHandle        *rumble_get_master(void);
-    void                rumble_tag_file(FILE *fp, const char *host, const char *fid, const char *usr, const char *dmn);
-    uint32_t            rumble_copy_mail(masterHandle *master, const char *fid, const char *usr, const char *dmn, char **pfid);
-    rumble_readerwriter *rumble_rw_init(void);
-    void                rumble_rw_start_read(rumble_readerwriter *rrw);
-    void                rumble_rw_stop_read(rumble_readerwriter *rrw);
-    void                rumble_rw_start_write(rumble_readerwriter *rrw);
-    void                rumble_rw_stop_write(rumble_readerwriter *rrw);
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 #   ifdef __cplusplus
 }
 #   endif
