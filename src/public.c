@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T public.c GC 1.140 02/16/11 21:04:57 */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
 
@@ -41,7 +46,10 @@ rumble_args *rumble_read_words(const char *d) {
     c = 0;
     x = 0;
     ret->argc = 0;
+<<<<<<< HEAD
     if (!d || !strlen(d)) return (ret);
+=======
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
     for (s = (char *) d; *s; s++) {
         b++;
         if (*s == '"') c++;

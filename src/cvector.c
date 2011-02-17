@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T cvector.c GC 1.140 02/16/11 21:04:56 */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /*$6
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -290,6 +295,7 @@ void cvector_flush(cvector *parent) {
  =======================================================================================================================
  */
 void *cvector_foreach(cvector *parent, citerator *iter) {
+<<<<<<< HEAD
 
     /*~~~~~~~*/
     void    *o;
@@ -301,4 +307,11 @@ void *cvector_foreach(cvector *parent, citerator *iter) {
     o = (*iter)->object;
     *iter = (*iter)->next;
     return (o);
+=======
+    if (*iter == 0) *iter = parent->first;
+    if (*iter == 0) return (0);
+    if ((*iter)->next == NULL) return (0);
+    *iter = (*iter)->next;
+    return (*iter)->previous;
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 }

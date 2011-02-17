@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T database.h GC 1.140 02/16/11 21:04:56 */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /* File: database.h Author: Administrator Created on January 2, 2011, 5:59 PM */
 #ifndef DATABASE_H
 #   define DATABASE_H

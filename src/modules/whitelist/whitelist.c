@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T whitelist.c GC 1.140 02/16/11 21:04:57 */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /*
  * File: whitelist.c Author: Humbedooh A simple white-listing module for rumble.
  * Created on January 3, 2011, 8:08

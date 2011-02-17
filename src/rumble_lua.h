@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T rumble_lua.h GC 1.140 02/16/11 21:04:56 */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /* File: rumble_lua.h Author: Administrator Created on January 30, 2011, 5:15 AM */
 #ifndef RUMBLE_LUA_H
 #   define RUMBLE_LUA_H

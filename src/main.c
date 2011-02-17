@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T main.c GC 1.140 02/16/11 21:04:57 */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 /* File: main.c Author: Administrator Created on January 2, 2011, 8:22 AM */
 #include "rumble.h"
 #include "database.h"
@@ -38,8 +43,11 @@ void rumble_master_init(masterHandle *master) {
     rumble_database_master_handle = master;
     master->domains.list = cvector_init();
     master->domains.rrw = rumble_rw_init();
+<<<<<<< HEAD
     master->mailboxes.rrw = rumble_rw_init();
     master->mailboxes.list = cvector_init();
+=======
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 }
 
 /*

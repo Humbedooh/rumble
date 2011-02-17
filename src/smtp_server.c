@@ -1,4 +1,14 @@
+<<<<<<< HEAD
 /*$I0 */
+=======
+/*$T smtp_server.c GC 1.140 02/16/11 21:04:57 */
+
+/*$6
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
 #include "rumble.h"
 #include "servers.h"
 #include "sqlite3.h"
@@ -125,6 +135,7 @@ void *rumble_smtp_init(void *m) {
 #endif
         if (rc == 421) rumble_comm_send(sessptr, rumble_smtp_reply_code(421422));   /* timeout! */
         else rumble_comm_send(sessptr, rumble_smtp_reply_code(221220)); /* bye! */
+<<<<<<< HEAD
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -133,6 +144,9 @@ void *rumble_smtp_init(void *m) {
          */
 
         comm_stoptls(&session); /* Close the TLS session if active */
+=======
+        if (session.client->tls != NULL) comm_stoptls(&session);        /* Close the TLS session if active */
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
         close(session.client->socket);
 
         /*$2
@@ -160,12 +174,16 @@ void *rumble_smtp_init(void *m) {
             }
         }
 
+<<<<<<< HEAD
         /*$2
          ---------------------------------------------------------------------------------------------------------------
             Check if we were told to go kill ourself::(
          ---------------------------------------------------------------------------------------------------------------
          */
 
+=======
+        /* Check if we were told to go kill ourself :( */
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
         if (session._tflags & RUMBLE_THREAD_DIE)
         {
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
@@ -220,6 +238,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
     uint32_t    max,
                 size;
     /*~~~~~~~~~~~~~*/
+<<<<<<< HEAD
 
     /* First, check for the right sequence of commands. */
     if (!(session->flags & RUMBLE_SMTP_HAS_HELO)) return (503); /* We need a HELO/EHLO first */
@@ -229,6 +248,17 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
     session->sender = rumble_parse_mail_address(argument);
     if (session->sender) {
 
+=======
+
+    /* First, check for the right sequence of commands. */
+    if (!(session->flags & RUMBLE_SMTP_HAS_HELO)) return (503); /* We need a HELO/EHLO first */
+    if ((session->flags & RUMBLE_SMTP_HAS_MAIL)) return (503);  /* And we shouldn't have gotten a MAIL FROM yet */
+
+    /* Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld> */
+    session->sender = rumble_parse_mail_address(argument);
+    if (session->sender) {
+
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
         /* Fire events scheduled for pre-processing run */
         rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
         if (rc != RUMBLE_RETURN_OKAY) {
@@ -325,7 +355,11 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
              * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
              * >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<< ;
              * Check if user has space in mailbox for this msg! ;
+<<<<<<< HEAD
              * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
+=======
+             * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+>>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
              */
             rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
             if (rc != RUMBLE_RETURN_OKAY) {
