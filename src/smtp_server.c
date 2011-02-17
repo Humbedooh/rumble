@@ -1,8 +1,4 @@
-/*$I0
- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- */
-
+/*$I0 */
 #include "rumble.h"
 #include "servers.h"
 #include "sqlite3.h"
@@ -129,11 +125,32 @@ void *rumble_smtp_init(void *m) {
 #endif
         if (rc == 421) rumble_comm_send(sessptr, rumble_smtp_reply_code(421422));   /* timeout! */
         else rumble_comm_send(sessptr, rumble_smtp_reply_code(221220)); /* bye! */
-        if (session.client->tls != NULL) comm_stoptls(&session);        /* Close the TLS session if active */
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Close socket and TLS (if open)
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        comm_stoptls(&session); /* Close the TLS session if active */
         close(session.client->socket);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Clean up after the session
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Update thread statistics
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
         pthread_mutex_lock(&(master->smtp.mutex));
         for (s = (sessionHandle *) cvector_first(master->smtp.handles); s != NULL; s = (sessionHandle *) cvector_next(master->smtp.handles)) {
             if (s == sessptr) {
@@ -143,7 +160,12 @@ void *rumble_smtp_init(void *m) {
             }
         }
 
-        /* Check if we were told to go kill ourself :( */
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Check if we were told to go kill ourself::(
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
         if (session._tflags & RUMBLE_THREAD_DIE)
         {
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
@@ -303,7 +325,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
              * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
              * >>>>>>>>>>>>>>>>>>>>>> !!! TODO !!! <<<<<<<<<<<<<<<<<<<<<<< ;
              * Check if user has space in mailbox for this msg! ;
-             * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+             * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
              */
             rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
             if (rc != RUMBLE_RETURN_OKAY) {

@@ -18,7 +18,7 @@ struct _cvector_element
     void                    *object;
 };
 typedef struct _cvector_element cvector_element;
-#   define citerator   cvector_element *
+typedef cvector_element         *citerator;
 typedef struct _cvector
 {
     cvector_element *first;

@@ -38,6 +38,8 @@ void rumble_master_init(masterHandle *master) {
     rumble_database_master_handle = master;
     master->domains.list = cvector_init();
     master->domains.rrw = rumble_rw_init();
+    master->mailboxes.rrw = rumble_rw_init();
+    master->mailboxes.list = cvector_init();
 }
 
 /*

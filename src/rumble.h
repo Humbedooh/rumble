@@ -101,7 +101,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x0008051C   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x00080520   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -463,20 +463,21 @@ typedef struct
 } rumble_folder;
 typedef struct
 {
-    int64_t     id;
-    time_t      updated;
-    uint64_t    lastMessage;
-    char        *name;
-    int         subscribed;
-    cvector     *letters;
-} rumble_mailman_shared_folder;
-typedef struct
-{
     cvector             *folders;
     rumble_readerwriter *rrw;
     uint32_t            sessions;
     uint32_t            uid;
 } rumble_mailman_shared_bag;
+typedef struct
+{
+    int64_t                     id;
+    time_t                      updated;
+    uint64_t                    lastMessage;
+    char                        *name;
+    int                         subscribed;
+    cvector                     *letters;
+    rumble_mailman_shared_bag   *bag;
+} rumble_mailman_shared_folder;
 typedef struct
 {
     char        **argv;
@@ -588,6 +589,23 @@ void                            rumble_mailman_free(rumble_mailman_shared_bag *b
 #   define and         &&
 #   define or          ||
 #   define rivp        (rumbleIntValuePair *)
+#   define rmsf        (rumble_mailman_shared_folder *)
+#   define rmsb        (rumble_mailman_shared_bag *)
+
+/*$2
+ -----------------------------------------------------------------------------------------------------------------------
+    Macro for implementing a cvector foreach() block as: For each A in B (as type T), using iterator C do {...}
+    example: int myValue, myArray[] = {1,2,3,4,5,6,7,8,9};
+    citerator iter;
+    foreach(int, myValue, myArray, iter) { printf("I got %d\n", myValue);
+    }
+ -----------------------------------------------------------------------------------------------------------------------
+ */
+#   define foreach(t, a, b, c) \
+    c = 0; \
+    while ((a = t cvector_foreach(b, &c)))
+
+
 #   ifdef __cplusplus
 }
 #   endif

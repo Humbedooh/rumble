@@ -414,6 +414,9 @@ ssize_t rumble_server_imap_select(masterHandle *master, sessionHandle *session, 
             recent = 0;
             first = 0;
             folder = rumble_mailman_current_folder(imap);
+            if (!folder) {
+                rcprintf(session, "%s BAD Couldn't find the mailbox!\r\n", tag, selector);
+            }
 
             /* Retrieve the statistics of the folder */
             for

@@ -98,6 +98,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
 #endif
     client = gethostbyaddr((char *) &IP, (session->client->client_info.ss_family == AF_INET) ? 4 : 16,
                            session->client->client_info.ss_family);
+    if (!client) return (RUMBLE_RETURN_IGNORE);
     addr = (const char *) client->h_name;
     rumble_string_lower((char *) addr);
 
@@ -158,17 +159,17 @@ ssize_t rumble_blacklist(sessionHandle *session) {
             dnshost = (char *) el->object;
             while (dnshost) {
 
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
                 struct hostent  *bl;
-                char            *dnsbl = (char *) calloc(1, strlen(dnshost) + strlen(addr) + 6);
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                char            *dnsbl = (char *) calloc(1, strlen(dnshost) + strlen(session->client->addr) + 6);
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                 sprintf(dnsbl, "%d.%d.%d.%d.%s", d, c, b, a, dnshost);
                 bl = gethostbyname(dnsbl);
                 if (bl)
                 {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", addr, dnshost);
+                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr, dnshost);
 #endif
                     if (blacklist_logfile) {
 
