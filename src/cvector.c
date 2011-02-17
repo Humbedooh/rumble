@@ -294,11 +294,11 @@ void *cvector_foreach(cvector *parent, citerator *iter) {
     /*~~~~~~~*/
     void    *o;
     /*~~~~~~~*/
-
+    if (*iter == parent->first) return(0);
     if (*iter == 0) *iter = parent->first;
     if (*iter == 0) return (0);
-    if ((*iter)->next == NULL) return (0);
     o = (*iter)->object;
     *iter = (*iter)->next;
+    if (*iter == 0) *iter = parent->first;
     return (o);
 }

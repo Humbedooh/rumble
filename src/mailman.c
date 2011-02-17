@@ -281,6 +281,9 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
         if ((letter->flags & RUMBLE_LETTER_EXPUNGE)) {
 
             /* Delete it? */
+#if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
+            printf("Deleting letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
+#endif
             sprintf(tmp, "%s/%s.msg", path, letter->fid);
             unlink(tmp);
             state = rumble_database_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %l", letter->id);
@@ -325,7 +328,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
     if (!bag) return;
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);    /* Lock the mailboxes */
     bag->sessions--;
-
+    printf("Closing bag\n");
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         If the session is no longer in use by any threads, destroy it and free up resources
@@ -333,7 +336,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
      */
 
     if (bag->sessions <= 0) {
-
+        printf("Flushing bag\n");
         /* Traverse folders */
         foreach(rmsf, folder, bag->folders, fiter) {
 
@@ -369,14 +372,15 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
                                 *bag = 0;
     citerator                   iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    printf("Opening bag\n");
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);    /* Lock mailboxes for writing */
-
+    
     /* Check if we have a shared mailbox instance available */
     foreach(rmsb, tmpbag, rumble_database_master_handle->mailboxes.list, iter) {
         if (tmpbag->uid == uid) {
             bag = tmpbag;
             bag->sessions++;
+            printf("Found an existing bag! session count is: %u\n", bag->sessions);
             break;
         }
     }
@@ -385,9 +389,9 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
     if (!bag) {
         bag = rumble_letters_retrieve_shared(uid);
         bag->sessions = 1;
+        bag->uid = uid;
         cvector_add(rumble_database_master_handle->mailboxes.list, bag);
     }
-
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);     /* Unlock mailboxes */
     return (bag);
 }
