@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-/*$T reply_codes.h GC 1.140 02/16/11 21:15:02 */
-
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /* File: reply_codes.h Author: Humbedooh Created on January 5, 2011, 8:44 AM */
 #ifndef REPLY_CODES_H
 #   define REPLY_CODES_H

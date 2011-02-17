@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-/*$T database.h GC 1.140 02/16/11 21:15:02 */
-
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /* File: database.h Author: Administrator Created on January 2, 2011, 5:59 PM */
 #ifndef DATABASE_H
 #   define DATABASE_H

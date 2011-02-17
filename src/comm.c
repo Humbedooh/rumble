@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-/*$T comm.c GC 1.140 02/16/11 21:10:53 */
-
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /*$6
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -34,7 +29,6 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     int                 sockfd; /* our socket! yaaay. */
     struct addrinfo     hints;
     int                 yes = 1;
-<<<<<<< HEAD
 #ifdef RUMBLE_WINSOCK
     struct sockaddr_in  x;
     WSADATA             wsaData;
@@ -46,19 +40,6 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;    /* use my IP */
 #ifdef RUMBLE_WINSOCK
-=======
-#ifdef RUMBLE_WINSOCK
-    struct sockaddr_in  x;
-    WSADATA             wsaData;
-#endif
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC;  /* Force IPv4 or use default? */
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;    /* use my IP */
-#ifdef RUMBLE_WINSOCK
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
     if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) {
         perror("Winsock failed to start");
         exit(EXIT_FAILURE);
@@ -303,11 +284,7 @@ char *rumble_comm_read(sessionHandle *session) {
         } else {
             z = time(0) - z;
             free(ret);
-<<<<<<< HEAD
             printf("timeout after %lld secs!\r\n", z);
-=======
-            printf("timeout after %ld secs!\r\n", z);
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
             return (NULL);
         }
     }

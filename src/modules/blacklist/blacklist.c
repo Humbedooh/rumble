@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/*$T blacklist.c GC 1.140 02/16/11 21:04:57 */
-
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
-=======
-/*$T blacklist.c GC 1.140 02/16/11 21:10:54 */
-
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /*
  * File: blacklist.c Author: Humbedooh A simple black-listing module for rumble.
  * Created on January 3, 2011, 8:08 PM
@@ -108,13 +98,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
 #endif
     client = gethostbyaddr((char *) &IP, (session->client->client_info.ss_family == AF_INET) ? 4 : 16,
                            session->client->client_info.ss_family);
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (!client) return (RUMBLE_RETURN_IGNORE);
-=======
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
-=======
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
     addr = (const char *) client->h_name;
     rumble_string_lower((char *) addr);
 
@@ -175,38 +159,17 @@ ssize_t rumble_blacklist(sessionHandle *session) {
             dnshost = (char *) el->object;
             while (dnshost) {
 
-<<<<<<< HEAD
-<<<<<<< HEAD
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
                 struct hostent  *bl;
                 char            *dnsbl = (char *) calloc(1, strlen(dnshost) + strlen(session->client->addr) + 6);
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-=======
-=======
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                struct hostent  *bl;
-                char            *dnsbl = (char *) calloc(1, strlen(dnshost) + strlen(addr) + 6);
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-<<<<<<< HEAD
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
-=======
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 
                 sprintf(dnsbl, "%d.%d.%d.%d.%s", d, c, b, a, dnshost);
                 bl = gethostbyname(dnsbl);
                 if (bl)
                 {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-<<<<<<< HEAD
-<<<<<<< HEAD
                     printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr, dnshost);
-=======
-                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", addr, dnshost);
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
-=======
-                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", addr, dnshost);
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 #endif
                     if (blacklist_logfile) {
 

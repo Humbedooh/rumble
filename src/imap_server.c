@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-/*$T imap_server.c GC 1.140 02/16/11 21:10:54 */
-
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /*$6
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -419,12 +414,9 @@ ssize_t rumble_server_imap_select(masterHandle *master, sessionHandle *session, 
             recent = 0;
             first = 0;
             folder = rumble_mailman_current_folder(imap);
-<<<<<<< HEAD
             if (!folder) {
                 rcprintf(session, "%s BAD Couldn't find the mailbox!\r\n", tag, selector);
             }
-=======
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 
             /* Retrieve the statistics of the folder */
             for
