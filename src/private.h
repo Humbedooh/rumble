@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T private.h GC 1.140 02/16/11 21:15:02 */
+
+>>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /*
  * File: private.h Author: Administrator Private functions for rumble Created on
  * January 9, 2011, 6:53 PM

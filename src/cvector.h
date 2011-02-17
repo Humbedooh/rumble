@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+/*$T cvector.h GC 1.140 02/16/11 21:15:02 */
+
+>>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 /* File: cvector.h Author: Humbedooh Created on January 3, 2011, 9:25 PM */
 #ifndef CVECTOR_H
 #   define CVECTOR_H
@@ -18,7 +23,11 @@ struct _cvector_element
     void                    *object;
 };
 typedef struct _cvector_element cvector_element;
+<<<<<<< HEAD
 typedef cvector_element         *citerator;
+=======
+#   define citerator   cvector_element *
+>>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
 typedef struct _cvector
 {
     cvector_element *first;
