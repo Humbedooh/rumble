@@ -102,9 +102,10 @@ void *rumble_imap_init(void *m) {
                     sscanf(arg, "%32s %1000[^\r\n]", cmd, arg);
                     rumble_string_upper(cmd);
                 } else session.flags -= (session.flags & rumble_mailman_HAS_UID);   /* clear UID demand if not there. */
-                printf("Client said: <%s> %s %s\r\n", tag, cmd, arg);
 
                 /*
+                 * printf("Client said: <%s> %s %s\r\n", tag, cmd, arg);
+                 * ;
                  * printf("Selected folder is: %lld\r\n", pops->folder);
                  */
                 if (!strcmp(cmd, "LOGIN")) rc = rumble_server_imap_login(master, &session, tag, arg);
@@ -907,6 +908,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     int                             a,
                                     b,
                                     c,
+                                    d,
                                     w_uid,
                                     first,
                                     last;
@@ -927,7 +929,6 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
 
     folder = rumble_mailman_current_folder(imap);
     if (!folder) {
-        printf("%s NO No mailbox selected for fetching! <%s>\r\n", tag, arg);
         rcprintf(session, "%s NO No mailbox selected for fetching!\r\n", tag);
         return (RUMBLE_RETURN_IGNORE);
     }
@@ -964,7 +965,6 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
 
             memset(region, 0, 32);
             memset(buffer, 0, 1024);
-            printf("%u %s\r\n", octets, line);
             if (sscanf(line, "%32s (%1000c)", region, buffer) == 2) {
                 parts = rumble_read_words(buffer);
                 for (b = 0; b < parts->argc; b++) rumble_string_lower(parts->argv[b]);
@@ -974,11 +974,12 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
 
     b = 0;
     a = 0;
+    d = 0;
     foreach((rumble_letter *), letter, folder->letters, iter) {
         a++;
         if (w_uid && (letter->id < first || (last > 0 && letter->id > last))) continue;
         if (!w_uid && (a < first || (last > 0 && a > last))) continue;
-        b++;
+        d++;
         rcprintf(session, "* %u FETCH (", a + 1);
         if (flags) {
             rcprintf(session, "FLAGS (%s%s%s%s) ", (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
@@ -1025,7 +1026,6 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
                                  * if ( line[c-2] != '\r' ) {line[c-1] = '\r';
                                  * line[c] = '\n';
                                  * line[c+1] = 0;
-                                 * }
                                  */
                                 strncpy(header + strlen(header), line, strlen(line));
                             }
@@ -1035,15 +1035,24 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
                     sprintf(header + strlen(header), "\r\n \r\n");
                     rcprintf(session, "BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
                     rcsend(session, header);
-                    printf("BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
-                    printf("%s", header);
+
+                    /*
+                     * printf("BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
+                     * printf("%s", header);
+                     */
                 } else {
                     rcprintf(session, "BODY[] {%u}\r\n", letter->size);
-                    printf("BODY[] {%u}\r\n", letter->size);
+
+                    /*
+                     * printf("BODY[] {%u}\r\n", letter->size);
+                     */
                     memset(line, 0, 1024);
                     while (fgets(line, 1024, fp)) {
                         rcsend(session, line);
-                        printf("%s", line);
+
+                        /*
+                         * printf("%s", line);
+                         */
                     }
                 }
 
@@ -1056,7 +1065,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     }
 
     rcprintf(session, "%s OK FETCH completed\r\n", tag);
-    printf("Fetched %u letters\n", b);
+    printf("Fetched %u letters\n", d);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1202,7 +1211,12 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
 
     if (!destination && !strcmp(folderName, "INBOX")) destination = 0;
 
-    /* Copy them letters */
+    /*$1
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        TODO: Move this to mailman.c and make it spiffy!
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     */
+
     folder = rumble_mailman_current_folder(imap);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
     printf("Copying letters %u through %u (UID = %s) to %lld...\n", first, last, useUID ? "enabled" : "disabled", destination);

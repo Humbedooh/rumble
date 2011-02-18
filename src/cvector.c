@@ -4,6 +4,7 @@
  */
 
 #include "cvector.h"
+#include <stdio.h>
 
 /*
  =======================================================================================================================
@@ -351,10 +352,10 @@ void dvector_add(dvector *parent, void *object) {
     if (!parent) return;
     el = (dvector_element *) malloc(sizeof(dvector_element));
     el->object = object;
+    el->next = 0;
+    el->prev = parent->last;
     if (parent->last) parent->last->next = el;
     else parent->first = el;
-    el->prev = parent->last;
-    el->next = 0;
     parent->last = el;
     parent->size++;
 }
@@ -406,16 +407,19 @@ void *dvector_foreach(dvector *parent, d_iterator *iter) {
 void dvector_flush(dvector *parent) {
 
     /*~~~~~~~~~~~~~~~~*/
-    dvector_element *el;
+    dvector_element *el,
+                    *nl;
     /*~~~~~~~~~~~~~~~~*/
 
-    for (el = parent->first; el; el = el->next) free(el);
+    for (el = parent->first; el; el = nl) {
+        nl = el->next;
+        free(el);
+    }
+
     parent->size = 0;
     parent->first = 0;
     parent->last = 0;
 }
-
-#include <stdio.h>
 
 /*
  =======================================================================================================================
@@ -424,11 +428,15 @@ void dvector_flush(dvector *parent) {
 void dvector_destroy(dvector *parent) {
 
     /*~~~~~~~~~~~~~~~~*/
-    dvector_element *el;
+    dvector_element *el,
+                    *nl;
     /*~~~~~~~~~~~~~~~~*/
 
-    printf("destroying dvector of size: %u\n", parent->size);
-    for (el = parent->first; el; el = el->next) free(el);
+    for (el = parent->first; el; el = nl) {
+        nl = el->next;
+        free(el);
+    }
+
     free(parent);
 }
 

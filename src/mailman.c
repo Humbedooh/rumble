@@ -115,7 +115,6 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
         folder->updated = time(0);
         folder->lastMessage = 0;
         dvector_add(bag->folders, folder);
-        printf("Added folder: %s (%lld)\n", folder->name, folder->id);
     }
 
     rumble_database_cleanup(state);
@@ -292,6 +291,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             state = rumble_database_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %l", letter->id);
             rumble_database_run(state);
             rumble_database_cleanup(state);
+            printf("DELETE FROM mbox WHERE id = %llu\n", letter->id);
             r++;
             free(letter->fid);
             letter->fid = 0;
@@ -334,7 +334,6 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
     if (!bag) return;
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);    /* Lock the mailboxes */
     bag->sessions--;
-    printf("Closing bag\n");
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -343,11 +342,9 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
      */
 
     if (bag->sessions <= 0) {
-        printf("Flushing bag\n");
 
         /* Traverse folders */
         foreach(rmsf, folder, bag->folders, fiter) {
-            printf("Traversing <%s> with %u items\n", folder->name, folder->letters->size);
 
             /* Traverse letters */
             foreach((rumble_letter *), letter, folder->letters, liter) {
@@ -388,7 +385,6 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
     d_iterator                  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    printf("Opening bag\n");
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);    /* Lock mailboxes for writing */
 
     /* Check if we have a shared mailbox instance available */
@@ -396,7 +392,6 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
         if (tmpbag->uid == uid) {
             bag = tmpbag;
             bag->sessions++;
-            printf("Found an existing bag! session count is: %u\n", bag->sessions);
             break;
         }
     }
