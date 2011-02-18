@@ -1,20 +1,19 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-/*$T whitelist.c GC 1.140 02/16/11 21:04:57 */
+/*$I0 */
+<< << << < HEAD << << << < HEAD == == == =
 
->>>>>>> 7c6078b307d012f3ab1c0cc605edd7fa50d50252
-=======
-/*$T whitelist.c GC 1.140 02/16/11 21:10:54 */
+/*$T whitelist.c GC 1.140 02/17/11 19:05:38 */
+>> >> >> > 7 c6078b307d012f3ab1c0cc605edd7fa50d50252 == == == =
 
->>>>>>> 43a381c615c91573f80c48bfd2769fa03b2c5644
+/*$T whitelist.c GC 1.140 02/17/11 19:05:38 */
+>> >> >> > 43 a381c615c91573f80c48bfd2769fa03b2c5644
+
 /*
  * File: whitelist.c Author: Humbedooh A simple white-listing module for rumble.
  * Created on January 3, 2011, 8:08
  */
 #include <string.h>
 #include "../../rumble.h"
-cvector *rumble_whiteList;
+cvector * rumble_whiteList;
 
 /*
  =======================================================================================================================

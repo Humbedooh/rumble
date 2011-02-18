@@ -251,6 +251,7 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
     address         *addr;
     imap4Session    *imap = (imap4Session *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     rumble_mailman_close_bag(imap->bag);
     if (sscanf(arg, "%s %s", user, pass) == 2) {
         addr = rumble_parse_mail_address(user);
@@ -317,6 +318,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                     *buffer;
     address         *addr = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     rumble_mailman_close_bag(imap->bag);
     if (sscanf(strchr(arg, '"') ? strchr(arg, '"') + 1 : arg, "%32[a-zA-Z]", method)) {
         rumble_string_upper(method);
@@ -416,7 +418,7 @@ ssize_t rumble_server_imap_select(masterHandle *master, sessionHandle *session, 
             folder = rumble_mailman_current_folder(imap);
             if (!folder) {
                 rcprintf(session, "%s BAD Couldn't find the mailbox <%s>!\r\n", tag, selector);
-                return RUMBLE_RETURN_IGNORE;
+                return (RUMBLE_RETURN_IGNORE);
             }
 
             /* Retrieve the statistics of the folder */
@@ -1338,8 +1340,13 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  */
 ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, const char *tag, const char *arg) {
-    char* line;
+
+    /*~~~~~~~~~~*/
+    char    *line;
+    /*~~~~~~~~~~*/
+
     rcprintf(session, "+ OK IDLE Starting idle mode.\r\n", tag);
     line = rcread(session);
+    rcprintf(session, "+ OK IDLE completed.\r\n", tag);
     return (RUMBLE_RETURN_IGNORE);
 }

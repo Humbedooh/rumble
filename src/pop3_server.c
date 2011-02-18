@@ -283,7 +283,7 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
     folder = rumble_mailman_current_folder(pops);
     i = 0;
     iter = 0;
-    while ((letter = (rumble_letter *) cvector_foreach(folder->letters, &iter))) {
+    foreach((rumble_letter *), letter, folder->letters, iter) {
         i++;
         if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %u\r\n", i + 1, letter->size);
     }
@@ -312,7 +312,7 @@ ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, co
     rumble_rw_start_read(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
     i = 0;
-    for (iter = 0; (letter = (rumble_letter *) cvector_foreach(folder->letters, &iter));) {
+    foreach((rumble_letter *), letter, folder->letters, iter) {
         i++;
         if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %s\r\n", i + 1, letter->fid);
     }
@@ -344,7 +344,7 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     rumble_rw_start_write(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
     j = 0;
-    for (iter = 0; (letter = (rumble_letter *) cvector_foreach(folder->letters, &iter));) {
+    foreach((rumble_letter *), letter, folder->letters, iter) {
         j++;
         if (j == i) {
             letter->flags |= RUMBLE_LETTER_DELETED;
@@ -384,7 +384,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
     rumble_rw_start_read(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
     j = 0;
-    for (iter = 0; (letter = (rumble_letter *) cvector_foreach(folder->letters, &iter));) {
+    foreach((rumble_letter *), letter, folder->letters, iter) {
         j++;
         if (j == i) {
             fp = rumble_letters_open(pops->account, letter);
@@ -436,7 +436,7 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
         rumble_rw_start_read(pops->bag->rrw);
         folder = rumble_mailman_current_folder(pops);
         j = 0;
-        for (iter = 0; (letter = (rumble_letter *) cvector_foreach(folder->letters, &iter));) {
+        foreach((rumble_letter *), letter, folder->letters, iter) {
             j++;
             if (j == i) {
                 fp = rumble_letters_open(pops->account, letter);

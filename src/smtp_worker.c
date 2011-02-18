@@ -332,6 +332,7 @@ void *rumble_worker_process(void *m) {
             char                        *filename;
             uint32_t                    delivered = 500;
             rumble_sendmail_response    *res;
+            citerator                   iter;
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
             printf("%s@%s is a foreign user\n", item->recipient->user, item->recipient->domain);
@@ -341,20 +342,19 @@ void *rumble_worker_process(void *m) {
                 filename = (char *) calloc(1, 256);
                 if (!filename) merror();
                 sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
-                for (mxr = (mxRecord *) cvector_first(mx); mxr != NULL; mxr = (mxRecord *) cvector_next(mx)) {
+                foreach((mxRecord *), mxr, mx, iter) {
                     if (rhdict(badmx, mxr->host)) continue; /* ignore bogus MX records */
                     printf("Trying %s (%u)...\n", mxr->host, mxr->preference);
-                    res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient);    /* Anything
-                                                                                                             * below
-                                                                                                             * 300
-                                                                                                             * would be
-                                                                                                             * good :> */
-                    delivered = (res->replyCode < delivered) ? res->replyCode : delivered;  /* get the best result from
-                                                                                             * all servers we've tried */
+
+                    /* Anything below 300 would be good here :> */
+                    res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient);
+
+                    /* get the best result from all servers we've tried */
+                    delivered = (res->replyCode < delivered) ? res->replyCode : delivered;
                     rumble_flush_dictionary(res->flags);
                     free(res->replyMessage);
                     free(res);
-                    if (delivered <= 299) break;    /* yay! */
+                    if (delivered <= 299) break;            /* yay! */
                 }
 
                 free(filename);

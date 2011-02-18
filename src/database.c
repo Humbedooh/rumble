@@ -87,7 +87,7 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
 
     strl = strlen(op);
     strncpy((char *) (sql + len), op, strl);
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
     rc = sqlite3_prepare_v2((sqlite3 *) db, sql, -1, (sqlite3_stmt **) &returnObject, NULL);
     free(sql);
     if (rc != SQLITE_OK) return (0);
@@ -97,31 +97,31 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
         switch (injects[at])
         {
         case 's':
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
             rc = sqlite3_bind_text((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, const char *), -1, SQLITE_TRANSIENT);
 #endif
             break;
 
         case 'u':
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
             rc = sqlite3_bind_int((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, unsigned int));
 #endif
             break;
 
         case 'i':
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
             rc = sqlite3_bind_int((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, signed int));
 #endif
             break;
 
         case 'l':
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
             rc = sqlite3_bind_int64((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, signed int));
 #endif
             break;
 
         case 'f':
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
             rc = sqlite3_bind_double((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, double));
 #endif
             break;
@@ -130,7 +130,7 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
             break;
         }
 
-#ifdef RUMBLE_USING_SQLITE3
+#if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
         if (rc != SQLITE_OK) {
             va_end(vl);
             return (0);
@@ -285,16 +285,12 @@ uint32_t rumble_domain_exists(const char *domain) {
     /*~~~~~~~~~~~~~~~~~*/
     uint32_t        rc;
     rumble_domain   *dmn;
+    citerator       iter;
     /*~~~~~~~~~~~~~~~~~*/
 
     rc = 0;
     rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
-    for
-    (
-        dmn = (rumble_domain *) cvector_first(rumble_database_master_handle->domains.list);
-        dmn != NULL;
-        dmn = (rumble_domain *) cvector_next(rumble_database_master_handle->domains.list)
-    ) {
+    foreach((rumble_domain *), dmn, rumble_database_master_handle->domains.list, iter) {
         if (!strcmp(dmn->name, domain)) {
             rc = 1;
             break;
@@ -315,6 +311,7 @@ rumble_domain *rumble_domain_copy(const char *domain) {
     /*~~~~~~~~~~~~~~~~~*/
     rumble_domain   *dmn,
                     *rc;
+    citerator       iter;
     /*~~~~~~~~~~~~~~~~~*/
 
     rc = (rumble_domain *) malloc(sizeof(rumble_domain));
@@ -322,12 +319,7 @@ rumble_domain *rumble_domain_copy(const char *domain) {
     rc->path = 0;
     rc->name = 0;
     rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
-    for
-    (
-        dmn = (rumble_domain *) cvector_first(rumble_database_master_handle->domains.list);
-        dmn != NULL;
-        dmn = (rumble_domain *) cvector_next(rumble_database_master_handle->domains.list)
-    ) {
+    foreach((rumble_domain *), dmn, rumble_database_master_handle->domains.list, iter) {
         if (!strcmp(dmn->name, domain)) {
             rc->name = (char *) calloc(1, strlen(dmn->name) + 1);
             rc->path = (char *) calloc(1, strlen(dmn->path) + 1);
@@ -355,16 +347,12 @@ void rumble_database_update_domains(void) {
                     l;
     void            *state;
     rumble_domain   *domain;
+    citerator       iter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     /* Clean up the old list */
     rumble_rw_start_write(rumble_database_master_handle->domains.rrw);
-    for
-    (
-        domain = (rumble_domain *) cvector_first(rumble_database_master_handle->domains.list);
-        domain != NULL;
-        domain = (rumble_domain *) cvector_next(rumble_database_master_handle->domains.list)
-    ) {
+    foreach((rumble_domain *), domain, rumble_database_master_handle->domains.list, iter) {
         free(domain->name);
         free(domain->path);
         free(domain);

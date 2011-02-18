@@ -13,7 +13,7 @@
 
 /* pragma message("Non-C99 compliant compiler used, boooooo!") */
 #   endif
- 
+
 /* Checks for Microsoft compiler */
 #   if ((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__))
 #      define RUMBLE_MSC
@@ -101,7 +101,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x00080527   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x0008052C   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -510,7 +510,7 @@ rumblemodule    rumble_module_check(void);
     Public tool-set
  =======================================================================================================================
  */
-
+void                        rumble_test();
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
 char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
 char                        *rumble_decode_base64(const char *src);
@@ -601,14 +601,13 @@ void                            rumble_mailman_free(rumble_mailman_shared_bag *b
     }
  -----------------------------------------------------------------------------------------------------------------------
  */
-#define IN ,
-#define AS ,
-#define USING ,
+
+#   define IN      ,
+#   define AS      ,
+#   define USING   ,
 #   define foreach(type, element, list, iterator) \
     iterator = 0; \
     while ((element = type cvector_foreach(list, &iterator)))
-
-
 #   ifdef __cplusplus
 }
 #   endif

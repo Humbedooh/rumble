@@ -61,7 +61,10 @@ int main(int argc, char **argv) {
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
     }
-
+    if (rhdict(args, "--TEST")) {
+        rumble_test();
+        exit(EXIT_SUCCESS);
+        }
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     srand(time(0));
     rumble_config_load(master, args);
