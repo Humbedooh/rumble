@@ -51,17 +51,18 @@ void *yalloc(size_t n, size_t m) {
  */
 void rumble_clean_session(sessionHandle *session) {
 
-    /*~~~~~~~~*/
-    address *el;
-    /*~~~~~~~~*/
+    /*~~~~~~~~~~~~~*/
+    address     *el;
+    d_iterator  iter;
+    /*~~~~~~~~~~~~~*/
 
     if (!session) return;
     rumble_free_address(session->sender);
-    for (el = (address *) cvector_first(session->recipients); el != NULL; el = (address *) cvector_next(session->recipients)) {
+    foreach((address *), el, session->recipients, iter) {
         rumble_free_address(el);
     }
 
-    cvector_flush(session->recipients);
+    dvector_flush(session->recipients);
 }
 
 /*

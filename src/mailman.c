@@ -80,23 +80,23 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     rumble_mailman_shared_bag       *bag;
     rumble_letter                   *letter;
     rumble_mailman_shared_folder    *folder;
-    citerator                       iter;
+    d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     bag = (rumble_mailman_shared_bag *) malloc(sizeof(rumble_mailman_shared_bag));
-    bag->folders = cvector_init();
+    bag->folders = dvector_init();
     bag->rrw = rumble_rw_init();
 
     /* Add the default inbox */
     folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
     folder->id = 0;
-    folder->letters = cvector_init();
+    folder->letters = dvector_init();
     folder->lastMessage = 0;
     folder->updated = time(0);
     folder->subscribed = 1;
     folder->name = (char *) calloc(1, 32);
     strcpy(folder->name, "INBOX");
-    cvector_add(bag->folders, folder);
+    dvector_add(bag->folders, folder);
     state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", uid);
     while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
         folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
@@ -111,10 +111,10 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
 
         /* Subscribed? */
         folder->subscribed = sqlite3_column_int((sqlite3_stmt *) state, 2);
-        folder->letters = cvector_init();
+        folder->letters = dvector_init();
         folder->updated = time(0);
         folder->lastMessage = 0;
-        cvector_add(bag->folders, folder);
+        dvector_add(bag->folders, folder);
         printf("Added folder: %s (%lld)\n", folder->name, folder->id);
     }
 
@@ -128,7 +128,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
         foreach(rmsf, folder, bag->folders, iter) {
             if (folder->id == letter->folder) {
                 l++;
-                cvector_add(folder->letters, letter);
+                dvector_add(folder->letters, letter);
                 folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
                 break;
             }
@@ -153,7 +153,7 @@ rumble_mailman_shared_folder *rumble_mailman_current_folder(accountSession *sess
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_mailman_shared_folder    *folder;
-    citerator                       iter;
+    d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     foreach(rmsf, folder, sess->bag->folders, iter) {
@@ -177,7 +177,7 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
                                     folder_id,
                                     found;
     void                            *state;
-    citerator                       iter;
+    d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_write(bag->rrw);    /* Lock bag for writing */
@@ -208,7 +208,7 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
 
             /* Subscribed? */
             folder->subscribed = sqlite3_column_int((sqlite3_stmt *) state, 2);
-            cvector_add(bag->folders, folder);
+            dvector_add(bag->folders, folder);
         }
     }
 
@@ -245,7 +245,7 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         exists = 1;
         letter = rumble_mailman_letter_spawn(state);
         letter->uid = folder->bag->uid;
-        cvector_add(folder->letters, letter);
+        dvector_add(folder->letters, letter);
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
     }
 
@@ -269,7 +269,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
     const char      *path;
     rumble_letter   *letter;
     char            tmp[256];
-    citerator       iter;
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!folder) return (0);
@@ -277,8 +277,10 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
                                                                                             "storagefolder");
     r = 0;
     rumble_rw_start_write(session->bag->rrw);   /* Lock the bag */
-    foreach((rumble_letter *), letter, folder->letters, iter) {
-        if ((letter->flags & RUMBLE_LETTER_EXPUNGE))
+    printf("Running COMMIT on <%s>\n", folder->name);
+    dforeach((rumble_letter *), letter, folder->letters, iter) {
+        printf("parsing letter no. %llu with flags %08x\n", letter->id, letter->flags);
+        if ((letter->flags & RUMBLE_LETTER_DELETED))
         {
 
             /* Delete it? */
@@ -294,7 +296,9 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             free(letter->fid);
             letter->fid = 0;
             free(letter);
-            cvector_delete_at(folder->letters, iter);
+            printf("size of folder before deletion: %u", folder->letters->size);
+            dvector_delete(&iter);
+            printf("size of folder after deletion: %u", folder->letters->size);
         } else if (letter->flags != letter->_flags)
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
@@ -323,7 +327,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
     rumble_mailman_shared_folder    *folder;
-    citerator                       fiter,
+    d_iterator                      fiter,
                                     liter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -343,22 +347,29 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
 
         /* Traverse folders */
         foreach(rmsf, folder, bag->folders, fiter) {
+            printf("Traversing <%s> with %u items\n", folder->name, folder->letters->size);
 
             /* Traverse letters */
             foreach((rumble_letter *), letter, folder->letters, liter) {
+                if (!letter || !letter->flags) {
+                    printf("Memory corruption??!\n");
+                    continue;
+                }
+
                 if (letter->fid) free(letter->fid);
                 free(letter);
             }
 
-            cvector_flush(folder->letters);
+            dvector_destroy(folder->letters);
             if (folder->name) free(folder->name);
             free(folder);
         }
 
-        cvector_flush(bag->folders);
+        dvector_destroy(bag->folders);
         pthread_mutex_destroy(&bag->rrw->mutex);
         free(bag->rrw);
         free(bag);
+        bag = 0;
     }
 
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw); /* Unlock mailboxes */
@@ -374,7 +385,7 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_mailman_shared_bag   *tmpbag,
                                 *bag = 0;
-    citerator                   iter;
+    d_iterator                  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     printf("Opening bag\n");
@@ -395,7 +406,7 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
         bag = rumble_letters_retrieve_shared(uid);
         bag->sessions = 1;
         bag->uid = uid;
-        cvector_add(rumble_database_master_handle->mailboxes.list, bag);
+        dvector_add(rumble_database_master_handle->mailboxes.list, bag);
     }
 
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);     /* Unlock mailboxes */

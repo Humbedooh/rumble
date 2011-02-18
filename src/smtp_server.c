@@ -30,11 +30,12 @@ void *rumble_smtp_init(void *m) {
     void            *pp,
                     *tp;
     pthread_t       p = pthread_self();
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_read(master->domains.rrw);
-    session.dict = cvector_init();
-    session.recipients = cvector_init();
+    session.dict = dvector_init();
+    session.recipients = dvector_init();
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session.client->tls = 0;
     session._master = m;
@@ -54,7 +55,7 @@ void *rumble_smtp_init(void *m) {
     while (1) {
         comm_accept(master->smtp.socket, session.client);
         pthread_mutex_lock(&master->smtp.mutex);
-        cvector_add(master->smtp.handles, (void *) sessptr);
+        dvector_add(master->smtp.handles, (void *) sessptr);
         pthread_mutex_unlock(&master->smtp.mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
@@ -152,9 +153,9 @@ void *rumble_smtp_init(void *m) {
          */
 
         pthread_mutex_lock(&(master->smtp.mutex));
-        for (s = (sessionHandle *) cvector_first(master->smtp.handles); s != NULL; s = (sessionHandle *) cvector_next(master->smtp.handles)) {
+        foreach((sessionHandle *), s, master->smtp.handles, iter) {
             if (s == sessptr) {
-                cvector_delete(master->smtp.handles);
+                dvector_delete(&iter);
                 x = 1;
                 break;
             }
@@ -166,35 +167,31 @@ void *rumble_smtp_init(void *m) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        if (session._tflags & RUMBLE_THREAD_DIE)
-        {
+        if (session._tflags & RUMBLE_THREAD_DIE) {
+
+            /*~~~~~~~~~~~~*/
+            pthread_t   *el;
+            /*~~~~~~~~~~~~*/
+
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
             printf("<smtp::threads>I (%#x) was told to die :(\n", (uintptr_t) pthread_self());
 #endif
-
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            cvector_element *el = master->smtp.threads->first;
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-            while (el != NULL) {
-
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                pthread_t   *t = (pthread_t *) el->object;
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
 #ifdef PTW32_CDECL
-                pp = (void *) p.p;
-                tp = t->p;
+            pp = (void *) p.p;
 #else
-                tp = t;
-                pp = p;
+            pp = p;
+#endif
+            foreach((pthread_t *), el, master->smtp.threads, iter)
+            {
+#ifdef PTW32_CDECL
+                tp = el->p;
+#else
+                tp = el;
 #endif
                 if (tp == pp) {
-                    cvector_delete_at(master->smtp.threads, el);
+                    dvector_delete(&iter);
                     break;
                 }
-
-                el = el->next;
             }
 
             pthread_mutex_unlock(&master->smtp.mutex);
@@ -250,13 +247,12 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
 
             /*~~~~~~~~~~~~~~~~~~~~~~~*/
             rumbleKeyValuePair  *entry;
-            cvector_element     *el;
+            d_iterator          iter;
             /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
-            for (el = master->_core.batv->first; el != NULL; el = el->next) {
-                entry = (rumbleKeyValuePair *) el->object;
+            foreach((rumbleKeyValuePair *), entry, master->_core.batv, iter) {
                 if (!strcmp(entry->key, session->sender->tag)) {
-                    cvector_delete_at(master->_core.batv, el);
+                    dvector_delete(&iter);
                     session->flags |= RUMBLE_SMTP_HAS_BATV;
                     free((char *) entry->key);
                     free(entry);
@@ -305,12 +301,12 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
     /* Allocate stuff and start parsing */
     recipient = rumble_parse_mail_address(argument);
     if (recipient) {
-        cvector_add(session->recipients, recipient);
+        dvector_add(session->recipients, recipient);
 
         /* Fire events scheduled for pre-processing run */
         rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
         if (rc != RUMBLE_RETURN_OKAY) {
-            cvector_pop(session->recipients);           /* pop the last element from the vector */
+            dvector_pop(session->recipients);           /* pop the last element from the vector */
             rumble_free_address(recipient);             /* flush the memory */
             return (rc);
         }
@@ -329,7 +325,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
              */
             rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
             if (rc != RUMBLE_RETURN_OKAY) {
-                cvector_pop(session->recipients);       /* pop the last element from the vector */
+                dvector_pop(session->recipients);       /* pop the last element from the vector */
                 rumble_free_address(recipient);         /* flush the memory */
                 return (rc);
             }
@@ -346,7 +342,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 rc = rumble_server_schedule_hooks(master, session,
                                                   RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
                 if (rc != RUMBLE_RETURN_OKAY) {
-                    cvector_pop(session->recipients);   /* pop the last element from the vector */
+                    dvector_pop(session->recipients);   /* pop the last element from the vector */
                     rumble_free_address(recipient);     /* flush the memory */
                     return (rc);
                 }
@@ -356,13 +352,13 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
             }
 
             /* Not local and no relaying allowed, return 530. */
-            cvector_pop(session->recipients);
+            dvector_pop(session->recipients);
             rumble_free_address(recipient);
             return (530);
         }
 
         /* Domain is local but user doesn't exist, return 550 */
-        cvector_pop(session->recipients);
+        dvector_pop(session->recipients);
         rumble_free_address(recipient);
         return (550);
     }
@@ -445,6 +441,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
     const char  *sf;
     FILE        *fp;
     address     *el;
+    d_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~*/
 
     /* First, check for the right sequence of commands. */
@@ -501,7 +498,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
     }
 
     fclose(fp);
-    for (el = (address *) cvector_first(session->recipients); el != NULL; el = (address *) cvector_next(session->recipients)) {
+    foreach((address *), el, session->recipients, iter) {
 
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         void    *state = rumble_database_prepare(master->_core.db, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)",

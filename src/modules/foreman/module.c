@@ -61,8 +61,8 @@ ssize_t accept_hook(sessionHandle *session) {
          * just return.
          */
         pthread_mutex_lock(&(svc->mutex));
-        workers = cvector_size(svc->threads);   /* Number of threads alive */
-        busy = cvector_size(svc->handles);      /* Number of threads busy */
+        workers = svc->threads->size;   /* Number of threads alive */
+        busy = svc->handles->size;      /* Number of threads busy */
         idle = workers - busy;      /* Number of threads idling */
         if ((idle <= 1 || workers < FOREMAN_FALLBACK) && workers < FOREMAN_MAX_THREADS) {
             New = (workers + FOREMAN_THREAD_BUFFER) >= FOREMAN_FALLBACK ? FOREMAN_THREAD_BUFFER : FOREMAN_FALLBACK - workers;
@@ -72,7 +72,7 @@ ssize_t accept_hook(sessionHandle *session) {
                 pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-                cvector_add(svc->threads, t);
+                dvector_add(svc->threads, t);
                 pthread_create(t, NULL, svc->init, session->_master);
             }
         }

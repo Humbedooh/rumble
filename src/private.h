@@ -10,7 +10,7 @@
 extern "C"
 {
 #   endif
-void                rumble_config_load(masterHandle *master, cvector *args);
+void                rumble_config_load(masterHandle *master, dvector *args);
 void                rumble_master_init(masterHandle *master);
 void                rumble_modules_load(masterHandle *master);
 void                rumble_database_load(masterHandle *master);

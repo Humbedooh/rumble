@@ -30,7 +30,7 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     hook->func = func;
     hook->flags = flags;
     hook->module = ((masterHandle *) handle)->_core.currentSO;
-    hook->modinfo = (rumble_module_info *) cvector_last(((masterHandle *) handle)->_core.modules);
+    hook->modinfo = (rumble_module_info *) ((masterHandle *) handle)->_core.modules->last;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS)
     printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
 #endif
@@ -39,9 +39,9 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_ACCEPT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  cvector_add(((masterHandle *) handle)->smtp.init_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  cvector_add(((masterHandle *) handle)->pop3.init_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  cvector_add(((masterHandle *) handle)->imap.init_hooks, hook); break;
+        case RUMBLE_HOOK_SMTP:  dvector_add(((masterHandle *) handle)->smtp.init_hooks, hook); break;
+        case RUMBLE_HOOK_POP3:  dvector_add(((masterHandle *) handle)->pop3.init_hooks, hook); break;
+        case RUMBLE_HOOK_IMAP:  dvector_add(((masterHandle *) handle)->imap.init_hooks, hook); break;
         default:                break;
         }
         break;
@@ -49,9 +49,9 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_COMMAND:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  cvector_add(((masterHandle *) handle)->smtp.cue_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  cvector_add(((masterHandle *) handle)->pop3.cue_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  cvector_add(((masterHandle *) handle)->imap.cue_hooks, hook); break;
+        case RUMBLE_HOOK_SMTP:  dvector_add(((masterHandle *) handle)->smtp.cue_hooks, hook); break;
+        case RUMBLE_HOOK_POP3:  dvector_add(((masterHandle *) handle)->pop3.cue_hooks, hook); break;
+        case RUMBLE_HOOK_IMAP:  dvector_add(((masterHandle *) handle)->imap.cue_hooks, hook); break;
         default:                break;
         }
         break;
@@ -59,19 +59,19 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_EXIT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  cvector_add(((masterHandle *) handle)->smtp.exit_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  cvector_add(((masterHandle *) handle)->pop3.exit_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  cvector_add(((masterHandle *) handle)->imap.exit_hooks, hook); break;
+        case RUMBLE_HOOK_SMTP:  dvector_add(((masterHandle *) handle)->smtp.exit_hooks, hook); break;
+        case RUMBLE_HOOK_POP3:  dvector_add(((masterHandle *) handle)->pop3.exit_hooks, hook); break;
+        case RUMBLE_HOOK_IMAP:  dvector_add(((masterHandle *) handle)->imap.exit_hooks, hook); break;
         default:                break;
         }
         break;
 
     case RUMBLE_HOOK_FEED:
-        cvector_add(((masterHandle *) handle)->_core.feed_hooks, hook);
+        dvector_add(((masterHandle *) handle)->_core.feed_hooks, hook);
         break;
 
     case RUMBLE_HOOK_PARSER:
-        cvector_add(((masterHandle *) handle)->_core.parser_hooks, hook);
+        dvector_add(((masterHandle *) handle)->_core.parser_hooks, hook);
 
     default:
         break;
@@ -84,18 +84,18 @@ typedef ssize_t (*hookFunc) (sessionHandle *);
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint32_t flags) {
+ssize_t rumble_server_execute_hooks(sessionHandle *session, dvector *hooks, uint32_t flags) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int             g = 0;
     ssize_t         rc = RUMBLE_RETURN_OKAY;
-    cvector_element *el;
+    dvector_element *el;
     hookFunc        mFunc = NULL;
     hookHandle      *hook;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
-    if (cvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
+    if (dvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
 #endif
     for (el = hooks->first; el != NULL; el = el->next) {
         hook = (hookHandle *) el->object;

@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include "comm.h"
 mqueue  *current = 0;
-cvector *badmx;
+dvector *badmx;
 
 /*
  =======================================================================================================================
@@ -75,7 +75,7 @@ rumble_sendmail_response *rumble_send_email(
     s.client = &c;
     res = (rumble_sendmail_response *) malloc(sizeof(rumble_sendmail_response));
     if (!res) merror();
-    res->flags = cvector_init();
+    res->flags = dvector_init();
     res->replyCode = 500;
     res->replyMessage = (char *) calloc(1, 1024);
     res->replyServer = (char *) calloc(1, strlen(mailserver) + 1);
@@ -115,7 +115,7 @@ rumble_sendmail_response *rumble_send_email(
         if (!el) merror();
         el->key = batv;
         el->value = (char *) time(0);
-        cvector_add(master->_core.batv, el);
+        dvector_add(master->_core.batv, el);
     }
 
     while (c.socket) {
@@ -327,18 +327,18 @@ void *rumble_worker_process(void *m) {
         } /* Foreign delivery? */ else {
 
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            cvector                     *mx;
+            dvector                     *mx;
             mxRecord                    *mxr;
             char                        *filename;
             uint32_t                    delivered = 500;
             rumble_sendmail_response    *res;
-            citerator                   iter;
+            d_iterator                  iter;
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
             printf("%s@%s is a foreign user\n", item->recipient->user, item->recipient->domain);
             mx = comm_mxLookup(item->recipient->domain);
             if (!mx) merror();
-            if (cvector_size(mx)) {
+            if (mx->size) {
                 filename = (char *) calloc(1, 256);
                 if (!filename) merror();
                 sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
@@ -410,7 +410,7 @@ void *rumble_worker_init(void *m) {
     pthread_mutex_init(&master->_core.workmutex, NULL);
     pthread_cond_init(&master->_core.workcond, NULL);
     ignmx = rrdict(master->_core.conf, "ignoremx");
-    badmx = cvector_init();
+    badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
     for (x = 0; x < 10; x++) {
 
@@ -418,7 +418,7 @@ void *rumble_worker_init(void *m) {
         pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-        cvector_add(master->_core.workers, t);
+        dvector_add(master->_core.workers, t);
         pthread_create(t, NULL, rumble_worker_process, m);
     }
 

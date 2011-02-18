@@ -9,7 +9,7 @@
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_scan_formdata(cvector *dict, const char *flags) {
+void rumble_scan_formdata(dvector *dict, const char *flags) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *pch = strtok((char *) flags, "&");
@@ -40,7 +40,7 @@ char            *html_template;
  =======================================================================================================================
  =======================================================================================================================
  */
-char *entr_format_page(masterHandle *m, cvector *dict) {
+char *entr_format_page(masterHandle *m, dvector *dict) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *p,
@@ -135,14 +135,14 @@ rumblemodule rumble_module_init(void *m, rumble_module_info *modinfo) {
         exit(0);
     }
 
-    svc->threads = cvector_init();
+    svc->threads = dvector_init();
     for (n = 0; n < 10; n++) {
 
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-        cvector_add(svc->threads, t);
+        dvector_add(svc->threads, t);
         pthread_create(t, NULL, accept_connection, m);
     }
 
@@ -158,9 +158,10 @@ void *accept_connection(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     masterHandle        *master = (masterHandle *) m;
-    cvector             *args,
+    dvector             *args,
                         *form,
                         *dict;
+    d_iterator iter;
     char                *postBuffer,
                         *URL,
                         *rest,
@@ -180,9 +181,9 @@ void *accept_connection(void *m) {
 
     session.client = &client;
     session._master = master;
-    args = cvector_init();
-    form = cvector_init();
-    dict = cvector_init();
+    args = dvector_init();
+    form = dvector_init();
+    dict = dvector_init();
     while (1) {
         postBuffer = 0;
         comm_accept(svc->socket, &client);
@@ -222,8 +223,8 @@ void *accept_connection(void *m) {
         }
 
         URI = strlen(rrdict(args, "get")) ? rrdict(args, "get") : rrdict(args, "post");
-        URL = calloc(1, strlen(URI));
-        rest = calloc(1, strlen(URI));
+        URL = (char*) calloc(1, strlen(URI));
+        rest = (char*) calloc(1, strlen(URI));
         if (!URL || !rest) merror();
         sscanf(URI, "/%200[^? ]?%200[^ ]", URL, rest);
         if (strlen(rest)) rumble_scan_formdata(form, rest);
@@ -233,12 +234,7 @@ void *accept_connection(void *m) {
         }
 
         myPos = 0;
-        for
-        (
-            mod = (rumble_module_info *) cvector_first(master->_core.modules);
-            mod != NULL;
-            mod = (rumble_module_info *) cvector_next(master->_core.modules)
-        ) {
+        foreach ((rumble_module_info *), mod, master->_core.modules, iter) {
             sprintf(buffa, "<b>%s</b> <small>(<font color='red'>%s</font>)</small>: <br/> %s<hr/><br/>\n", mod->title, mod->file,
                     mod->description);
             strncpy(&buffb[myPos], buffa, strlen(buffa));

@@ -10,10 +10,10 @@
  =======================================================================================================================
  =======================================================================================================================
  */
-cvector *comm_mxLookup(const char *domain) {
+dvector *comm_mxLookup(const char *domain) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector     *vec = cvector_init();
+    dvector     *vec = dvector_init();
 #ifdef RUMBLE_WINSOCK   /* Windows MX resolver */
     DNS_STATUS  status;
     PDNS_RECORD rec,
@@ -37,7 +37,7 @@ cvector *comm_mxLookup(const char *domain) {
                 if (!mx->host) merror();
                 strncpy((char *) mx->host, (char *) rec->Data.MX.pNameExchange, len);
                 mx->preference = rec->Data.MX.wPreference;
-                cvector_add(vec, mx);
+                dvector_add(vec, mx);
             }
 
             rec = rec->pNext;
@@ -92,13 +92,13 @@ cvector *comm_mxLookup(const char *domain) {
             if (ns_name_uncompress(ns_msg_base(query_parse_msg), ns_msg_end(query_parse_msg), (u_char *) ns_rr_rdata(query_parse_rr) + 2,
                 (char *) mx->host, 1024) < 0)
                 break;
-            cvector_add(vec, mx);
+            dvector_add(vec, mx);
         }
     }
 #endif
 
     /* Fall back to A record if no MX exists */
-    if (cvector_size(vec) == 0) {
+    if (vec->size == 0) {
 
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         struct hostent  *a = gethostbyname(domain);

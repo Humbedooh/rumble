@@ -12,6 +12,6 @@ socketHandle    comm_init(masterHandle *m, const char *port);
 void            comm_accept(socketHandle sock, clientHandle *client);
 void            comm_starttls(sessionHandle *session);
 void            comm_stoptls(sessionHandle *session);
-cvector         *comm_mxLookup(const char *domain);
+dvector         *comm_mxLookup(const char *domain);
 socketHandle    comm_open(masterHandle *m, const char *host, unsigned short port);
 #endif /* COMM_H */

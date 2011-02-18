@@ -6,7 +6,8 @@
 #include "../../rumble.h"
 #define GREYLIST_MAX_AGE    172800  /* Grey-list records will linger for 48 hours. */
 #define GREYLIST_MIN_AGE    900     /* Put new triplets on hold for 15 minutes */
-cvector rumble_greyList;
+dvector rumble_greyList;
+
 typedef struct
 {
     char    *what;
@@ -27,6 +28,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
     time_t          n,
                     now;
     rumble_triplet  *item;
+    d_iterator iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     /*
@@ -36,7 +38,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
     if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
 
     /* Create the SHA1 hash that corresponds to the triplet. */
-    recipient = (address *) cvector_last(session->recipients);
+    recipient = (address *) session->recipients->last;
     if (!recipient) {
         printf("<greylist> No recipients found! (server bug?)\n");
         return (RUMBLE_RETURN_FAILURE);
@@ -65,7 +67,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
     now = time(0);
 
     /* Run through the list of triplets we have and look for this one. */
-    for (item = (rumble_triplet *) cvector_first(&rumble_greyList); item != NULL; item = (rumble_triplet *) cvector_next(&rumble_greyList)) {
+    foreach ((rumble_triplet *), item, &rumble_greyList, iter) {
         if (!strcmp(item->what, str)) {
             n = now - item->when;
             break;
@@ -73,7 +75,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
 
         /* If the record is too old, delete it from the vector. */
         if ((now - item->when) > GREYLIST_MAX_AGE) {
-            cvector_delete(&rumble_greyList);
+            dvector_delete(&iter);
             free(item->what);
             free(item);
         }
@@ -88,7 +90,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
 
         New->what = str;
         New->when = now;
-        cvector_add(&rumble_greyList, New);
+        dvector_add(&rumble_greyList, New);
         n = 0;
     } else free(str);
 

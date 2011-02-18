@@ -34,10 +34,11 @@ void *rumble_pop3_init(void *m) {
     void            *pp,
                     *tp;
     pthread_t       p = pthread_self();
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    session.dict = cvector_init();
-    session.recipients = cvector_init();
+    session.dict = dvector_init();
+    session.recipients = dvector_init();
     session._svcHandle = (pop3Session *) malloc(sizeof(pop3Session));
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session._master = m;
@@ -59,7 +60,7 @@ void *rumble_pop3_init(void *m) {
     while (1) {
         comm_accept(master->pop3.socket, session.client);
         pthread_mutex_lock(&master->pop3.mutex);
-        cvector_add(master->pop3.handles, (void *) sessptr);
+        dvector_add(master->pop3.handles, (void *) sessptr);
         pthread_mutex_unlock(&master->pop3.mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
@@ -138,44 +139,40 @@ void *rumble_pop3_init(void *m) {
 
         /* Update the thread stats */
         pthread_mutex_lock(&(master->pop3.mutex));
-        for (s = (sessionHandle *) cvector_first(master->pop3.handles); s != NULL; s = (sessionHandle *) cvector_next(master->pop3.handles)) {
+        foreach((sessionHandle *), s, master->pop3.handles, iter) {
             if (s == sessptr) {
-                cvector_delete(master->pop3.handles);
+                dvector_delete(&iter);
                 x = 1;
                 break;
             }
         }
 
         /* Check if we were told to go kill ourself :( */
-        if (session._tflags & RUMBLE_THREAD_DIE)
-        {
+        if (session._tflags & RUMBLE_THREAD_DIE) {
+
+            /*~~~~~~~~~~~~*/
+            pthread_t   *el;
+            /*~~~~~~~~~~~~*/
+
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
             printf("<pop3::threads>I (%#x) was told to die :(\n", (uintptr_t) pthread_self());
 #endif
-
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            cvector_element *el = master->pop3.threads->first;
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-            while (el != NULL) {
-
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                pthread_t   *t = (pthread_t *) el->object;
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
 #ifdef PTW32_CDECL
-                pp = (void *) p.p;
-                tp = t->p;
+            pp = (void *) p.p;
 #else
-                tp = t;
-                pp = p;
+            pp = p;
+#endif
+            foreach((pthread_t *), el, master->pop3.threads, iter)
+            {
+#ifdef PTW32_CDECL
+                tp = el->p;
+#else
+                tp = el;
 #endif
                 if (tp == pp) {
-                    cvector_delete_at(master->pop3.threads, el);
+                    dvector_delete(&iter);
                     break;
                 }
-
-                el = el->next;
             }
 
             pthread_mutex_unlock(&master->pop3.mutex);
@@ -273,7 +270,7 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
     rumble_letter                   *letter;
     uint32_t                        i;
     rumble_mailman_shared_folder    *folder;
-    citerator                       iter;
+    d_iterator                      iter;
     pop3Session                     *pops = (pop3Session *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -282,7 +279,6 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
     rumble_rw_start_read(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
     i = 0;
-    iter = 0;
     foreach((rumble_letter *), letter, folder->letters, iter) {
         i++;
         if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %u\r\n", i + 1, letter->size);
@@ -303,7 +299,7 @@ ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, co
     rumble_letter                   *letter;
     uint32_t                        i;
     rumble_mailman_shared_folder    *folder;
-    citerator                       iter;
+    d_iterator                      iter;
     pop3Session                     *pops = (pop3Session *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -334,7 +330,7 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     int                             j,
                                     i,
                                     found;
-    citerator                       iter;
+    d_iterator                      iter;
     pop3Session                     *pops = (pop3Session *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -372,7 +368,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
     int                             j,
                                     i,
                                     found;
-    citerator                       iter;
+    d_iterator                      iter;
     rumble_mailman_shared_folder    *folder;
     pop3Session                     *pops = (pop3Session *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -425,7 +421,7 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
                                     j;
     rumble_mailman_shared_folder    *folder;
     rumble_letter                   *letter;
-    citerator                       iter;
+    d_iterator                      iter;
     pop3Session                     *pops = (pop3Session *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 

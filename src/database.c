@@ -285,7 +285,7 @@ uint32_t rumble_domain_exists(const char *domain) {
     /*~~~~~~~~~~~~~~~~~*/
     uint32_t        rc;
     rumble_domain   *dmn;
-    citerator       iter;
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~*/
 
     rc = 0;
@@ -311,7 +311,7 @@ rumble_domain *rumble_domain_copy(const char *domain) {
     /*~~~~~~~~~~~~~~~~~*/
     rumble_domain   *dmn,
                     *rc;
-    citerator       iter;
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~*/
 
     rc = (rumble_domain *) malloc(sizeof(rumble_domain));
@@ -347,7 +347,7 @@ void rumble_database_update_domains(void) {
                     l;
     void            *state;
     rumble_domain   *domain;
-    citerator       iter;
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     /* Clean up the old list */
@@ -358,7 +358,7 @@ void rumble_database_update_domains(void) {
         free(domain);
     }
 
-    cvector_flush(rumble_database_master_handle->domains.list);
+    dvector_flush(rumble_database_master_handle->domains.list);
     state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, domain, storagepath FROM domains WHERE 1");
     while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
         domain = (rumble_domain *) malloc(sizeof(rumble_domain));
@@ -375,7 +375,7 @@ void rumble_database_update_domains(void) {
         l = sqlite3_column_bytes((sqlite3_stmt *) state, 2);
         domain->path = (char *) calloc(1, l + 1);
         memcpy(domain->path, sqlite3_column_text((sqlite3_stmt *) state, 2), l);
-        cvector_add(rumble_database_master_handle->domains.list, domain);
+        dvector_add(rumble_database_master_handle->domains.list, domain);
     }
 
     rumble_rw_stop_write(rumble_database_master_handle->domains.rrw);

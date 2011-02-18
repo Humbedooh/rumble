@@ -82,7 +82,7 @@ address *rumble_parse_mail_address(const char *addr) {
     usr->domain = (char *) calloc(1, 128);
     usr->user = (char *) calloc(1, 128);
     usr->raw = (char *) calloc(1, 256);
-    usr->flags = cvector_init();
+    usr->flags = dvector_init();
     usr->tag = (char *) calloc(1, 128);
     usr->_flags = (char *) calloc(1, 128);
     tmp = (char *) calloc(1, 256);
@@ -156,10 +156,10 @@ void rumble_string_upper(char *d) {
 
 /*
  =======================================================================================================================
-    Scans a string for key=value pairs and stores them in a cvector dictionary.
+    Scans a string for key=value pairs and stores them in a dvector dictionary.
  =======================================================================================================================
  */
-void rumble_scan_flags(cvector *dict, const char *flags) {
+void rumble_scan_flags(dvector *dict, const char *flags) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *pch = strtok((char *) flags, " ");
@@ -185,10 +185,10 @@ void rumble_scan_flags(cvector *dict, const char *flags) {
 
 /*
  =======================================================================================================================
-    Scans a string for words and stores them in a cvector dictionary as [word] => 1
+    Scans a string for words and stores them in a dvector dictionary as [word] => 1
  =======================================================================================================================
  */
-void rumble_scan_words(cvector *dict, const char *wordlist) {
+void rumble_scan_words(dvector *dict, const char *wordlist) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *pch = strtok((char *) wordlist, " ");
@@ -211,10 +211,10 @@ void rumble_scan_words(cvector *dict, const char *wordlist) {
  =======================================================================================================================
  =======================================================================================================================
  */
-const char *rumble_get_dictionary_value(cvector *dict, const char *flag) {
+const char *rumble_get_dictionary_value(dvector *dict, const char *flag) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector_element     *curr;
+    dvector_element     *curr;
     rumbleKeyValuePair  *el;
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -230,10 +230,10 @@ const char *rumble_get_dictionary_value(cvector *dict, const char *flag) {
  =======================================================================================================================
  =======================================================================================================================
  */
-uint32_t rumble_has_dictionary_value(cvector *dict, const char *flag) {
+uint32_t rumble_has_dictionary_value(dvector *dict, const char *flag) {
 
     /*~~~~~~~~~~~~~~~~~~*/
-    cvector_element *curr;
+    dvector_element *curr;
     /*~~~~~~~~~~~~~~~~~~*/
 
     for (curr = dict->first; curr != NULL; curr = curr->next) {
@@ -247,7 +247,7 @@ uint32_t rumble_has_dictionary_value(cvector *dict, const char *flag) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_add_dictionary_value(cvector *dict, const char *key, const char *value) {
+void rumble_add_dictionary_value(dvector *dict, const char *key, const char *value) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~*/
     char                *nkey,
@@ -264,30 +264,31 @@ void rumble_add_dictionary_value(cvector *dict, const char *key, const char *val
     if (!el) merror();
     el->key = (const char *) nkey;
     el->value = (const char *) nval;
-    cvector_add(dict, el);
+    dvector_add(dict, el);
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_flush_dictionary(cvector *dict) {
+void rumble_flush_dictionary(dvector *dict) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    d_iterator          iter;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!dict) {
         return;
     }
 
-    for (el = (rumbleKeyValuePair *) cvector_first(dict); el != NULL; el = (rumbleKeyValuePair *) cvector_next(dict)) {
+    foreach((rumbleKeyValuePair *), el, dict, iter) {
         if (el->key) free((char *) el->key);
         if (el->value) free((char *) el->value);
         free(el);
     }
 
-    cvector_flush(dict);
+    dvector_flush(dict);
 }
 
 /*

@@ -5,9 +5,9 @@
 #include "../../rumble.h"
 
 /* include <Ws2tcpip.h> */
-cvector         *blacklist_baddomains;
-cvector         *blacklist_badhosts;
-cvector         *blacklist_dnsbl;
+dvector         *blacklist_baddomains;
+dvector         *blacklist_badhosts;
+dvector         *blacklist_dnsbl;
 unsigned int    blacklist_spf = 0;
 const char      *blacklist_logfile = 0;
 
@@ -18,11 +18,11 @@ const char      *blacklist_logfile = 0;
 ssize_t rumble_blacklist_domains(sessionHandle *session) {
 
     /*~~~~~~~~~~~~~~~~*/
-    cvector_element *el;
+    dvector_element *el;
     /*~~~~~~~~~~~~~~~~*/
 
     /* Check against pre-configured list of bad hosts */
-    if (cvector_size(blacklist_baddomains)) {
+    if (blacklist_baddomains->size) {
         el = blacklist_baddomains->first;
         while (el) {
 
@@ -75,7 +75,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
     /* Resolve client address name */
     struct hostent          *client;
     struct in6_addr         IP;
-    cvector_element         *el;
+    dvector_element         *el;
     const char              *addr;
     struct sockaddr_storage ss;
     int                     sslen = sizeof(ss);
@@ -103,7 +103,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
     rumble_string_lower((char *) addr);
 
     /* Check against pre-configured list of bad hosts */
-    if (cvector_size(blacklist_badhosts)) {
+    if (blacklist_badhosts->size) {
         el = blacklist_badhosts->first;
         while (el) {
 
@@ -142,7 +142,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
     }
 
     /* Check against DNS blacklists */
-    if (cvector_size(blacklist_dnsbl)) {
+    if (blacklist_dnsbl->size) {
         if (session->client->client_info.ss_family == AF_INET) {
 
             /*~~~~~~~~~~~~~~~~~~~~~*/
@@ -221,9 +221,9 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
     modinfo->title = "Blacklisting module";
     modinfo->description = "Standard blacklisting module for rumble.";
-    blacklist_badhosts = cvector_init();
-    blacklist_baddomains = cvector_init();
-    blacklist_dnsbl = cvector_init();
+    blacklist_badhosts = dvector_init();
+    blacklist_baddomains = dvector_init();
+    blacklist_dnsbl = dvector_init();
     sprintf(cfgfile, "%s/blacklist.conf", ((masterHandle *) master)->cfgdir);
     config = fopen(cfgfile, "r");
     if (config) {
@@ -259,7 +259,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
                             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                             strncpy(entry, pch, strlen(pch));
-                            cvector_add(blacklist_dnsbl, entry);
+                            dvector_add(blacklist_dnsbl, entry);
                             pch = strtok(NULL, " ");
                         }
                     }
@@ -281,7 +281,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
                             strncpy(entry, pch, strlen(pch));
                             rumble_string_lower(entry);
-                            cvector_add(blacklist_badhosts, entry);
+                            dvector_add(blacklist_badhosts, entry);
                             pch = strtok(NULL, " ");
                         }
                     }
@@ -301,7 +301,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
                             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                             strncpy(entry, pch, strlen(pch));
-                            cvector_add(blacklist_baddomains, entry);
+                            dvector_add(blacklist_baddomains, entry);
                             pch = strtok(NULL, " ");
                         }
                     }
@@ -328,7 +328,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, rumble_blacklist);
 
     /* If fake domain check is enabled, hook that one too */
-    if (cvector_size(blacklist_baddomains)) {
+    if (blacklist_baddomains->size) {
         rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_MAIL, rumble_blacklist_domains);
     }
 

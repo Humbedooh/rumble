@@ -27,9 +27,9 @@
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-void            *rumble_database_prepare(void *db, const char *statement, ...);
-void            rumble_pop3_populate(sessionHandle *session, pop3Session *pops);
-void            rumble_database_update_domains(void);
+void    *rumble_database_prepare(void *db, const char *statement, ...);
+void    rumble_pop3_populate(sessionHandle *session, pop3Session *pops);
+void    rumble_database_update_domains(void);
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------

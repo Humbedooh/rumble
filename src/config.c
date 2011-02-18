@@ -10,7 +10,7 @@
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_config_load(masterHandle *master, cvector *args) {
+void rumble_config_load(masterHandle *master, dvector *args) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char                *paths[3] = { "config", "/var/rumble/config", "C:/cygwin/home/Administrator/rumble/config" };
@@ -20,7 +20,7 @@ void rumble_config_load(masterHandle *master, cvector *args) {
     rumbleKeyValuePair  *el;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    master->_core.conf = cvector_init();
+    master->_core.conf = dvector_init();
     cfgfile = (char *) calloc(1, 1024);
     cfgpath = rumble_get_dictionary_value(args, "--CONFIG-DIR");
     if (!cfgfile) merror();
@@ -29,7 +29,7 @@ void rumble_config_load(masterHandle *master, cvector *args) {
         if (!el) merror();
         el->key = "config-dir";
         el->value = rumble_get_dictionary_value(args, "--CONFIG-DIR");
-        cvector_add(master->_core.conf, el);
+        dvector_add(master->_core.conf, el);
         sprintf(cfgfile, "%s/rumble.conf", el->value);
         master->cfgdir = el->value;
     } else {
@@ -47,7 +47,7 @@ void rumble_config_load(masterHandle *master, cvector *args) {
                 if (!el) merror();
                 el->key = "config-dir";
                 el->value = paths[x];
-                cvector_add(master->_core.conf, el);
+                dvector_add(master->_core.conf, el);
                 master->cfgdir = el->value;
                 break;
             }
@@ -99,16 +99,12 @@ void rumble_config_load(masterHandle *master, cvector *args) {
  */
 const char *rumble_config_str(masterHandle *master, const char *key) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    d_iterator          iter;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
-    for
-    (
-        el = (rumbleKeyValuePair *) cvector_first(master->_core.conf);
-        el != NULL;
-        el = (rumbleKeyValuePair *) cvector_next(master->_core.conf)
-    ) {
+    foreach((rumbleKeyValuePair *), el, master->_core.conf, iter) {
         if (!strcmp(el->key, key)) {
             return (const char *) el->value;
         }
@@ -123,16 +119,12 @@ const char *rumble_config_str(masterHandle *master, const char *key) {
  */
 uint32_t rumble_config_int(masterHandle *master, const char *key) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    d_iterator          iter;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
-    for
-    (
-        el = (rumbleKeyValuePair *) cvector_first(master->_core.conf);
-        el != NULL;
-        el = (rumbleKeyValuePair *) cvector_next(master->_core.conf)
-    ) {
+    foreach((rumbleKeyValuePair *), el, master->_core.conf, iter) {
         if (!strcmp(el->key, key)) {
             return (atoi(el->value));
         }

@@ -101,7 +101,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x0008052C   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x0009053E   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -331,14 +331,14 @@ typedef struct
     char    *user;
     char    *domain;
     char    *raw;
-    cvector *flags;
+    dvector *flags;
     char    *_flags;
     char    *tag;   /* VERP or BATV tags */
 } address;
 typedef struct
 {
-    cvector         *recipients;
-    cvector         *dict;
+    dvector         *recipients;
+    dvector         *dict;
     address         *sender;
     clientHandle    *client;
     uint32_t        flags;
@@ -363,29 +363,29 @@ typedef struct
 typedef struct
 {
     socketHandle    socket;
-    cvector         *threads;
-    cvector         *init_hooks;
-    cvector         *cue_hooks;
-    cvector         *exit_hooks;
+    dvector         *threads;
+    dvector         *init_hooks;
+    dvector         *cue_hooks;
+    dvector         *exit_hooks;
     pthread_mutex_t mutex;
-    cvector         *handles;
+    dvector         *handles;
     void * (*init) (void *);
 } rumbleService;
 typedef struct
 {
     struct __core
     {
-        cvector         *conf;
-        cvector         *workers;
+        dvector         *conf;
+        dvector         *workers;
         pthread_cond_t  workcond;
         pthread_mutex_t workmutex;
         const char      *currentSO;
-        cvector         *modules;
-        cvector         *parser_hooks;
-        cvector         *feed_hooks;
+        dvector         *modules;
+        dvector         *parser_hooks;
+        dvector         *feed_hooks;
         void            *db;
         void            *mail;
-        cvector         *batv;  /* BATV handles for bounce control */
+        dvector         *batv;  /* BATV handles for bounce control */
         void            *lua;
         void            *tls_credentials;
     } _core;
@@ -395,12 +395,12 @@ typedef struct
     struct
     {
         rumble_readerwriter *rrw;
-        cvector             *list;
+        dvector             *list;
     } domains;
     struct
     {
         rumble_readerwriter *rrw;
-        cvector             *list;
+        dvector             *list;
     } mailboxes;
     const char  *cfgdir;
 } masterHandle;
@@ -435,7 +435,7 @@ typedef struct
     uint32_t    replyCode;
     char        *replyMessage;
     char        *replyServer;
-    cvector     *flags;
+    dvector     *flags;
 } rumble_sendmail_response;
 typedef struct
 {
@@ -451,7 +451,7 @@ typedef struct
 typedef struct
 {
     rumble_mailbox  *account;   /* Pointer to account */
-    cvector         *contents;  /* cvector with letters */
+    dvector         *contents;  /* dvector with letters */
     rumble_letter   **letters;  /* post-defined array of letters for fast access */
     uint32_t        size;       /* Number of letters */
 } rumble_mailbag;
@@ -463,7 +463,7 @@ typedef struct
 } rumble_folder;
 typedef struct
 {
-    cvector             *folders;
+    dvector             *folders;
     rumble_readerwriter *rrw;
     uint32_t            sessions;
     uint32_t            uid;
@@ -475,7 +475,7 @@ typedef struct
     uint64_t                    lastMessage;
     char                        *name;
     int                         subscribed;
-    cvector                     *letters;
+    dvector                     *letters;
     rumble_mailman_shared_bag   *bag;
 } rumble_mailman_shared_folder;
 typedef struct
@@ -510,7 +510,8 @@ rumblemodule    rumble_module_check(void);
     Public tool-set
  =======================================================================================================================
  */
-void                        rumble_test();
+
+void                        rumble_test(void);
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
 char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
 char                        *rumble_decode_base64(const char *src);
@@ -520,12 +521,12 @@ rumble_args                 *rumble_read_words(const char *d);
 void                        rumble_args_free(rumble_args *d);
 char                        *rumble_mtime(void);            /* mail time */
 char                        *rumble_create_filename(void);  /* Generates random 16-letter filenames */
-void                        rumble_scan_words(cvector *dict, const char *wordlist);
-void                        rumble_scan_flags(cvector *dict, const char *flags);
-void                        rumble_flush_dictionary(cvector *dict);
-const char                  *rumble_get_dictionary_value(cvector *dict, const char *flag);
-void                        rumble_add_dictionary_value(cvector *dict, const char *key, const char *value);
-uint32_t                    rumble_has_dictionary_value(cvector *dict, const char *flag);
+void                        rumble_scan_words(dvector *dict, const char *wordlist);
+void                        rumble_scan_flags(dvector *dict, const char *flags);
+void                        rumble_flush_dictionary(dvector *dict);
+const char                  *rumble_get_dictionary_value(dvector *dict, const char *flag);
+void                        rumble_add_dictionary_value(dvector *dict, const char *key, const char *value);
+uint32_t                    rumble_has_dictionary_value(dvector *dict, const char *flag);
 void                        rumble_free_address(address *a);
 void                        rumble_free_account(rumble_mailbox *user);
 const char                  *rumble_smtp_reply_code(unsigned int code);
@@ -594,20 +595,15 @@ void                            rumble_mailman_free(rumble_mailman_shared_bag *b
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
-    Macro for implementing a cvector foreach() block as: For each A in B (as type T), using iterator I do {...}
+    Macro for implementing a dvector foreach() block as: For each A in B (as type T), using iterator I do {...}
     example: int myValue, myArray[] = {1,2,3,4,5,6,7,8,9};
-    citerator iter;
+    d_iterator iter;
     foreach(int, myValue, myArray, iter) { printf("I got %d\n", myValue);
     }
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-#   define IN      ,
-#   define AS      ,
-#   define USING   ,
-#   define foreach(type, element, list, iterator) \
-    iterator = 0; \
-    while ((element = type cvector_foreach(list, &iterator)))
+#   define foreach dforeach
 #   ifdef __cplusplus
 }
 #   endif

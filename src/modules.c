@@ -26,7 +26,7 @@ void rumble_modules_load(masterHandle *master) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
-    cvector_element     *line;
+    dvector_element     *line;
     uint32_t            ver;
     int                 x;
 #ifdef _WIN32
@@ -71,7 +71,7 @@ void rumble_modules_load(masterHandle *master) {
             if (error != NULL) fprintf(stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
             if (init && mcheck) {
                 master->_core.currentSO = el->value;
-                cvector_add(master->_core.modules, modinfo);
+                dvector_add(master->_core.modules, modinfo);
                 ver = (*mcheck) ();
                 ver = (ver & 0xFFFFFF00) + (RUMBLE_VERSION & 0x000000FF);
                 x = EXIT_SUCCESS;
