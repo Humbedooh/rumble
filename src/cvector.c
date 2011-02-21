@@ -10,268 +10,75 @@
  =======================================================================================================================
  =======================================================================================================================
  */
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 cvector *cvector_init(void) {
 
-    /*~~~~~~~~~~~*/
-    cvector *c = 0;
-    /*~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    cvector *cvec = (cvector *) malloc(sizeof(cvector));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    c = (cvector *) malloc(sizeof(cvector));
-    if (!c) return (0);
-    c->current = NULL;
-    c->first = NULL;
-    c->last = NULL;
-    c->size = 0;
-    return (c);
+    if (!cvec) return (0);
+    cvec->size = 0;
+    cvec->objects = (void**) calloc(33, sizeof(void*));
+    cvec->allocated = 32;
+    return (cvec);
 }
-
-#ifdef CVECTOR_THREADED
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-cvector *cvector_init_threaded(void) {
+void cvector_add(cvector *parent, void *object) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector *c = calloc(1, sizeof(cvector));
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
+    unsigned int x,size;
+    /*~~~~~~~~~~~~~~~~*/
 
-    c->mutex = PTHREAD_MUTEX_INITIALIZER;
-    return (c);
-}
-#endif
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void cvector_add(cvector *parent, void *object)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector_element *el = (cvector_element *) malloc(sizeof(cvector_element));
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    if (!el) return;
-    el->object = object;
-    el->previous = parent->last;
-    el->next = NULL;
-    parent->last = el;
-    parent->first = parent->first ? parent->first : el;
-    if (el->previous) el->previous->next = el;
+    if (!parent) return;
+    if (parent->allocated == parent->size) {
+        size = parent->allocated * 2;
+        parent->objects = (void**) realloc(parent->objects, (size+1)*sizeof(void*));
+        parent->allocated = size;
+        parent->objects[parent->allocated] = 0;
+    }
+    parent->objects[parent->size] = object;
     parent->size++;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-void cvector_delete(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
+void cvector_delete(c_iterator *iter) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector_element *currobj = parent->current;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
+    unsigned int n;
+    /*~~~~~~~~~~~~~~~~*/
 
-    if (!currobj) return;
-    parent->first = (parent->first == currobj) ? currobj->next : parent->first;
-    parent->last = (parent->last == currobj) ? currobj->previous : parent->last;
-    parent->current = currobj->previous ? currobj->previous : currobj->next;
-    if (currobj->previous) currobj->previous->next = currobj->next;
-    if (currobj->next) currobj->next->previous = currobj->previous;
-    currobj->object = NULL;
-    currobj->previous = NULL;
-    currobj->next = NULL;
-    free(currobj);
-    parent->size--;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
+    if (!iter) return;
+    for (n = iter->position; n < iter->parent->size; n++) iter->parent->objects[n] = iter->parent->objects[n+1];
+    iter->parent->objects[iter->parent->size] = 0;
+    iter->parent->size--;
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-void cvector_delete_at(cvector *parent, cvector_element *el)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-    if (!el) return;
-    parent->first = (parent->first == el) ? el->next : parent->first;
-    parent->last = (parent->last == el) ? el->previous : parent->last;
-    if (el->previous) el->previous->next = el->next;
-    if (el->next) el->next->previous = el->previous;
-    free(el);
-    parent->size--;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-}
-
-/*
- =======================================================================================================================
-    cvector_delete_before: Used for deleting elements using iterators
- =======================================================================================================================
- */
-void cvector_delete_before(cvector *parent, cvector_element *el) {
-    if (el == (citerator) CVECTOR_LAST) el = parent->last;
-    cvector_delete_at(parent, el->previous);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_shift(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector_element *currobj = parent->first;
-    void            *obj = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    if (currobj == obj) return (obj);
-    if (currobj->next != (cvector_element *) 0) currobj->next->previous = currobj->previous;
-    obj = currobj->object;
-    free(currobj);
-    parent->size--;
-    if (parent->size == 0) {
-        parent->current = 0;
-        parent->first = 0;
-        parent->last = 0;
+void *cvector_foreach(cvector *parent, c_iterator *iter) {
+    if (iter->position == 0) {
+        iter->parent = parent;
+        iter->position++;
+        return (parent->objects[0]);
     }
+//    printf("<cvector> current is %#p, next is %#p\n", iter->current,iter->current ? iter->current->next : 0);
+    iter->position++;
 
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-    return (obj);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_pop(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector_element *currobj = parent->last;
-    void            *obj = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    if (!currobj) return (obj);
-    if (currobj->previous) currobj->previous->next = NULL;
-    obj = currobj->object;
-    free(currobj);
-    parent->size--;
-    if (parent->size == 0) {
-        parent->current = 0;
-        parent->first = 0;
-        parent->last = 0;
-    }
-
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-    return (obj);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_first(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-    parent->current = parent->first;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-    return (parent->current ? parent->current->object : NULL);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_next(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-    parent->current = parent->current ? parent->current->next : NULL;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-    return (parent->current ? parent->current->object : NULL);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_previous(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-    parent->current = parent->current ? parent->current->previous : NULL;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-    return (parent->current ? parent->current->object : NULL);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_last(cvector *parent)
-{
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_lock(&parent->mutex);
-#endif
-    parent->current = parent->last;
-#ifdef CVECTOR_THREADED
-    if (parent->mutex) pthread_mutex_unlock(&parent->mutex);
-#endif
-    return (parent->current ? parent->current->object : NULL);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void *cvector_current(cvector *parent) {
-    return (parent->current ? parent->current->object : NULL);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-unsigned int cvector_size(cvector *parent) {
-    return (parent->size);
+    return (iter->position < parent->size ? parent->objects[iter->position] : 0);
 }
 
 /*
@@ -280,20 +87,9 @@ unsigned int cvector_size(cvector *parent) {
  */
 void cvector_flush(cvector *parent) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    cvector_element *el = parent->last;
-    cvector_element *oel;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    while (el) {
-        oel = el;
-        el = el->previous;
-        free(oel);
-    }
-
-    parent->last = 0;
-    parent->first = 0;
-    parent->current = 0;
+    free(parent->objects);
+    parent->allocated = 32;
+    parent->objects = (void**) calloc(33, sizeof(void*));
     parent->size = 0;
 }
 
@@ -301,21 +97,23 @@ void cvector_flush(cvector *parent) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void *cvector_foreach(cvector *parent, citerator *iter) {
-
-    /*~~~~~~~*/
-    void    *o;
-    /*~~~~~~~*/
-
-    if (*iter == (citerator) CVECTOR_LAST) return (0);
-    if (*iter == (citerator) CVECTOR_FIRST) *iter = parent->first;
-    if (*iter == 0) return (0);
-    o = (*iter)->object;
-    *iter = (*iter)->next;
-    if (*iter == 0) *iter = (citerator) CVECTOR_LAST;
-    return (o);
+void cvector_destroy(cvector *parent) {
+    free(parent->objects);
+    free(parent);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void *cvector_pop(cvector *parent) {
+    void* object;
+    if (!parent) return (0);
+    object = parent->objects[parent->size-1];
+    parent->objects[parent->size-1] = 0;
+    parent->size--;
+    return (object);
+}
 /*$5
  #######################################################################################################################
     dvector implementation
@@ -376,7 +174,8 @@ void dvector_delete(d_iterator *iter) {
     if (el->prev) el->prev->next = el->next;
     if (iter->parent->first == el) iter->parent->first = el->next;
     if (iter->parent->last == el) iter->parent->last = el->prev;
-    iter->current = el->prev;
+    iter->current = el->prev ? el->prev : iter->parent->first;
+ //   printf("<dvector> deleted %#p, set current to %#p\n", el, iter->current);
     free(el);
     iter->parent->size--;
 }
@@ -390,13 +189,10 @@ void *dvector_foreach(dvector *parent, d_iterator *iter) {
         iter->start = 0;
         iter->parent = parent;
         iter->current = parent->first;
-        iter->next = iter->current ? iter->current->next : 0;
         return (iter->current ? iter->current->object : 0);
     }
-
-    iter->current = iter->current ? iter->current->next : 0;
-    if (!iter->current) return (0);
-    iter->next = iter->current->next;
+//    printf("<dvector> current is %#p, next is %#p\n", iter->current,iter->current ? iter->current->next : 0);
+    if (!(iter->current = iter->current ? iter->current->next : 0)) return (0);
     return (iter->current->object);
 }
 
@@ -415,7 +211,6 @@ void dvector_flush(dvector *parent) {
         nl = el->next;
         free(el);
     }
-
     parent->size = 0;
     parent->first = 0;
     parent->last = 0;

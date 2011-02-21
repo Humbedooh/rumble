@@ -116,7 +116,7 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
 
         case 'l':
 #if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
-            rc = sqlite3_bind_int64((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, signed int));
+            rc = sqlite3_bind_int64((sqlite3_stmt *) returnObject, at + 1, va_arg(vl, signed long long int));
 #endif
             break;
 

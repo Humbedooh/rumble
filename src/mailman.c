@@ -82,10 +82,12 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    printf("<Mailman> Creating new bag struct for account #%u\n", uid);
     bag = (rumble_mailman_shared_bag *) malloc(sizeof(rumble_mailman_shared_bag));
     bag->folders = dvector_init();
     bag->rrw = rumble_rw_init();
+    bag->uid = uid;
+    dvector_add(rumble_database_master_handle->mailboxes.list, bag);
 
     /* Add the default inbox */
     folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
@@ -95,12 +97,13 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     folder->updated = time(0);
     folder->subscribed = 1;
     folder->name = (char *) calloc(1, 32);
+    folder->bag = bag;
     strcpy(folder->name, "INBOX");
     dvector_add(bag->folders, folder);
     state = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", uid);
     while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
         folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
-
+        folder->bag = bag;
         /* Folder ID */
         folder->id = sqlite3_column_int64((sqlite3_stmt *) state, 0);
 
@@ -129,8 +132,10 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
                 l++;
                 dvector_add(folder->letters, letter);
                 folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
+                printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
                 break;
             }
+            
         }
 
         if (!l) {
@@ -198,7 +203,9 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
 
         if (!found) {
             folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
-            if (!folder) merror() folder->id = folder_id;
+            if (!folder) merror();
+            folder->id = folder_id;
+            folder->bag = bag;
 
             /* Folder name */
             l = sqlite3_column_bytes((sqlite3_stmt *) state, 1);
@@ -207,6 +214,7 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
 
             /* Subscribed? */
             folder->subscribed = sqlite3_column_int((sqlite3_stmt *) state, 2);
+            
             dvector_add(bag->folders, folder);
         }
     }
@@ -235,8 +243,9 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
      */
     if (!folder) return (0);
     r = 0;
+    printf("<Mailman> Updating <%s> from ID > %llu\n", folder->name, folder->lastMessage);
     state = rumble_database_prepare(rumble_database_master_handle->_core.db,
-                                    "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %u", folder->id,
+                                    "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %l", folder->id,
                                     folder->lastMessage);
     rumble_rw_start_write(folder->bag->rrw);    /* Lock the bag for writing */
     while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
@@ -246,8 +255,9 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         letter->uid = folder->bag->uid;
         dvector_add(folder->letters, letter);
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
+        printf("Adding letter %llu to <%s>\n", letter->id, folder->name);
     }
-
+    printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
     rumble_rw_stop_write(folder->bag->rrw);     /* Unlock the bag */
 
     /* Clean up DB */
@@ -348,7 +358,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
 
             /* Traverse letters */
             foreach((rumble_letter *), letter, folder->letters, liter) {
-                if (!letter || !letter->flags) {
+                if (!letter) {
                     printf("Memory corruption??!\n");
                     continue;
                 }
@@ -406,4 +416,59 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
 
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);     /* Unlock mailboxes */
     return (bag);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+uint32_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter, rumble_mailman_shared_folder *folder) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char            *path,
+                    *filename,
+                    fullname[512];
+    int             len;
+    FILE            *in,
+                    *out;
+    char            buffer[4096];
+    void            *state;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    if (folder) {
+        path = (char *) (strlen(account->domain->path) ? account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"));
+        filename = rumble_create_filename();
+        sprintf(fullname, "%s/%s.msg", path, filename);
+        in = rumble_letters_open(account, letter);
+        if (!in) {
+            printf("couldn't open in-file <%s>\r\n", letter->fid);
+            free(filename);
+            return (0);
+        }
+
+        out = fopen(fullname, "wb");
+        if (!out) {
+            fclose(in);
+            printf("couldn't open out-file <%s>\r\n", fullname);
+            fclose(in);
+            free(filename);
+            return (0);
+        }
+
+        while (!feof(in)) {
+            len = fread(buffer, 1, 4096, in);
+            fwrite(buffer, 1, len, out);
+        }
+
+        fclose(in);
+        fclose(out);
+        state = rumble_database_prepare(rumble_database_master_handle->_core.db,
+                                        "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)", account->uid,
+                                        filename, folder->id, letter->size, 0);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+        free(filename);
+    }
+
+    return (1);
 }

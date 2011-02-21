@@ -1065,7 +1065,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     }
 
     rcprintf(session, "%s OK FETCH completed\r\n", tag);
-    printf("Fetched %u letters\n", d);
+    if (folder) printf("Fetched %u letters from <%s>\n", d, folder->name);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1142,6 +1142,7 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
                      (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
                      (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
         }
+        printf("Set flags for letter %llu to %08x\n", letter->id, letter->flags);
     }
 
     rcprintf(session, "%s OK STORE completed\r\n", tag);
@@ -1161,7 +1162,7 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
                                     a,
                                     b,
                                     useUID;
-    int64_t                         destination;
+    rumble_mailman_shared_folder    *destination;
     rumble_letter                   *letter;
     rumble_args                     *parts;
     char                            folderName[100],
@@ -1182,7 +1183,7 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
         return (RUMBLE_RETURN_IGNORE);
     }
 
-    destination = -1;
+    destination = 0;
 
     /* Get the message range */
     first = 0;
@@ -1204,12 +1205,10 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
     /* Check if folder exists */
     foreach(rmsf, folder, imap->bag->folders, iter) {
         if (!strcmp(folderName, folder->name)) {
-            destination = folder->id;
+            destination = folder;
             break;
         }
     }
-
-    if (!destination && !strcmp(folderName, "INBOX")) destination = 0;
 
     /*$1
      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1219,17 +1218,10 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
 
     folder = rumble_mailman_current_folder(imap);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-    printf("Copying letters %u through %u (UID = %s) to %lld...\n", first, last, useUID ? "enabled" : "disabled", destination);
+    printf("Copying letters %u through %u (UID = %s) to %lld...\n", first, last, useUID ? "enabled" : "disabled", destination->id);
     printf("Folder has %u letters\n", folder->letters->size);
 #endif
-    opath = (char *) (strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
-    if (destination != -1) {
-
-        /*~~~~~~~~~~~~~~~~~*/
-        char    buffer[4096];
-        void    *state;
-        /*~~~~~~~~~~~~~~~~~*/
-
+    if (destination) {
         a = 0;
         foreach((rumble_letter *), letter, folder->letters, iter) {
             a++;
@@ -1238,36 +1230,10 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
             printf("Copying letter %llu...\n", letter->id);
 #endif
-            filename = rumble_create_filename();
-            sprintf(path, "%s/%s.msg", opath, filename);
-            in = rumble_letters_open(imap->account, letter);
-            if (!in) {
-                printf("couldn't open in-file <%s>\r\n", letter->fid);
-                continue;
-            }
-
-            out = fopen(path, "wb");
-            if (!in) {
-                fclose(in);
-                printf("couldn't open out-file <%s>\r\n", path);
-                continue;
-            }
-
-            while (!feof(in)) {
-                b = fread(buffer, 1, 4096, in);
-                fwrite(buffer, 1, b, out);
-            }
-
-            fclose(in);
-            fclose(out);
-            state = rumble_database_prepare(master->_core.db,
-                                            "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %u, %u, %u)", imap->account->uid,
-                                            filename, destination, letter->size, 0);
-            rumble_database_run(state);
-            rumble_database_cleanup(state);
-            free(filename);
+            rumble_mailman_copy_letter(imap->account, letter, destination);
         }
 
+        rumble_mailman_scan_incoming(destination);
         rcprintf(session, "%s OK COPY completed\r\n", tag);
     } else {
         rcprintf(session, "%s NO COPY [TRYCREATE] failed: Destination folder doesn't exist!\r\n", tag);

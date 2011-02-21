@@ -101,7 +101,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE)   /* debug output flags */
-#   define RUMBLE_VERSION          0x0009053E   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x000A054E   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -572,6 +572,13 @@ rumble_mailman_shared_bag       *rumble_letters_retrieve_shared(uint32_t uid);
 void                            rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);
 uint32_t                        rumble_mailman_commit(imap4Session *imap, rumble_mailman_shared_folder *folder);
 void                            rumble_mailman_free(rumble_mailman_shared_bag *bag);
+uint32_t                        rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
+uint32_t                        rumble_mailman_copy_letter
+                                (
+                                    rumble_mailbox                  *account,
+                                    rumble_letter                   *letter,
+                                    rumble_mailman_shared_folder    *folder
+                                );
 
 /*$5
  #######################################################################################################################
