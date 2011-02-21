@@ -36,6 +36,8 @@ void *rumble_imap_init(void *m) {
                     *tp;
     pthread_t       p = pthread_self();
     d_iterator      iter;
+    imapCommandHook *hook;
+    c_iterator      citer;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
@@ -102,61 +104,15 @@ void *rumble_imap_init(void *m) {
                     sscanf(arg, "%32s %1000[^\r\n]", cmd, arg);
                     rumble_string_upper(cmd);
                 } else session.flags -= (session.flags & rumble_mailman_HAS_UID);   /* clear UID demand if not there. */
+                cforeach((imapCommandHook *), hook, master->imap.commands, citer) {
+                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, tag, arg);
+                }
 
-                /*
-                 * printf("Client said: <%s> %s %s\r\n", tag, cmd, arg);
-                 * ;
-                 * printf("Selected folder is: %lld\r\n", pops->folder);
-                 */
-                if (!strcmp(cmd, "LOGIN")) rc = rumble_server_imap_login(master, &session, tag, arg);
-                else if (!strcmp(cmd, "LOGOUT"))
-                    break;
-                else if (!strcmp(cmd, "NOOP"))
-                    rc = rumble_server_imap_noop(master, &session, tag, arg);
-                else if (!strcmp(cmd, "CAPABILITY"))
-                    rc = rumble_server_imap_capability(master, &session, tag, arg);
-                else if (!strcmp(cmd, "AUTHENTICATE"))
-                    rc = rumble_server_imap_authenticate(master, &session, tag, arg);
-                else if (!strcmp(cmd, "STARTTLS"))
-                    rc = rumble_server_imap_starttls(master, &session, tag, arg);
-                else if (!strcmp(cmd, "SELECT"))
-                    rc = rumble_server_imap_select(master, &session, tag, arg);
-                else if (!strcmp(cmd, "EXAMINE"))
-                    rc = rumble_server_imap_examine(master, &session, tag, arg);
-                else if (!strcmp(cmd, "CREATE"))
-                    rc = rumble_server_imap_create(master, &session, tag, arg);
-                else if (!strcmp(cmd, "DELETE"))
-                    rc = rumble_server_imap_delete(master, &session, tag, arg);
-                else if (!strcmp(cmd, "RENAME"))
-                    rc = rumble_server_imap_rename(master, &session, tag, arg);
-                else if (!strcmp(cmd, "SUBSCRIBE"))
-                    rc = rumble_server_imap_subscribe(master, &session, tag, arg);
-                else if (!strcmp(cmd, "UNSUBSCRIBE"))
-                    rc = rumble_server_imap_unsubscribe(master, &session, tag, arg);
-                else if (!strcmp(cmd, "LIST"))
-                    rc = rumble_server_imap_list(master, &session, tag, arg);
-                else if (!strcmp(cmd, "LSUB"))
-                    rc = rumble_server_imap_lsub(master, &session, tag, arg);
-                else if (!strcmp(cmd, "STATUS"))
-                    rc = rumble_server_imap_status(master, &session, tag, arg);
-                else if (!strcmp(cmd, "APPEND"))
-                    rc = rumble_server_imap_append(master, &session, tag, arg);
-                else if (!strcmp(cmd, "CHECK"))
-                    rc = rumble_server_imap_check(master, &session, tag, arg);
-                else if (!strcmp(cmd, "CLOSE"))
-                    rc = rumble_server_imap_close(master, &session, tag, arg);
-                else if (!strcmp(cmd, "EXPUNGE"))
-                    rc = rumble_server_imap_expunge(master, &session, tag, arg);
-                else if (!strcmp(cmd, "SEARCH"))
-                    rc = rumble_server_imap_search(master, &session, tag, arg);
-                else if (!strcmp(cmd, "FETCH"))
-                    rc = rumble_server_imap_fetch(master, &session, tag, arg);
-                else if (!strcmp(cmd, "STORE"))
-                    rc = rumble_server_imap_store(master, &session, tag, arg);
-                else if (!strcmp(cmd, "COPY"))
-                    rc = rumble_server_imap_copy(master, &session, tag, arg);
-                else if (!strcmp(cmd, "IDLE"))
-                    rc = rumble_server_imap_idle(master, &session, tag, arg);
+                
+                  printf("Client said: <%s> %s %s\r\n", tag, cmd, arg);
+                 
+                  printf("Selected folder is: %lld\r\n", pops->folder);
+                 
             }
 
             free(line);
@@ -178,10 +134,11 @@ void *rumble_imap_init(void *m) {
             rcprintf(&session, "%s OK <%s> signing off for now.\r\n", tag, myName);
         }
 
-        if (session.client->tls != NULL) comm_stoptls(&session);    /* Close the TLS session if active */
+        comm_stoptls(&session);    /* Close the TLS session if active */
         close(session.client->socket);
 
         /* Start cleanup */
+        printf("cleaning up\n");
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
@@ -189,6 +146,7 @@ void *rumble_imap_init(void *m) {
         rumble_mailman_close_bag(pops->bag);
 
         /* End cleanup */
+        printf("done!\n");
         pthread_mutex_lock(&(master->imap.mutex));
         foreach((sessionHandle *), s, master->imap.handles, iter) {
             if (s == sessptr) {
@@ -294,7 +252,7 @@ ssize_t rumble_server_imap_capability(masterHandle *master, sessionHandle *sessi
     const char  *capa_tls = "* CAPABILITY IMAP4rev1 IDLE CONDSTORE UIDPLUS AUTH=PLAIN\r\n";
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    if (!(session->flags & rumble_mailman_HAS_TLS)) rcsend(session, capa_plain);
+    if (!session->client->tls) rcsend(session, capa_plain);
     else rcsend(session, capa_tls);
     rcprintf(session, "%s OK CAPABILITY completed.\r\n", tag);
     return (RUMBLE_RETURN_IGNORE);
@@ -359,6 +317,8 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
  =======================================================================================================================
  */
 ssize_t rumble_server_imap_starttls(masterHandle *master, sessionHandle *session, const char *tag, const char *arg) {
+    rcprintf(session, "%s OK Begin TLS negotiation now\r\n", tag);
+    comm_starttls(session);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1142,6 +1102,7 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
                      (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
                      (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
         }
+
         printf("Set flags for letter %llu to %08x\n", letter->id, letter->flags);
     }
 
@@ -1257,4 +1218,12 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
     line = rcread(session);
     rcprintf(session, "+ OK IDLE completed.\r\n", tag);
     return (RUMBLE_RETURN_IGNORE);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+ssize_t rumble_server_imap_logout(masterHandle *master, sessionHandle *session, const char *tag, const char *arg) {
+    return (RUMBLE_RETURN_FAILURE);
 }

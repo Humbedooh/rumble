@@ -82,6 +82,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     printf("<Mailman> Creating new bag struct for account #%u\n", uid);
     bag = (rumble_mailman_shared_bag *) malloc(sizeof(rumble_mailman_shared_bag));
     bag->folders = dvector_init();
@@ -104,6 +105,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
         folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
         folder->bag = bag;
+
         /* Folder ID */
         folder->id = sqlite3_column_int64((sqlite3_stmt *) state, 0);
 
@@ -135,7 +137,6 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
                 printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
                 break;
             }
-            
         }
 
         if (!l) {
@@ -214,7 +215,6 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
 
             /* Subscribed? */
             folder->subscribed = sqlite3_column_int((sqlite3_stmt *) state, 2);
-            
             dvector_add(bag->folders, folder);
         }
     }
@@ -257,6 +257,7 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
         printf("Adding letter %llu to <%s>\n", letter->id, folder->name);
     }
+
     printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
     rumble_rw_stop_write(folder->bag->rrw);     /* Unlock the bag */
 
@@ -424,16 +425,16 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
  */
 uint32_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter, rumble_mailman_shared_folder *folder) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char            *path,
-                    *filename,
-                    fullname[512];
-    int             len;
-    FILE            *in,
-                    *out;
-    char            buffer[4096];
-    void            *state;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~*/
+    char    *path,
+            *filename,
+            fullname[512];
+    int     len;
+    FILE    *in,
+            *out;
+    char    buffer[4096];
+    void    *state;
+    /*~~~~~~~~~~~~~~~~~~*/
 
     if (folder) {
         path = (char *) (strlen(account->domain->path) ? account->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"));

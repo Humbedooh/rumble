@@ -6,6 +6,12 @@
 #include "rumble.h"
 #include <gnutls/gnutls.h>
 #include <gnutls/extra.h>
+#include <gcrypt.h>
+#include <errno.h>
+#ifndef ENOMEM
+#define ENOMEM 1
+#endif
+GCRY_THREAD_OPTION_PTHREAD_IMPL;
 static gnutls_dh_params_t   dh_params;
 static gnutls_rsa_params_t  rsa_params;
 
@@ -38,11 +44,17 @@ void rumble_crypt_init(masterHandle *master) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     printf("%-48s", "Loading SSL...");
+    gcry_control(GCRYCTL_DISABLE_SECMEM_WARN);
+    gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+    
+    gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
+  
+
     if (gnutls_global_init()) {
         printf("[BAD]\n");
         return;
     }
-
+    
     master->_core.tls_credentials = (gnutls_certificate_credentials_t *) calloc(1, sizeof(gnutls_certificate_credentials_t));
     pcred = (gnutls_certificate_credentials_t *) master->_core.tls_credentials;
     if (gnutls_certificate_allocate_credentials(pcred)) {
@@ -64,16 +76,14 @@ void rumble_crypt_init(masterHandle *master) {
  =======================================================================================================================
  */
 void comm_starttls(sessionHandle *session) {
-
+    
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int                                 ret;
     gnutls_certificate_credentials_t    *pcred;
     gnutls_session_t                    psess;
     masterHandle                        *master = (masterHandle *) session->_master;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     pcred = (gnutls_certificate_credentials_t *) master->_core.tls_credentials;
-    psess = (gnutls_session_t) session->client->tls;
     ret = gnutls_init(&psess, GNUTLS_SERVER);
     ret = gnutls_priority_set_direct(psess, "EXPORT", NULL);
     ret = gnutls_credentials_set(psess, GNUTLS_CRD_CERTIFICATE, *pcred);
@@ -81,14 +91,16 @@ void comm_starttls(sessionHandle *session) {
     gnutls_dh_set_prime_bits(psess, 1024);
     gnutls_transport_set_ptr(psess, (gnutls_transport_ptr_t) session->client->socket);
     ret = gnutls_handshake(psess);
+    session->client->tls = psess;
+    
     if (ret < 0) {
         fprintf(stderr, "*** TLS Handshake failed\n");
         gnutls_perror(ret);
         session->client->tls = 0;
         return;
     }
-
-    /* Set the dummy send/recv operators */
+    
+        /* Set the dummy send/recv operators */
     session->client->recv = (dummySocketOp) gnutls_record_recv;
     session->client->send = (dummySocketOp) gnutls_record_send;
 }
@@ -101,11 +113,9 @@ void comm_starttls(sessionHandle *session) {
 void comm_stoptls(sessionHandle *session) {
     if (session->client->tls) {
         gnutls_bye((gnutls_session_t) session->client->tls, GNUTLS_SHUT_RDWR);
-        session->client->tls = 0;
         gnutls_deinit((gnutls_session_t) session->client->tls);
         session->client->tls = 0;
     }
-
     session->client->recv = (dummySocketOp) recv;
     session->client->send = (dummySocketOp) send;
 }

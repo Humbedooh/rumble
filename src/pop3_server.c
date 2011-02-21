@@ -35,6 +35,8 @@ void *rumble_pop3_init(void *m) {
                     *tp;
     pthread_t       p = pthread_self();
     d_iterator      iter;
+    c_iterator      citer;
+    smtpCommandHook *hook;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
@@ -90,24 +92,9 @@ void *rumble_pop3_init(void *m) {
             if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
                 if (!strcmp(cmd, "QUIT")) break;        /* bye! */
-                else if (!strcmp(cmd, "CAPA"))
-                    rc = rumble_server_pop3_capa(master, &session, arg);
-                else if (!strcmp(cmd, "USER"))
-                    rc = rumble_server_pop3_user(master, &session, arg);
-                else if (!strcmp(cmd, "PASS"))
-                    rc = rumble_server_pop3_pass(master, &session, arg);
-                else if (!strcmp(cmd, "TOP"))
-                    rc = rumble_server_pop3_top(master, &session, arg);
-                else if (!strcmp(cmd, "UIDL"))
-                    rc = rumble_server_pop3_uidl(master, &session, arg);
-                else if (!strcmp(cmd, "DELE"))
-                    rc = rumble_server_pop3_dele(master, &session, arg);
-                else if (!strcmp(cmd, "RETR"))
-                    rc = rumble_server_pop3_retr(master, &session, arg);
-                else if (!strcmp(cmd, "LIST"))
-                    rc = rumble_server_pop3_list(master, &session, arg);
-                else if (!strcmp(cmd, "STAR"))
-                    rc = rumble_server_pop3_starttls(master, &session, arg);
+                cforeach((smtpCommandHook *), hook, master->smtp.commands, citer) {
+                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg);
+                }
             }
 
             free(line);

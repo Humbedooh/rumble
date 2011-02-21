@@ -39,9 +39,9 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_ACCEPT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  dvector_add(((masterHandle *) handle)->smtp.init_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  dvector_add(((masterHandle *) handle)->pop3.init_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  dvector_add(((masterHandle *) handle)->imap.init_hooks, hook); break;
+        case RUMBLE_HOOK_SMTP:  cvector_add(((masterHandle *) handle)->smtp.init_hooks, hook); break;
+        case RUMBLE_HOOK_POP3:  cvector_add(((masterHandle *) handle)->pop3.init_hooks, hook); break;
+        case RUMBLE_HOOK_IMAP:  cvector_add(((masterHandle *) handle)->imap.init_hooks, hook); break;
         default:                break;
         }
         break;
@@ -49,9 +49,9 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_COMMAND:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  dvector_add(((masterHandle *) handle)->smtp.cue_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  dvector_add(((masterHandle *) handle)->pop3.cue_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  dvector_add(((masterHandle *) handle)->imap.cue_hooks, hook); break;
+        case RUMBLE_HOOK_SMTP:  cvector_add(((masterHandle *) handle)->smtp.cue_hooks, hook); break;
+        case RUMBLE_HOOK_POP3:  cvector_add(((masterHandle *) handle)->pop3.cue_hooks, hook); break;
+        case RUMBLE_HOOK_IMAP:  cvector_add(((masterHandle *) handle)->imap.cue_hooks, hook); break;
         default:                break;
         }
         break;
@@ -59,19 +59,19 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_EXIT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  dvector_add(((masterHandle *) handle)->smtp.exit_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  dvector_add(((masterHandle *) handle)->pop3.exit_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  dvector_add(((masterHandle *) handle)->imap.exit_hooks, hook); break;
+        case RUMBLE_HOOK_SMTP:  cvector_add(((masterHandle *) handle)->smtp.exit_hooks, hook); break;
+        case RUMBLE_HOOK_POP3:  cvector_add(((masterHandle *) handle)->pop3.exit_hooks, hook); break;
+        case RUMBLE_HOOK_IMAP:  cvector_add(((masterHandle *) handle)->imap.exit_hooks, hook); break;
         default:                break;
         }
         break;
 
     case RUMBLE_HOOK_FEED:
-        dvector_add(((masterHandle *) handle)->_core.feed_hooks, hook);
+        cvector_add(((masterHandle *) handle)->_core.feed_hooks, hook);
         break;
 
     case RUMBLE_HOOK_PARSER:
-        dvector_add(((masterHandle *) handle)->_core.parser_hooks, hook);
+        cvector_add(((masterHandle *) handle)->_core.parser_hooks, hook);
 
     default:
         break;
@@ -84,7 +84,7 @@ typedef ssize_t (*hookFunc) (sessionHandle *);
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_execute_hooks(sessionHandle *session, dvector *hooks, uint32_t flags) {
+ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint32_t flags) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int             g = 0;
@@ -92,13 +92,13 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, dvector *hooks, uint
     dvector_element *el;
     hookFunc        mFunc = NULL;
     hookHandle      *hook;
+    c_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
     if (dvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
 #endif
-    for (el = hooks->first; el != NULL; el = el->next) {
-        hook = (hookHandle *) el->object;
+    cforeach((hookHandle *), hook, hooks, iter) {
         if (!hook) continue;
         if (hook->flags == flags) {
             if (hook->flags & RUMBLE_HOOK_FEED) {
@@ -190,4 +190,49 @@ ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *sessio
     }
 
     return (RUMBLE_RETURN_OKAY);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_imap_add_command(masterHandle *handle, const char *command, imapCommand func) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    imapCommandHook *hook = (imapCommandHook *) malloc(sizeof(imapCommandHook));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    hook->cmd = command;
+    hook->func = func;
+    cvector_add(handle->imap.commands, hook);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_pop3_add_command(masterHandle *handle, const char *command, pop3Command func) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    pop3CommandHook *hook = (pop3CommandHook *) malloc(sizeof(pop3CommandHook));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    hook->cmd = command;
+    hook->func = func;
+    cvector_add(handle->pop3.commands, hook);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_smtp_add_command(masterHandle *handle, const char *command, smtpCommand func) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    smtpCommandHook *hook = (smtpCommandHook *) malloc(sizeof(smtpCommandHook));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    hook->cmd = command;
+    hook->func = func;
+    cvector_add(handle->smtp.commands, hook);
 }

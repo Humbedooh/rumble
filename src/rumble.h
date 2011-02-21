@@ -100,8 +100,8 @@
 #   define RUMBLE_DEBUG_STORAGE    0x04000000
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
-#   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE)   /* debug output flags */
-#   define RUMBLE_VERSION          0x000A054E   /* Internal version for module checks */
+#   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
+#   define RUMBLE_VERSION          0x000B0574   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -364,9 +364,10 @@ typedef struct
 {
     socketHandle    socket;
     dvector         *threads;
-    dvector         *init_hooks;
-    dvector         *cue_hooks;
-    dvector         *exit_hooks;
+    cvector         *init_hooks;
+    cvector         *cue_hooks;
+    cvector         *exit_hooks;
+    cvector         *commands;
     pthread_mutex_t mutex;
     dvector         *handles;
     void * (*init) (void *);
@@ -381,8 +382,8 @@ typedef struct
         pthread_mutex_t workmutex;
         const char      *currentSO;
         dvector         *modules;
-        dvector         *parser_hooks;
-        dvector         *feed_hooks;
+        cvector         *parser_hooks;
+        cvector         *feed_hooks;
         void            *db;
         void            *mail;
         dvector         *batv;  /* BATV handles for bounce control */
@@ -491,6 +492,24 @@ typedef struct
 } accountSession;
 typedef accountSession  imap4Session;
 typedef accountSession  pop3Session;
+typedef ssize_t (*imapCommand) (masterHandle *, sessionHandle *, const char *, const char *);
+typedef ssize_t (*pop3Command) (masterHandle *, sessionHandle *, const char *);
+typedef ssize_t (*smtpCommand) (masterHandle *, sessionHandle *, const char *);
+typedef struct
+{
+    const char  *cmd;
+    imapCommand func;
+} imapCommandHook;
+typedef struct
+{
+    const char  *cmd;
+    pop3Command func;
+} pop3CommandHook;
+typedef struct
+{
+    const char  *cmd;
+    smtpCommand func;
+} smtpCommandHook;
 #   ifdef __cplusplus
 extern "C"
 {
@@ -502,8 +521,17 @@ extern "C"
  #######################################################################################################################
  */
 
+/*$3
+ =======================================================================================================================
+    Functions for hooking modules into rumble
+ =======================================================================================================================
+ */
+
 void            rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *));
 rumblemodule    rumble_module_check(void);
+void            rumble_imap_add_command(masterHandle *handle, const char *command, imapCommand func);
+void            rumble_pop3_add_command(masterHandle *handle, const char *command, pop3Command func);
+void            rumble_smtp_add_command(masterHandle *handle, const char *command, smtpCommand func);
 
 /*$3
  =======================================================================================================================

@@ -265,7 +265,6 @@ char *rumble_comm_read(sessionHandle *session) {
         perror("Calloc failed!");
         exit(1);
     }
-
     t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
     t.tv_usec = 0;
     z = time(0);

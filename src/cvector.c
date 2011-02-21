@@ -10,11 +10,6 @@
  =======================================================================================================================
  =======================================================================================================================
  */
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
 cvector *cvector_init(void) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -23,7 +18,7 @@ cvector *cvector_init(void) {
 
     if (!cvec) return (0);
     cvec->size = 0;
-    cvec->objects = (void**) calloc(33, sizeof(void*));
+    cvec->objects = (void **) calloc(33, sizeof(void *));
     cvec->allocated = 32;
     return (cvec);
 }
@@ -34,17 +29,19 @@ cvector *cvector_init(void) {
  */
 void cvector_add(cvector *parent, void *object) {
 
-    /*~~~~~~~~~~~~~~~~*/
-    unsigned int x,size;
-    /*~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~*/
+    unsigned int    x,
+                    size;
+    /*~~~~~~~~~~~~~~~~~*/
 
     if (!parent) return;
     if (parent->allocated == parent->size) {
         size = parent->allocated * 2;
-        parent->objects = (void**) realloc(parent->objects, (size+1)*sizeof(void*));
+        parent->objects = (void **) realloc(parent->objects, (size + 1) * sizeof(void *));
         parent->allocated = size;
         parent->objects[parent->allocated] = 0;
     }
+
     parent->objects[parent->size] = object;
     parent->size++;
 }
@@ -55,14 +52,15 @@ void cvector_add(cvector *parent, void *object) {
  */
 void cvector_delete(c_iterator *iter) {
 
-    /*~~~~~~~~~~~~~~~~*/
-    unsigned int n;
-    /*~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~*/
+    unsigned int    n;
+    /*~~~~~~~~~~~~~~*/
 
     if (!iter) return;
-    for (n = iter->position; n < iter->parent->size; n++) iter->parent->objects[n] = iter->parent->objects[n+1];
+    for (n = iter->position; n < iter->parent->size; n++) iter->parent->objects[n] = iter->parent->objects[n + 1];
     iter->parent->objects[iter->parent->size] = 0;
     iter->parent->size--;
+    iter->position--;
 }
 
 /*
@@ -75,9 +73,12 @@ void *cvector_foreach(cvector *parent, c_iterator *iter) {
         iter->position++;
         return (parent->objects[0]);
     }
-//    printf("<cvector> current is %#p, next is %#p\n", iter->current,iter->current ? iter->current->next : 0);
-    iter->position++;
 
+    /*
+     * printf("<cvector> current is %#p, next is %#p\n", iter->current,iter->current ?
+     * iter->current->next : 0);
+     */
+    iter->position++;
     return (iter->position < parent->size ? parent->objects[iter->position] : 0);
 }
 
@@ -86,10 +87,9 @@ void *cvector_foreach(cvector *parent, c_iterator *iter) {
  =======================================================================================================================
  */
 void cvector_flush(cvector *parent) {
-
     free(parent->objects);
     parent->allocated = 32;
-    parent->objects = (void**) calloc(33, sizeof(void*));
+    parent->objects = (void **) calloc(33, sizeof(void *));
     parent->size = 0;
 }
 
@@ -107,13 +107,18 @@ void cvector_destroy(cvector *parent) {
  =======================================================================================================================
  */
 void *cvector_pop(cvector *parent) {
-    void* object;
+
+    /*~~~~~~~~~~~~*/
+    void    *object;
+    /*~~~~~~~~~~~~*/
+
     if (!parent) return (0);
-    object = parent->objects[parent->size-1];
-    parent->objects[parent->size-1] = 0;
+    object = parent->objects[parent->size - 1];
+    parent->objects[parent->size - 1] = 0;
     parent->size--;
     return (object);
 }
+
 /*$5
  #######################################################################################################################
     dvector implementation
@@ -175,7 +180,10 @@ void dvector_delete(d_iterator *iter) {
     if (iter->parent->first == el) iter->parent->first = el->next;
     if (iter->parent->last == el) iter->parent->last = el->prev;
     iter->current = el->prev ? el->prev : iter->parent->first;
- //   printf("<dvector> deleted %#p, set current to %#p\n", el, iter->current);
+
+    /*
+     * printf("<dvector> deleted %#p, set current to %#p\n", el, iter->current);
+     */
     free(el);
     iter->parent->size--;
 }
@@ -191,7 +199,11 @@ void *dvector_foreach(dvector *parent, d_iterator *iter) {
         iter->current = parent->first;
         return (iter->current ? iter->current->object : 0);
     }
-//    printf("<dvector> current is %#p, next is %#p\n", iter->current,iter->current ? iter->current->next : 0);
+
+    /*
+     * printf("<dvector> current is %#p, next is %#p\n", iter->current,iter->current ?
+     * iter->current->next : 0);
+     */
     if (!(iter->current = iter->current ? iter->current->next : 0)) return (0);
     return (iter->current->object);
 }
@@ -211,6 +223,7 @@ void dvector_flush(dvector *parent) {
         nl = el->next;
         free(el);
     }
+
     parent->size = 0;
     parent->first = 0;
     parent->last = 0;

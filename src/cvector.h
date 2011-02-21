@@ -3,24 +3,21 @@
 #   define CVECTOR_H
 #   define CVECTOR_FIRST   0
 #   define CVECTOR_LAST    1
-
-
 #   ifdef __cplusplus
 extern "C"
 {
 #   endif
 #   include <stdlib.h>
-
 typedef struct _cvector
 {
-    void **objects;
+    void            **objects;
     unsigned int    size;
     unsigned int    allocated;
 } cvector;
 typedef struct _c_iterator
 {
     cvector         *parent;
-    unsigned int   position;
+    unsigned int    position;
 } c_iterator;
 
 /*$2
@@ -79,13 +76,18 @@ dvector *dvector_init(void);
     }
  -----------------------------------------------------------------------------------------------------------------------
  */
-#   define cforeach(type, element, list, iterator) \
-    iterator.position = 0; \
-    while ((element = type cvector_foreach(list, &iterator)))
 
+#   define cforeach(type, element, list, iterator) \
+    iterator.parent = list; \
+    for \
+    ( \
+        element = type list->objects[(iterator.position = 0)]; \
+        iterator.position < list->size; \
+        element = type list->objects[++iterator.position] \
+    )
 #   define dforeach(type, element, list, iterator) \
     iterator.start = 1; \
-    while ((element = type dvector_foreach(list, &iterator)))
+while ((element = type dvector_foreach(list, &iterator)))
 #   ifdef __cplusplus
 }
 #   endif

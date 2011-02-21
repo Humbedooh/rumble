@@ -31,6 +31,8 @@ void *rumble_smtp_init(void *m) {
                     *tp;
     pthread_t       p = pthread_self();
     d_iterator      iter;
+    c_iterator      citer;
+    pop3CommandHook *hook;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_read(master->domains.rrw);
@@ -89,26 +91,9 @@ void *rumble_smtp_init(void *m) {
             if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
                 if (!strcmp(cmd, "QUIT")) break;        /* bye! */
-                else if (!strcmp(cmd, "MAIL"))
-                    rc = rumble_server_smtp_mail(master, &session, arg);
-                else if (!strcmp(cmd, "RCPT"))
-                    rc = rumble_server_smtp_rcpt(master, &session, arg);
-                else if (!strcmp(cmd, "HELO"))
-                    rc = rumble_server_smtp_helo(master, &session, arg);
-                else if (!strcmp(cmd, "EHLO"))
-                    rc = rumble_server_smtp_ehlo(master, &session, arg);
-                else if (!strcmp(cmd, "NOOP"))
-                    rc = rumble_server_smtp_noop(master, &session, arg);
-                else if (!strcmp(cmd, "DATA"))
-                    rc = rumble_server_smtp_data(master, &session, arg);
-                else if (!strcmp(cmd, "VRFY"))
-                    rc = rumble_server_smtp_vrfy(master, &session, arg);
-                else if (!strcmp(cmd, "RSET"))
-                    rc = rumble_server_smtp_rset(master, &session, arg);
-                else if (!strcmp(cmd, "AUTH"))
-                    rc = rumble_server_smtp_auth(master, &session, arg);
-                else if (!strcmp(cmd, "STAR"))
-                    rc = rumble_server_smtp_tls(master, &session, arg);
+                cforeach((pop3CommandHook *), hook, master->smtp.commands, citer) {
+                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg);
+                }
             }
 
             free(line);
