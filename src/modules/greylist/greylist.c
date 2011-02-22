@@ -1,6 +1,6 @@
 /*
  * File: greylist.c Author: Humbedooh A simple grey-listing module for rumble.
- * Created on January 3, 201
+ * Created on January 3, 2
  */
 #include <string.h>
 #include "../../rumble.h"

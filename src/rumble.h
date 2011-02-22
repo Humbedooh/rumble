@@ -32,6 +32,7 @@
  #######################################################################################################################
  */
 
+
 #   include <stdio.h>
 #   include <stdlib.h>
 #   include <string.h>
@@ -43,7 +44,7 @@
     Microsoft specific headers
  =======================================================================================================================
  */
-
+#define FORCE_OLD_PTHREAD /* comment out this field to use native windows threading (vista or above) */
 #   ifdef RUMBLE_MSC
 #      define RUMBLE_WINSOCK
 #      define HAVE_STRUCT_TIMESPEC
@@ -51,7 +52,11 @@
 #      include <Ws2tcpip.h>
 #      include <WinSock2.h>
 #      include <windns.h>
+#if (NTDDI_VERSION < NTDDI_WIN6 || defined(FORCE_OLD_PTHREAD))
+#include <pthread.h>
+#else
 #      include "winpthreads.h"
+#endif
 #   else
 
 /*$3
@@ -101,7 +106,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x000D0613   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x000D0617   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================

@@ -38,9 +38,9 @@ int main(int argc, char **argv) {
     rumble_master_init(master);
     rumble_database_load(master);
     rumble_modules_load(master);
+    printf("%-48s", "Launching core service...");
     rumble_database_update_domains();
     pthread_attr_init(&attr);
-    printf("%-48s", "Launching core service...");
     t = (pthread_t *) malloc(sizeof(pthread_t));
     dvector_add(master->_core.workers, t);
     pthread_create(t, NULL, rumble_worker_init, master);

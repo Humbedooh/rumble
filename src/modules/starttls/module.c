@@ -98,17 +98,13 @@ ssize_t rumble_tls_stop(sessionHandle *session) {
  */
 rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    masterHandle    *m = (masterHandle *) master;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    masterHandle                        *m = (masterHandle *) master;
+    gnutls_certificate_credentials_t    *pcred;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    gnutls_certificate_credentials_t    *pcred;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     gcry_control(GCRYCTL_DISABLE_SECMEM_WARN);
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
     gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
