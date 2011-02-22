@@ -1,3 +1,4 @@
+/*$I0 */
 
 /* File: rumble_lua.h Author: Administrator Created on January 30, 2011, 5:15 AM */
 #ifndef RUMBLE_LUA_H

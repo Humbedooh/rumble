@@ -208,7 +208,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     buffer = (char *) calloc(1, len);
     if (!buffer) merror();
     vsprintf(buffer, d, vl);
-    if (session->client->tls != NULL) len = session->client->send(session->client->tls, buffer, strlen(buffer), 0);
+    if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, strlen(buffer), 0);
     free(buffer);
     return (len);
@@ -265,13 +265,14 @@ char *rumble_comm_read(sessionHandle *session) {
         perror("Calloc failed!");
         exit(1);
     }
+
     t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
     t.tv_usec = 0;
     z = time(0);
     for (p = 0; p < 1024; p++) {
         f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
         if (f > 0) {
-            if (session->client->tls != NULL) rc = session->client->recv(session->client->tls, &b, 1, 0);
+            if (session->client->tls != NULL) rc = (session->client->recv) (session->client->tls, &b, 1, 0);
             else rc = recv(session->client->socket, &b, 1, 0);
             if (rc <= 0) {
                 free(ret);
@@ -283,7 +284,10 @@ char *rumble_comm_read(sessionHandle *session) {
         } else {
             z = time(0) - z;
             free(ret);
-            printf("timeout after %lld secs!\r\n", z);
+#ifndef PRIdPTR
+#   define PRIdPTR "ld"
+#endif
+            printf("timeout after %l"PRIdPTR " secs!\r\n", z);
             return (NULL);
         }
     }
@@ -297,7 +301,7 @@ char *rumble_comm_read(sessionHandle *session) {
  */
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
     if (session->client->tls != NULL) {
-        return (session->client->send(session->client->tls, message, strlen(message), 0));
+        return ((session->client->send) (session->client->tls, message, strlen(message), 0));
     }
 
     return (send(session->client->socket, message, strlen(message), 0));

@@ -360,7 +360,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
             /* Traverse letters */
             foreach((rumble_letter *), letter, folder->letters, liter) {
                 if (!letter) {
-                    printf("Memory corruption??!\n");
+                    printf("Memory corruption?!\n");
                     continue;
                 }
 

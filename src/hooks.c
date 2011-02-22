@@ -86,14 +86,13 @@ typedef ssize_t (*hookFunc) (sessionHandle *);
  */
 ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint32_t flags) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             g = 0;
-    ssize_t         rc = RUMBLE_RETURN_OKAY;
-    dvector_element *el;
-    hookFunc        mFunc = NULL;
-    hookHandle      *hook;
-    c_iterator      iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int         g = 0;
+    ssize_t     rc = RUMBLE_RETURN_OKAY;
+    hookFunc    mFunc = NULL;
+    hookHandle  *hook;
+    c_iterator  iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
     if (dvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
@@ -196,43 +195,21 @@ ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *sessio
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_imap_add_command(masterHandle *handle, const char *command, imapCommand func) {
+void rumble_service_add_command(rumbleService *svc, const char *command, svcCommand func) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    imapCommandHook *hook = (imapCommandHook *) malloc(sizeof(imapCommandHook));
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    svcCommandHook  *hook = (svcCommandHook *) malloc(sizeof(svcCommandHook));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     hook->cmd = command;
     hook->func = func;
-    cvector_add(handle->imap.commands, hook);
+    cvector_add(svc->commands, hook);
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_pop3_add_command(masterHandle *handle, const char *command, pop3Command func) {
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    pop3CommandHook *hook = (pop3CommandHook *) malloc(sizeof(pop3CommandHook));
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    hook->cmd = command;
-    hook->func = func;
-    cvector_add(handle->pop3.commands, hook);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void rumble_smtp_add_command(masterHandle *handle, const char *command, smtpCommand func) {
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    smtpCommandHook *hook = (smtpCommandHook *) malloc(sizeof(smtpCommandHook));
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    hook->cmd = command;
-    hook->func = func;
-    cvector_add(handle->smtp.commands, hook);
+void rumble_service_add_capability(rumbleService *svc, const char *capa) {
+    cvector_add(svc->capabilities, capa);
 }

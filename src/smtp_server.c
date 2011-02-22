@@ -32,7 +32,7 @@ void *rumble_smtp_init(void *m) {
     pthread_t       p = pthread_self();
     d_iterator      iter;
     c_iterator      citer;
-    pop3CommandHook *hook;
+    svcCommandHook  *hook;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_read(master->domains.rrw);
@@ -78,21 +78,18 @@ void *rumble_smtp_init(void *m) {
         arg = (char *) malloc(1024);
         if (!cmd || !arg) merror();
         while (rc != RUMBLE_RETURN_FAILURE) {
-            memset(cmd, 0, 5);
+            memset(cmd, 0, 9);
             memset(arg, 0, 1024);
             line = rumble_comm_read(sessptr);
             rc = 421;
             if (!line) break;
             rc = 500;   /* default return code is "500 unknown command thing" */
 
-            /*
-             * printf("<Client> %s", line);
-             */
-            if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
+            if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
-                if (!strcmp(cmd, "QUIT")) break;        /* bye! */
-                cforeach((pop3CommandHook *), hook, master->smtp.commands, citer) {
-                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg);
+                if (!strcmp(cmd, "QUIT")) { rc = RUMBLE_RETURN_FAILURE; break;}        /* bye! */
+                cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
+                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
                 }
             }
 
@@ -195,7 +192,7 @@ void *rumble_smtp_init(void *m) {
     Command specific routines
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~*/
     ssize_t     rc;
@@ -208,7 +205,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
     if ((session->flags & RUMBLE_SMTP_HAS_MAIL)) return (503);  /* And we shouldn't have gotten a MAIL FROM yet */
 
     /* Try to fetch standard syntax: MAIL FROM: [whatever] <user@domain.tld> */
-    session->sender = rumble_parse_mail_address(argument);
+    session->sender = rumble_parse_mail_address(parameters);
     if (session->sender) {
 
         /* Fire events scheduled for pre-processing run */
@@ -271,7 +268,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~*/
     address     *recipient;
@@ -284,7 +281,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
     if (!(session->flags & RUMBLE_SMTP_HAS_MAIL)) return (503);
 
     /* Allocate stuff and start parsing */
-    recipient = rumble_parse_mail_address(argument);
+    recipient = rumble_parse_mail_address(parameters);
     if (recipient) {
         dvector_add(session->recipients, recipient);
 
@@ -355,23 +352,23 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_helo(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_helo(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int     rc;
     char    *tmp = (char *) malloc(128);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    rc = sscanf(argument, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
+    rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
     if (rc < 3) {
         free(tmp);
-        printf("Bad HELO: %s\n", argument);
+        printf("Bad HELO: %s\n", parameters);
         return (504552);    /* simple test for FQDN */
     }
 
     free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_HELO;
-    rsdict(session->dict, "helo", argument);
+    rsdict(session->dict, "helo", parameters);
     return (250);
 }
 
@@ -379,35 +376,30 @@ ssize_t rumble_server_smtp_helo(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int     rc;
     char    *tmp = (char *) malloc(128);
+    char *el;
+    c_iterator iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    rc = sscanf(argument, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
+    rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
     if (rc < 3) {
         free(tmp);
-        printf("Bad EHLO: %s\n", argument);
+        printf("Bad EHLO: %s\n", parameters);
         return (504552);    /* simple test for FQDN */
     }
 
     free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
     rumble_comm_send(session, "250-Extended commands follow\r\n");
-    rumble_comm_send(session, "250-EXPN\r\n");
-    rumble_comm_send(session, "250-VRFY\r\n");
-    rumble_comm_send(session, "250-PIPELINING\r\n");
-    rumble_comm_send(session, "250-8BITMIME\r\n");
-    rumble_comm_send(session, "250-STARTTLS\r\n");
-    rumble_comm_send(session, "250-AUTH LOGIN PLAIN\r\n");
-    rumble_comm_send(session, "250-DELIVERBY 900\r\n");
-    rumble_comm_send(session, "250-DSN\r\n");
-    rumble_comm_send(session, "250-SIZE\r\n");
-    rumble_comm_send(session, "250-ENHANCEDSTATUSCODES\r\n");
-    rumble_comm_send(session, "250 XVERP\r\n");
-    rsdict(session->dict, "helo", argument);
+    cforeach((char*), el, master->smtp.capabilities, iter) {
+        rcprintf(session, "250-%s\r\n", el);
+    }
+    rcsend(session, "250 Done\r\n");
+    rsdict(session->dict, "helo", parameters);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -415,7 +407,7 @@ ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~*/
     char        *fid,
@@ -502,7 +494,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_rset(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_rset(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~*/
     ssize_t rc;
@@ -526,7 +518,7 @@ ssize_t rumble_server_smtp_rset(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_vrfy(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_vrfy(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     ssize_t rc;
@@ -534,7 +526,7 @@ ssize_t rumble_server_smtp_vrfy(masterHandle *master, sessionHandle *session, co
     char    *domain = (char *) calloc(1, 128);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    if (sscanf(argument, "%128[^@\"]@%128[^\"]", user, domain)) {
+    if (sscanf(parameters, "%128[^@\"]@%128[^\"]", user, domain)) {
 
         /* Fire events scheduled for pre-processing run */
         rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_VRFY);
@@ -551,7 +543,7 @@ ssize_t rumble_server_smtp_vrfy(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~*/
     ssize_t rc;
@@ -574,7 +566,7 @@ ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char            method[31],
@@ -589,8 +581,8 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
 
     memset(method, 0, 31);
     memset(digest, 0, 1025);
-    printf("Got: %s\n", argument);
-    sscanf(argument, "%30s %1024s", method, digest);
+    printf("Got: %s\n", parameters);
+    sscanf(parameters, "%30s %1024s", method, digest);
     rumble_string_lower(method);
     pass = "";
     addr = 0;
@@ -646,7 +638,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_smtp_tls(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_smtp_tls(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
     rcsend(session, "220 OK, starting TLS\r\n");
     comm_starttls(session);
     return (RUMBLE_RETURN_IGNORE);

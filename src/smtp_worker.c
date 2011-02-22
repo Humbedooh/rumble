@@ -8,7 +8,6 @@
 #include "servers.h"
 #include "private.h"
 #include "database.h"
-#include <sys/stat.h>
 #include "comm.h"
 mqueue  *current = 0;
 dvector *badmx;

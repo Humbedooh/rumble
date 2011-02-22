@@ -8,9 +8,19 @@ extern "C"
 {
 #   endif
 #   include <stdlib.h>
+
+/*$2
+ -----------------------------------------------------------------------------------------------------------------------
+    cvector: Chunked vectoring mechanism for ANSI C. Uses alligned memory chunks for accessing an array of arbitrary
+    size. This allows for very fast access to the elements (constant time) and adding new values in constant amortized
+    time, while deleting values may take a significant amount of linear time. If you have a static array of values, or
+    just an array that doesn't change much, cvector is the best choice for fast access to elements.
+ -----------------------------------------------------------------------------------------------------------------------
+ */
+
 typedef struct _cvector
 {
-    void            **objects;
+    const void      **objects;
     unsigned int    size;
     unsigned int    allocated;
 } cvector;
@@ -22,7 +32,9 @@ typedef struct _c_iterator
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
-    dvector: Slim implementation of cvector
+    dvector: Dynamic vector mechanism. Unlike cvector, dvector uses mutual referencing to allow for very fast
+    insertions and deletions (constant time), while accessing elements is done somewhat slower (linear time). Thus,
+    dvectors are optimal for arrays where you have a lot of inserting and deleting compared to indexing.
  -----------------------------------------------------------------------------------------------------------------------
  */
 
@@ -45,13 +57,13 @@ typedef struct _d_iterator
     dvector         *parent;
     unsigned char   start;
 } d_iterator;
-void    cvector_add(cvector *parent, void *object);
-void    cvector_delete(c_iterator *iter);
-void    *cvector_foreach(cvector *parent, c_iterator *iter);
-void    cvector_flush(cvector *parent);
-void    cvector_destroy(cvector *parent);
-void    *cvector_pop(cvector *parent);
-cvector *cvector_init(void);
+void        cvector_add(cvector *parent, const void *object);
+void        cvector_delete(c_iterator *iter);
+const void  *cvector_foreach(cvector *parent, c_iterator *iter);
+void        cvector_flush(cvector *parent);
+void        cvector_destroy(cvector *parent);
+const void  *cvector_pop(cvector *parent);
+cvector     *cvector_init(void);
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------

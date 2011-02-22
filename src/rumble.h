@@ -48,10 +48,10 @@
 #      define RUMBLE_WINSOCK
 #      define HAVE_STRUCT_TIMESPEC
 #      pragma warning(disable : 5)
-#      include "pthreads-win32/include/pthread.h"
 #      include <Ws2tcpip.h>
 #      include <WinSock2.h>
 #      include <windns.h>
+#      include "winpthreads.h"
 #   else
 
 /*$3
@@ -101,7 +101,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x000B0574   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x000C060D   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -368,6 +368,7 @@ typedef struct
     cvector         *cue_hooks;
     cvector         *exit_hooks;
     cvector         *commands;
+    cvector         *capabilities;
     pthread_mutex_t mutex;
     dvector         *handles;
     void * (*init) (void *);
@@ -490,26 +491,12 @@ typedef struct
     rumble_mailman_shared_bag   *bag;
     int64_t                     folder;
 } accountSession;
-typedef accountSession  imap4Session;
-typedef accountSession  pop3Session;
-typedef ssize_t (*imapCommand) (masterHandle *, sessionHandle *, const char *, const char *);
-typedef ssize_t (*pop3Command) (masterHandle *, sessionHandle *, const char *);
-typedef ssize_t (*smtpCommand) (masterHandle *, sessionHandle *, const char *);
+typedef ssize_t (*svcCommand) (masterHandle *, sessionHandle *, const char *, const char *);
 typedef struct
 {
     const char  *cmd;
-    imapCommand func;
-} imapCommandHook;
-typedef struct
-{
-    const char  *cmd;
-    pop3Command func;
-} pop3CommandHook;
-typedef struct
-{
-    const char  *cmd;
-    smtpCommand func;
-} smtpCommandHook;
+    svcCommand  func;
+} svcCommandHook;
 #   ifdef __cplusplus
 extern "C"
 {
@@ -529,9 +516,8 @@ extern "C"
 
 void            rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *));
 rumblemodule    rumble_module_check(void);
-void            rumble_imap_add_command(masterHandle *handle, const char *command, imapCommand func);
-void            rumble_pop3_add_command(masterHandle *handle, const char *command, pop3Command func);
-void            rumble_smtp_add_command(masterHandle *handle, const char *command, smtpCommand func);
+void            rumble_service_add_command(rumbleService *svc, const char *command, svcCommand func);
+void            rumble_service_add_capability(rumbleService *svc, const char *command);
 
 /*$3
  =======================================================================================================================
@@ -598,7 +584,7 @@ void                            rumble_mailman_close_bag(rumble_mailman_shared_b
 rumble_mailman_shared_folder    *rumble_mailman_current_folder(accountSession *sess);
 rumble_mailman_shared_bag       *rumble_letters_retrieve_shared(uint32_t uid);
 void                            rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);
-uint32_t                        rumble_mailman_commit(imap4Session *imap, rumble_mailman_shared_folder *folder);
+uint32_t                        rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder);
 void                            rumble_mailman_free(rumble_mailman_shared_bag *bag);
 uint32_t                        rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
 uint32_t                        rumble_mailman_copy_letter

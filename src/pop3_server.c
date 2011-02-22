@@ -30,21 +30,21 @@ void *rumble_pop3_init(void *m) {
     int             x = 0;
     time_t          now;
     sessionHandle   *s;
-    pop3Session     *pops;
+    accountSession  *pops;
     void            *pp,
                     *tp;
     pthread_t       p = pthread_self();
     d_iterator      iter;
     c_iterator      citer;
-    smtpCommandHook *hook;
+    svcCommandHook  *hook;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
     session.recipients = dvector_init();
-    session._svcHandle = (pop3Session *) malloc(sizeof(pop3Session));
+    session._svcHandle = (accountSession *) malloc(sizeof(accountSession));
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session._master = m;
-    pops = (pop3Session *) session._svcHandle;
+    pops = (accountSession *) session._svcHandle;
     pops->account = 0;
     pops->bag = 0;
     session._tflags = RUMBLE_THREAD_POP3;   /* Identify the thread/session as POP3 */
@@ -83,17 +83,17 @@ void *rumble_pop3_init(void *m) {
         arg = (char *) malloc(1024);
         if (!cmd || !arg) merror();
         while (rc != RUMBLE_RETURN_FAILURE) {
-            memset(cmd, 0, 5);
+            memset(cmd, 0, 9);
             memset(arg, 0, 1024);
             line = rumble_comm_read(sessptr);
             rc = 421;
             if (!line) break;
             rc = 105;   /* default return code is "500 unknown command thing" */
-            if (sscanf(line, "%4[^\t ]%*[ \t]%1000[^\r\n]", cmd, arg)) {
+            if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
-                if (!strcmp(cmd, "QUIT")) break;        /* bye! */
-                cforeach((smtpCommandHook *), hook, master->smtp.commands, citer) {
-                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg);
+                if (!strcmp(cmd, "QUIT")) { rc = RUMBLE_RETURN_FAILURE; break;}        /* bye! */
+                cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
+                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
                 }
             }
 
@@ -177,14 +177,15 @@ void *rumble_pop3_init(void *m) {
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char* el;
+    c_iterator iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rcsend(session, "+OK Here's what I got:\r\n");
-    rcsend(session, "TOP\r\n");
-    rcsend(session, "UIDL\r\n");
-    rcsend(session, "USER\r\n");
-    rcsend(session, "STARTTLS\r\n");
-    rcsend(session, "PIPELINING\r\n");
-    rcprintf(session, "IMPLEMENTATION Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    cforeach((char*), el, master->pop3.capabilities, iter) {
+        rcprintf(session, "%s\r\n", el);
+    }    
     rcsend(session, ".\r\n");
     return (RUMBLE_RETURN_IGNORE);
 }
@@ -193,10 +194,10 @@ ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_user(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_user(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
     if (session->flags & RUMBLE_POP3_HAS_AUTH) return (105);
     rfdict(session->dict);
-    rsdict(session->dict, "user", argument);
+    rsdict(session->dict, "user", parameters);
     session->flags |= RUMBLE_POP3_HAS_USER;
     return (104);
 }
@@ -205,14 +206,14 @@ ssize_t rumble_server_pop3_user(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char        *usr,
-                *dmn,
-                *tmp;
-    pop3Session *pops = (pop3Session *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char            *usr,
+                    *dmn,
+                    *tmp;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_USER)) return (105);
     if (session->flags & RUMBLE_POP3_HAS_AUTH) return (105);
@@ -222,7 +223,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
     if (sscanf(rrdict(session->dict, "user"), "%128[^@]@%128c", usr, dmn) == 2) {
         printf("searching for user <%s> @ <%s>\n", usr, dmn);
         if ((pops->account = rumble_account_data(session, usr, dmn))) {
-            tmp = rumble_sha256((const unsigned char *) argument);
+            tmp = rumble_sha256((const unsigned char *) parameters);
             printf("matching %s against %s\n", tmp, pops->account->hash);
             if (strcmp(tmp, pops->account->hash)) {
                 free(usr);
@@ -251,15 +252,15 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
     uint32_t                        i;
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
-    pop3Session                     *pops = (pop3Session *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    accountSession                  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rcsend(session, "+OK\r\n");
@@ -280,15 +281,15 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
     uint32_t                        i;
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
-    pop3Session                     *pops = (pop3Session *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    accountSession                  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rcsend(session, "+OK\r\n");
@@ -309,20 +310,20 @@ ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
     rumble_mailman_shared_folder    *folder;
     int                             j,
                                     i,
                                     found;
     d_iterator                      iter;
-    pop3Session                     *pops = (pop3Session *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    accountSession                  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
-    i = atoi(argument);
+    i = atoi(parameters);
     found = 0;
     rumble_rw_start_write(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
@@ -346,9 +347,9 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
     char                            buffer[2049];
     FILE                            *fp;
@@ -357,12 +358,12 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
                                     found;
     d_iterator                      iter;
     rumble_mailman_shared_folder    *folder;
-    pop3Session                     *pops = (pop3Session *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    accountSession                  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     fp = 0;
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
-    i = atoi(argument);
+    i = atoi(parameters);
     found = 0;
     rumble_rw_start_read(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
@@ -397,9 +398,9 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char                            buffer[2049];
     FILE                            *fp;
     int                             i,
@@ -409,12 +410,12 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
     rumble_mailman_shared_folder    *folder;
     rumble_letter                   *letter;
     d_iterator                      iter;
-    pop3Session                     *pops = (pop3Session *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    accountSession                  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     fp = 0;
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
-    if (sscanf(argument, "%i %i", &i, &lines) == 2) {
+    if (sscanf(parameters, "%i %i", &i, &lines) == 2) {
         found = 0;
         rumble_rw_start_read(pops->bag->rrw);
         folder = rumble_mailman_current_folder(pops);
@@ -453,7 +454,7 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_server_pop3_starttls(masterHandle *master, sessionHandle *session, const char *argument) {
+ssize_t rumble_server_pop3_starttls(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
     rcsend(session, "OK, starting TLS\r\n");
     comm_starttls(session);
     return (RUMBLE_RETURN_IGNORE);
