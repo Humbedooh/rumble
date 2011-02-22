@@ -101,7 +101,7 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x000C060D   /* Internal version for module checks */
+#   define RUMBLE_VERSION          0x000D0613   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================
@@ -124,6 +124,7 @@
 #   define RUMBLE_HOOK_EXIT        0x00000004
 #   define RUMBLE_HOOK_FEED        0x00000008
 #   define RUMBLE_HOOK_PARSER      0x00000010
+#   define RUMBLE_HOOK_CLOSE       0x00000020
 #   define RUMBLE_HOOK_STATE_MASK  0x000000FF
 #   define RUMBLE_HOOK_SMTP        0x00000100
 #   define RUMBLE_HOOK_POP3        0x00000200

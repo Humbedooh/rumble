@@ -1,10 +1,10 @@
 /*
  * File: whitelist.c Author: Humbedooh A simple white-listing module for rumble.
- * Created on January 3, 2011, 8:08
+ * Created on January 3, 2011, 8:0
  */
 #include <string.h>
 #include "../../rumble.h"
-cvector * rumble_whiteList;
+cvector *rumble_whiteList;
 
 /*
  =======================================================================================================================
@@ -12,11 +12,11 @@ cvector * rumble_whiteList;
  */
 ssize_t rumble_whitelist(sessionHandle *session) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     /* Make our own copy of the IP with an added dot at the end. */
-    char    *ip = malloc(strlen(session->client->addr) + 2);
-    c_iterator iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char        *ip = malloc(strlen(session->client->addr) + 2);
+    c_iterator  iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(ip, "%s.", session->client->addr);
 
@@ -25,7 +25,7 @@ ssize_t rumble_whitelist(sessionHandle *session) {
     const char  *addr;
     /*~~~~~~~~~~~~~~*/
 
-    cforeach((const char*), addr, rumble_whiteList, iter) {
+    cforeach((const char *), addr, rumble_whiteList, iter) {
         if (!strncmp(addr, ip, strlen(addr))) {
             session->flags |= RUMBLE_SMTP_WHITELIST;    /* Set the whitelist flag if the client matches a range. */
             break;

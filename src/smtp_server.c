@@ -84,10 +84,13 @@ void *rumble_smtp_init(void *m) {
             rc = 421;
             if (!line) break;
             rc = 500;   /* default return code is "500 unknown command thing" */
-
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
-                if (!strcmp(cmd, "QUIT")) { rc = RUMBLE_RETURN_FAILURE; break;}        /* bye! */
+                if (!strcmp(cmd, "QUIT")) {
+                    rc = RUMBLE_RETURN_FAILURE;
+                    break;
+                }       /* bye! */
+
                 cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
                 }
@@ -111,11 +114,11 @@ void *rumble_smtp_init(void *m) {
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
-            Close socket and TLS (if open)
+            Close socket and run pre-close hooks.
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        comm_stoptls(&session); /* Close the TLS session if active */
+        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
         close(session.client->socket);
 
         /*$2
@@ -378,12 +381,12 @@ ssize_t rumble_server_smtp_helo(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int     rc;
-    char    *tmp = (char *) malloc(128);
-    char *el;
-    c_iterator iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int         rc;
+    char        *tmp = (char *) malloc(128);
+    char        *el;
+    c_iterator  iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
     if (rc < 3) {
@@ -395,9 +398,10 @@ ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, co
     free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
     rumble_comm_send(session, "250-Extended commands follow\r\n");
-    cforeach((char*), el, master->smtp.capabilities, iter) {
+    cforeach((char *), el, master->smtp.capabilities, iter) {
         rcprintf(session, "250-%s\r\n", el);
     }
+
     rcsend(session, "250 Done\r\n");
     rsdict(session->dict, "helo", parameters);
     return (RUMBLE_RETURN_IGNORE);
@@ -632,14 +636,4 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
     }
 
     return (501);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-ssize_t rumble_server_smtp_tls(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
-    rcsend(session, "220 OK, starting TLS\r\n");
-    comm_starttls(session);
-    return (RUMBLE_RETURN_IGNORE);
 }

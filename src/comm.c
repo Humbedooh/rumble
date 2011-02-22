@@ -272,7 +272,7 @@ char *rumble_comm_read(sessionHandle *session) {
     for (p = 0; p < 1024; p++) {
         f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
         if (f > 0) {
-            if (session->client->tls != NULL) rc = (session->client->recv) (session->client->tls, &b, 1, 0);
+            if (session->client->recv) rc = (session->client->recv) (session->client->tls, &b, 1, 0);
             else rc = recv(session->client->socket, &b, 1, 0);
             if (rc <= 0) {
                 free(ret);
@@ -300,9 +300,6 @@ char *rumble_comm_read(sessionHandle *session) {
  =======================================================================================================================
  */
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
-    if (session->client->tls != NULL) {
-        return ((session->client->send) (session->client->tls, message, strlen(message), 0));
-    }
-
+    if (session->client->send) return ((session->client->send) (session->client->tls, message, strlen(message), 0));
     return (send(session->client->socket, message, strlen(message), 0));
 }

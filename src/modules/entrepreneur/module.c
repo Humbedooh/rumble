@@ -161,7 +161,7 @@ void *accept_connection(void *m) {
     dvector             *args,
                         *form,
                         *dict;
-    d_iterator iter;
+    d_iterator          iter;
     char                *postBuffer,
                         *URL,
                         *rest,
@@ -223,8 +223,8 @@ void *accept_connection(void *m) {
         }
 
         URI = strlen(rrdict(args, "get")) ? rrdict(args, "get") : rrdict(args, "post");
-        URL = (char*) calloc(1, strlen(URI));
-        rest = (char*) calloc(1, strlen(URI));
+        URL = (char *) calloc(1, strlen(URI));
+        rest = (char *) calloc(1, strlen(URI));
         if (!URL || !rest) merror();
         sscanf(URI, "/%200[^? ]?%200[^ ]", URL, rest);
         if (strlen(rest)) rumble_scan_formdata(form, rest);
@@ -234,7 +234,7 @@ void *accept_connection(void *m) {
         }
 
         myPos = 0;
-        foreach ((rumble_module_info *), mod, master->_core.modules, iter) {
+        foreach((rumble_module_info *), mod, master->_core.modules, iter) {
             sprintf(buffa, "<b>%s</b> <small>(<font color='red'>%s</font>)</small>: <br/> %s<hr/><br/>\n", mod->title, mod->file,
                     mod->description);
             strncpy(&buffb[myPos], buffa, strlen(buffa));

@@ -44,7 +44,6 @@ void rumble_master_init(masterHandle *master) {
     rumble_service_add_command(&master->smtp, "VRFY", rumble_server_smtp_vrfy);
     rumble_service_add_command(&master->smtp, "RSET", rumble_server_smtp_rset);
     rumble_service_add_command(&master->smtp, "AUTH", rumble_server_smtp_auth);
-    rumble_service_add_command(&master->smtp, "STARTTLS", rumble_server_smtp_tls);
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -52,7 +51,6 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_capability(&master->smtp, "STARTTLS");
     rumble_service_add_capability(&master->smtp, "EXPN");
     rumble_service_add_capability(&master->smtp, "VRFY");
     rumble_service_add_capability(&master->smtp, "PIPELINING");
@@ -99,7 +97,6 @@ void rumble_master_init(masterHandle *master) {
     rumble_service_add_command(&master->pop3, "DELE", rumble_server_pop3_dele);
     rumble_service_add_command(&master->pop3, "RETR", rumble_server_pop3_retr);
     rumble_service_add_command(&master->pop3, "LIST", rumble_server_pop3_list);
-    rumble_service_add_command(&master->pop3, "STARTTLS", rumble_server_pop3_starttls);
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -107,7 +104,6 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_capability(&master->pop3, "STARTTLS");
     rumble_service_add_capability(&master->pop3, "TOP");
     rumble_service_add_capability(&master->pop3, "UIDL");
     rumble_service_add_capability(&master->pop3, "PIPELINING");
@@ -145,7 +141,6 @@ void rumble_master_init(masterHandle *master) {
     rumble_service_add_command(&master->imap, "NOOP", rumble_server_imap_noop);
     rumble_service_add_command(&master->imap, "CAPABILITY", rumble_server_imap_capability);
     rumble_service_add_command(&master->imap, "AUTHENTICATE", rumble_server_imap_authenticate);
-    rumble_service_add_command(&master->imap, "STARTTLS", rumble_server_imap_starttls);
     rumble_service_add_command(&master->imap, "SELECT", rumble_server_imap_select);
     rumble_service_add_command(&master->imap, "EXAMINE", rumble_server_imap_examine);
     rumble_service_add_command(&master->imap, "CREATE", rumble_server_imap_create);
@@ -174,7 +169,6 @@ void rumble_master_init(masterHandle *master) {
 
     rumble_service_add_capability(&master->imap, "IMAP4rev1");
     rumble_service_add_capability(&master->imap, "IDLE");
-    rumble_service_add_capability(&master->imap, "STARTTLS");
     rumble_service_add_capability(&master->imap, "CONDSTORE");
     rumble_service_add_capability(&master->imap, "AUTH=PLAIN");
     rumble_service_add_capability(&master->imap, "UIDPLUS");

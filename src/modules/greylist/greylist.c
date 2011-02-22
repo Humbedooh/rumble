@@ -1,13 +1,12 @@
 /*
  * File: greylist.c Author: Humbedooh A simple grey-listing module for rumble.
- * Created on January 3, 2011, 8
+ * Created on January 3, 201
  */
 #include <string.h>
 #include "../../rumble.h"
 #define GREYLIST_MAX_AGE    172800  /* Grey-list records will linger for 48 hours. */
 #define GREYLIST_MIN_AGE    900     /* Put new triplets on hold for 15 minutes */
 dvector rumble_greyList;
-
 typedef struct
 {
     char    *what;
@@ -28,7 +27,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
     time_t          n,
                     now;
     rumble_triplet  *item;
-    d_iterator iter;
+    d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     /*
@@ -67,7 +66,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
     now = time(0);
 
     /* Run through the list of triplets we have and look for this one. */
-    foreach ((rumble_triplet *), item, &rumble_greyList, iter) {
+    foreach((rumble_triplet *), item, &rumble_greyList, iter) {
         if (!strcmp(item->what, str)) {
             n = now - item->when;
             break;

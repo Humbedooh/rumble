@@ -131,7 +131,13 @@ void *rumble_imap_init(void *m) {
             rcprintf(&session, "%s OK <%s> signing off for now.\r\n", extra_data, myName);
         }
 
-        comm_stoptls(&session); /* Close the TLS session if active */
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Run hooks scheduled for service closing
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
         close(session.client->socket);
 
         /* Start cleanup */
@@ -244,16 +250,17 @@ ssize_t rumble_server_imap_noop(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_imap_capability(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char capa[1024];
-    char* el;
-    c_iterator iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
+    char        capa[1024];
+    char        *el;
+    c_iterator  iter;
+    /*~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(capa, "* CAPABILITY");
-    cforeach((char*), el, master->imap.capabilities, iter) {
+    cforeach((char *), el, master->imap.capabilities, iter) {
         sprintf(&capa[strlen(capa)], " %s", el);
     }
+
     sprintf(&capa[strlen(capa)], "\r\n");
     rcsend(session, capa);
     rcprintf(session, "%s OK CAPABILITY completed.\r\n", extra_data);
@@ -310,17 +317,6 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
     }
 
     rumble_free_address(addr);
-    return (RUMBLE_RETURN_IGNORE);
-}
-
-/*
- =======================================================================================================================
-    STARTTLS
- =======================================================================================================================
- */
-ssize_t rumble_server_imap_starttls(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
-    rcprintf(session, "%s OK Begin TLS negotiation now\r\n", extra_data);
-    comm_starttls(session);
     return (RUMBLE_RETURN_IGNORE);
 }
 

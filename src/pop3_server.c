@@ -91,7 +91,11 @@ void *rumble_pop3_init(void *m) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
-                if (!strcmp(cmd, "QUIT")) { rc = RUMBLE_RETURN_FAILURE; break;}        /* bye! */
+                if (!strcmp(cmd, "QUIT")) {
+                    rc = RUMBLE_RETURN_FAILURE;
+                    break;
+                }       /* bye! */
+
                 cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
                 }
@@ -113,8 +117,13 @@ void *rumble_pop3_init(void *m) {
         if (rc == 421) rumble_comm_send(sessptr, rumble_pop3_reply_code(103));  /* timeout! */
         else rumble_comm_send(sessptr, rumble_pop3_reply_code(102));            /* bye! */
 
-        /* Shut down socket */
-        comm_stoptls(&session); /* Close the TLS session if active */
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Close socket and run pre-close hooks.
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
         close(session.client->socket);
 
         /* Start cleaning up after the session */
@@ -178,14 +187,17 @@ void *rumble_pop3_init(void *m) {
  =======================================================================================================================
  */
 ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char* el;
-    c_iterator iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    /*~~~~~~~~~~~~~*/
+    char        *el;
+    c_iterator  iter;
+    /*~~~~~~~~~~~~~*/
+
     rcsend(session, "+OK Here's what I got:\r\n");
-    cforeach((char*), el, master->pop3.capabilities, iter) {
+    cforeach((char *), el, master->pop3.capabilities, iter) {
         rcprintf(session, "%s\r\n", el);
-    }    
+    }
+
     rcsend(session, ".\r\n");
     return (RUMBLE_RETURN_IGNORE);
 }
@@ -448,14 +460,4 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
     }
 
     return (105);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-ssize_t rumble_server_pop3_starttls(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
-    rcsend(session, "OK, starting TLS\r\n");
-    comm_starttls(session);
-    return (RUMBLE_RETURN_IGNORE);
 }

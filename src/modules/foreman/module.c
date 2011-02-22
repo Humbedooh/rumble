@@ -1,6 +1,6 @@
 /*
  * File: module.c Author: Humbedooh A simple (but efficient) load balancing module
- * for rumble. Created on January 3, 2011, 8:08 PM
+ * for rumble. Created on January 3, 2011, 8:08
  */
 #include "../../rumble.h"
 #include <pthread.h>
@@ -58,12 +58,12 @@ ssize_t accept_hook(sessionHandle *session) {
 
         /*
          * Check if there's a shortage of workers. If there is, make some more, if not,
-         * just return.
+         * just return
          */
         pthread_mutex_lock(&(svc->mutex));
         workers = svc->threads->size;   /* Number of threads alive */
         busy = svc->handles->size;      /* Number of threads busy */
-        idle = workers - busy;      /* Number of threads idling */
+        idle = workers - busy;          /* Number of threads idling */
         if ((idle <= 1 || workers < FOREMAN_FALLBACK) && workers < FOREMAN_MAX_THREADS) {
             New = (workers + FOREMAN_THREAD_BUFFER) >= FOREMAN_FALLBACK ? FOREMAN_THREAD_BUFFER : FOREMAN_FALLBACK - workers;
             for (x = 0; x < New; x++) {
@@ -80,7 +80,7 @@ ssize_t accept_hook(sessionHandle *session) {
         pthread_mutex_unlock(&(svc->mutex));
     }
 
-    return (RUMBLE_RETURN_OKAY);    /* Tell the thread to continue. */
+    return (RUMBLE_RETURN_OKAY);        /* Tell the thread to continue. */
 }
 
 /* Done! */
