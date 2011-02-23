@@ -82,10 +82,12 @@
  =======================================================================================================================
  */
 
+#   define RUMBLE_LUA
 #   ifdef RUMBLE_LUA
 #      include <lua.h>
 #      include <lualib.h>
 #      include <lauxlib.h>
+#      include "rumble_lua.h"
 #   endif
 
 /*$5
@@ -365,6 +367,7 @@ typedef struct
     ssize_t (*func) (sessionHandle *);
     const char          *module;
     rumble_module_info  *modinfo;
+    int                 lua_callback;
 } hookHandle;
 typedef struct
 {
@@ -574,6 +577,7 @@ rumble_sendmail_response    *rumble_send_email
 
 uint32_t        rumble_domain_exists(const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
+cvector         *rumble_domains_list(void);
 uint32_t        rumble_account_exists(sessionHandle *session, const char *user, const char *domain);
 rumble_mailbox  *rumble_account_data(sessionHandle *session, const char *user, const char *domain);
 rumble_mailbox  *rumble_account_data_auth(sessionHandle *session, const char *user, const char *domain, const char *pass);

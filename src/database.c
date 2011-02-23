@@ -336,6 +336,36 @@ rumble_domain *rumble_domain_copy(const char *domain) {
 
 /*
  =======================================================================================================================
+ =======================================================================================================================
+ */
+cvector *rumble_domains_list(void) {
+
+    /*~~~~~~~~~~~~~~~~~~*/
+    rumble_domain   *dmn,
+                    *rc;
+    d_iterator      iter;
+    cvector         *cvec;
+    /*~~~~~~~~~~~~~~~~~~*/
+
+    cvec = cvector_init();
+    rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
+    foreach((rumble_domain *), dmn, rumble_database_master_handle->domains.list, iter) {
+        rc = (rumble_domain *) malloc(sizeof(rumble_domain));
+        rc->id = 0;
+        rc->name = (char *) calloc(1, strlen(dmn->name) + 1);
+        rc->path = (char *) calloc(1, strlen(dmn->path) + 1);
+        strcpy(rc->name, dmn->name);
+        strcpy(rc->path, dmn->path);
+        rc->id = dmn->id;
+        cvector_add(cvec, rc);
+    }
+
+    rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
+    return (cvec);
+}
+
+/*
+ =======================================================================================================================
     Internal database functions (not for use by modules) ;
     rumble_database_update_domains: Updates the list of domains from the db
  =======================================================================================================================

@@ -27,6 +27,7 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
 
     if (!hook) merror();
     rumble_module_check();
+    hook->lua_callback = 0;
     hook->func = func;
     hook->flags = flags;
     hook->module = ((masterHandle *) handle)->_core.currentSO;
@@ -87,7 +88,6 @@ typedef ssize_t (*hookFunc) (sessionHandle *);
 ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint32_t flags) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int         g = 0;
     ssize_t     rc = RUMBLE_RETURN_OKAY;
     hookFunc    mFunc = NULL;
     hookHandle  *hook;
@@ -113,11 +113,14 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
             }
 
             mFunc = hook->func;
-            g++;
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
             printf("<debug :: hooks> Executing hook %p from %s\n", (void *) hookFunc, hook->module);
 #endif
-            rc = (mFunc) (session);
+            if (mFunc) rc = (mFunc) (session);
+            else if (hook->lua_callback) {
+                rc = rumble_lua_callback((lua_State *) ((masterHandle *) session->_master)->_core.lua, (void *) hook, session);
+            }
+
             if (rc == RUMBLE_RETURN_FAILURE)
             {
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS

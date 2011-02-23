@@ -52,11 +52,11 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     free(cfgfile);
     if (config) {
 
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         char    *buffer = (char *) malloc(200);
         int     p = 0;
         char    byte;
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         while (!feof(config)) {
             memset(buffer, 0, 200);

@@ -188,4 +188,5 @@ void rumble_master_init(masterHandle *master) {
     master->domains.rrw = rumble_rw_init();
     master->mailboxes.rrw = rumble_rw_init();
     master->mailboxes.list = dvector_init();
+    master->_core.lua = 0;
 }
