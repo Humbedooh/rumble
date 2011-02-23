@@ -150,111 +150,115 @@ rumblemodule rumble_module_init(void *m, rumble_module_info *modinfo) {
     return (EXIT_SUCCESS);          /* Tell the thread to continue. */
 }
 
+typedef struct
+{
+    char            *URL;
+    dvector         *form;
+    dvector         *headers;
+    const char      *method;
+    const char      *remote_addr;
+    sessionHandle   *session;
+} HTTPRequest;
+
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-typedef struct {
-    char*       URL;
-    dvector* form;
-    dvector* headers;
-    const char* method;
-    const char* remote_addr;
-    sessionHandle* session;
-    
-} HTTPRequest;
-
-void free_session(HTTPRequest* http) {
+void free_session(HTTPRequest *http) {
     rumble_flush_dictionary(http->headers);
     rumble_flush_dictionary(http->form);
     free(http->URL);
     free(http);
 }
-HTTPRequest* parse_session(sessionHandle* s) {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char    *cmd = (char *) calloc(1, 32);
-    char    *arg = (char *) calloc(1, 128);
-    char    *line;
-    const char *URI;
-    char* rest;
-    char*postBuffer = 0;
-    int rc;
-    HTTPRequest* http;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    http = (HTTPRequest*) malloc(sizeof(HTTPRequest));
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+HTTPRequest *parse_session(sessionHandle *s) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char        *cmd = (char *) calloc(1, 32);
+    char        *arg = (char *) calloc(1, 128);
+    char        *line;
+    const char  *URI;
+    char        *rest;
+    char        *postBuffer = 0;
+    int         rc;
+    HTTPRequest *http;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    http = (HTTPRequest *) malloc(sizeof(HTTPRequest));
     http->form = dvector_init();
     http->headers = dvector_init();
     http->remote_addr = s->client->addr;
     http->session = s;
-    
     while (1) {
         memset(cmd, 0, 32);
         memset(arg, 0, 128);
-            line = rumble_comm_read(s);
-            sscanf(line, "%30[^ \r\n:]%*[: ]%120[^\r\n]", cmd, arg);
-            if (strlen(cmd)) {
-                rumble_string_lower(cmd);
-                if (strlen(arg)) rsdict(http->headers, cmd, arg);
-                if (!strcmp(cmd, "content-length")) {
+        line = rumble_comm_read(s);
+        sscanf(line, "%30[^ \r\n:]%*[: ]%120[^\r\n]", cmd, arg);
+        if (strlen(cmd)) {
+            rumble_string_lower(cmd);
+            if (strlen(arg)) rsdict(http->headers, cmd, arg);
+            if (!strcmp(cmd, "content-length")) {
 
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
-                    uint32_t    len = atoi(arg);
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
+                /*~~~~~~~~~~~~~~~~~~~~~~~~*/
+                uint32_t    len = atoi(arg);
+                /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-                    if (len > (1024 * 1024)) len = 1024 * 1024;
-                    postBuffer = (char *) calloc(1, len + 1);
-                    if (!postBuffer) merror();
-                    rc = recv(s->client->socket, postBuffer, len, 0);
-                    if (rc < 1) {
-                        free(postBuffer);
-                        postBuffer = 0;
-                    }
-                    break;
+                if (len > (1024 * 1024)) len = 1024 * 1024;
+                postBuffer = (char *) calloc(1, len + 1);
+                if (!postBuffer) merror();
+                rc = recv(s->client->socket, postBuffer, len, 0);
+                if (rc < 1) {
+                    free(postBuffer);
+                    postBuffer = 0;
                 }
+                break;
+            }
+        } else break;
+    }
 
-                
-            } else break;
-        }
-free(cmd);
-                free(arg);
-        URI = rhdict(http->headers, "get") ? rrdict(http->headers, "get") : rrdict(http->headers, "post");
-        http->method = rhdict(http->headers, "get") ? "get" : "post";
-        http->URL = (char *) calloc(1, strlen(URI));
-        rest = (char *) calloc(1, strlen(URI));
-        if (!http->URL || !rest) merror();
-        sscanf(URI, "/%200[^? ]?%[^ ]", http->URL, rest);
-        if (strlen(rest)) rumble_scan_formdata(http->form, rest);
-        if (postBuffer) {
-            rumble_scan_formdata(http->form, postBuffer);
-            free(postBuffer);
-        }
-        free(rest);
-        return http;
+    free(cmd);
+    free(arg);
+    URI = rhdict(http->headers, "get") ? rrdict(http->headers, "get") : rrdict(http->headers, "post");
+    http->method = rhdict(http->headers, "get") ? "get" : "post";
+    http->URL = (char *) calloc(1, strlen(URI));
+    rest = (char *) calloc(1, strlen(URI));
+    if (!http->URL || !rest) merror();
+    sscanf(URI, "/%200[^? ]?%[^ ]", http->URL, rest);
+    if (strlen(rest)) rumble_scan_formdata(http->form, rest);
+    if (postBuffer) {
+        rumble_scan_formdata(http->form, postBuffer);
+        free(postBuffer);
+    }
+
+    free(rest);
+    return (http);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 void *accept_connection(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     masterHandle        *master = (masterHandle *) m;
-
-    dvector                    *dict;
+    dvector             *dict;
     d_iterator          iter;
-    char                
-                        
-                        *now,
+    char                *now,
                         *output;
     char                buffa[1024 * 32],
                         buffb[1024 * 32];
     int                 myPos;
-
-
     rumble_module_info  *mod;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle       session;
     sessionHandle       *s = &session;
     clientHandle        client;
-    HTTPRequest*        http;
+    HTTPRequest         *http;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.client = &client;
@@ -263,11 +267,8 @@ void *accept_connection(void *m) {
     client.recv = 0;
     dict = dvector_init();
     while (1) {
-        
         comm_accept(svc->socket, &client);
-        
         http = parse_session(s);
-
         myPos = 0;
         dforeach((rumble_module_info *), mod, master->_core.modules, iter) {
             sprintf(buffa, "<b>%s</b> <small>(<font color='red'>%s</font>)</small>: <br/> %s<hr/><br/>\n", mod->title, mod->file,
@@ -285,7 +286,8 @@ void *accept_connection(void *m) {
         close(session.client->socket);
         free_session(http);
     }
-    return 0;
+
+    return (0);
 }
 
 /* Done! */

@@ -35,7 +35,7 @@ void cvector_add(cvector *parent, const void *object) {
     if (!parent) return;
     if (parent->allocated == parent->size) {
         size = parent->allocated * 2;
-        parent->objects = (const void **) realloc(parent->objects, (size + 1) * sizeof(void *));
+        parent->objects = (const void **) realloc((void **) parent->objects, (size + 1) * sizeof(void *));
         parent->allocated = size;
         parent->objects[parent->allocated] = 0;
     }
@@ -81,7 +81,7 @@ const void *cvector_foreach(cvector *parent, c_iterator *iter) {
  =======================================================================================================================
  */
 void cvector_flush(cvector *parent) {
-    free(parent->objects);
+    free((void **) parent->objects);
     parent->allocated = 32;
     parent->objects = (const void **) calloc(33, sizeof(void *));
     parent->size = 0;
@@ -92,7 +92,7 @@ void cvector_flush(cvector *parent) {
  =======================================================================================================================
  */
 void cvector_destroy(cvector *parent) {
-    free(parent->objects);
+    free((void **) parent->objects);
     free(parent);
 }
 

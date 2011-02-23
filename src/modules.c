@@ -42,8 +42,8 @@ void rumble_modules_load(masterHandle *master) {
 
     for (line = master->_core.conf->first; line != NULL; line = line->next) {
         el = (rumbleKeyValuePair *) line->object;
-        if (!strcmp(el->key, "loadmodule")) {
-            printf("Loading %-40s", el->value);
+        if (!strcmp(el->key, "loadmodule"))
+        {
 #ifdef WINDOWS_DLL
             handle = LoadLibraryA(el->value);
 #else
@@ -91,8 +91,10 @@ void rumble_modules_load(masterHandle *master) {
                     dlclose(handle);
                 }
 
-                if (x == EXIT_SUCCESS) printf("[OK]\n");
-                else printf("[BAD]\n");
+                if (x == EXIT_SUCCESS) {
+                    if (modinfo->title) printf("Loaded extension: %-30s[OK]\n", modinfo->title);
+                    else printf("%48s[OK]\n", el->value);
+                } else printf("[BAD]\n");
             }
 
             modinfo->file = el->value;

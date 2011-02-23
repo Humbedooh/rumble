@@ -110,14 +110,14 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
     if (gnutls_global_init()) {
         fprintf(stderr, "<TLS> Failed!\r\n");
-        return;
+        return (EXIT_FAILURE);
     }
 
     m->_core.tls_credentials = (gnutls_certificate_credentials_t *) calloc(1, sizeof(gnutls_certificate_credentials_t));
     pcred = (gnutls_certificate_credentials_t *) m->_core.tls_credentials;
     if (gnutls_certificate_allocate_credentials(pcred)) {
         fprintf(stderr, "<TLS> Failed!\r\n");
-        return;
+        return (EXIT_FAILURE);
     }
 
     gnutls_certificate_set_x509_key_file(*pcred, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);

@@ -12,19 +12,16 @@ cvector *rumble_whiteList;
  */
 ssize_t rumble_whitelist(sessionHandle *session) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     /* Make our own copy of the IP with an added dot at the end. */
-    char        *ip = malloc(strlen(session->client->addr) + 2);
+    const char  *addr;
+    char        *ip = (char *) malloc(strlen(session->client->addr) + 2);
     c_iterator  iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(ip, "%s.", session->client->addr);
 
-    /*~~~~~~~~~~~~~~*/
     /* Go through the list of white-listed spaces and see what we find. */
-    const char  *addr;
-    /*~~~~~~~~~~~~~~*/
-
     cforeach((const char *), addr, rumble_whiteList, iter) {
         if (!strncmp(addr, ip, strlen(addr))) {
             session->flags |= RUMBLE_SMTP_WHITELIST;    /* Set the whitelist flag if the client matches a range. */
@@ -40,26 +37,23 @@ ssize_t rumble_whitelist(sessionHandle *session) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int rumble_module_init(void *master, rumble_module_info *modinfo) {
+rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    FILE    *config;
+    char    *cfgfile = (char *) calloc(1, 1024);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     modinfo->title = "Whitelisting module";
     modinfo->description = "Standard whitelisting module for rumble.";
     rumble_whiteList = cvector_init();
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char    *cfgfile = calloc(1, 1024);
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     sprintf(cfgfile, "%s/whitelist.conf", ((masterHandle *) master)->cfgdir);
-
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    FILE    *config = fopen(cfgfile, "r");
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    config = fopen(cfgfile, "r");
     free(cfgfile);
     if (config) {
 
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        char    *buffer = malloc(200);
+        char    *buffer = (char *) malloc(200);
         int     p = 0;
         char    byte;
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -69,16 +63,16 @@ int rumble_module_init(void *master, rumble_module_info *modinfo) {
             fgets(buffer, 200, config);
             if (!ferror(config)) {
 
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                char    *address = calloc(1, 46);
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                char    *address = (char *) calloc(1, 46);
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                 sscanf(buffer, "%46[^# \t\r\n]", address);
                 if (strlen(address)) {
 
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                    char    *el = calloc(1, strlen(address) + 2);
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                    char    *el = (char *) calloc(1, strlen(address) + 2);
+                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                     sprintf(el, "%s.", address);    /* add a trailing dot for security measures. */
                     cvector_add(rumble_whiteList, el);
