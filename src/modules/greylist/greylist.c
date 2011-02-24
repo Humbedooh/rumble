@@ -1,6 +1,6 @@
 /*
  * File: greylist.c Author: Humbedooh A simple grey-listing module for rumble.
- * Created on January 3
+ * Created on Janua
  */
 #include <string.h>
 #include "../../rumble.h"
@@ -32,7 +32,7 @@ ssize_t rumble_greylist(sessionHandle *session) {
 
     /*
      * First, check if the client has been given permission to skip this check by any
-     * other modules
+     * other modul
      */
     if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
 
