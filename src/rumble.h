@@ -581,6 +581,8 @@ cvector         *rumble_domains_list(void);
 uint32_t        rumble_account_exists(sessionHandle *session, const char *user, const char *domain);
 rumble_mailbox  *rumble_account_data(sessionHandle *session, const char *user, const char *domain);
 rumble_mailbox  *rumble_account_data_auth(sessionHandle *session, const char *user, const char *domain, const char *pass);
+cvector         *rumble_database_accounts_list(const char *domain);
+void            rumble_database_accounts_free(cvector *accounts);   /* cleanup func for the function above. */
 
 /*$3
  =======================================================================================================================

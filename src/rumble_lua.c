@@ -70,6 +70,7 @@ static int rumble_lua_hook_on_accept(lua_State *L) {
     cvector         *svchooks = 0;
     int             len;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     hook->flags = 0;
     hook->func = 0;
     luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -145,22 +146,21 @@ static int rumble_lua_hook_on_accept(lua_State *L) {
 
     if (svchooks == svc->cue_hooks) { }
 
-    
-
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Save the callback reference in the Lua registry for later use
      -------------------------------------------------------------------------------------------------------------------
      */
-    lua_settop(L, 1); // Pop the stack so only the function ref is left.
-    hook->lua_callback = luaL_ref(L, LUA_REGISTRYINDEX); // Pop the ref and store it in the registry
-    
+
+    lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
+    hook->lua_callback = luaL_ref(L, LUA_REGISTRYINDEX);    /* Pop the ref and store it in the registry */
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Save the hook in the appropriate cvector and finish up
      -------------------------------------------------------------------------------------------------------------------
      */
+
     printf("Adding hook as callback %d\n", hook->lua_callback);
     cvector_add(svchooks, hook);
     return (0);
@@ -186,7 +186,6 @@ static int rumble_lua_send(lua_State *L) {
     message = lua_tostring(L, 2);
     rcsend(session->session, message);
     lua_pop(L, 2);
-
     return (0);
 }
 
@@ -216,7 +215,6 @@ static int rumble_lua_recv(lua_State *L) {
     lua_pop(L, 1);
     lua_pushstring(L, line);
     lua_pushinteger(L, len);
-
     return (2);
 }
 
@@ -233,20 +231,137 @@ static int rumble_lua_getdomains(lua_State *L) {
     int             x;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*
-     * rumble_lua_userdata *me = checkFoo(L, 1);
-     */
     domains = rumble_domains_list();
     x = 0;
+    lua_newtable(L);
     cforeach((rumble_domain *), domain, domains, iter) {
-        lua_pushstring(L, domain->name);
         x++;
+        lua_pushinteger(L, x);
+        lua_pushstring(L, domain->name);
+        lua_rawset(L, -3);
     }
 
-    return (x);
+    return (1);
 }
 
-static const luaL_reg   Foo_methods[] = { { "getdomains", rumble_lua_getdomains }, { "SetHook", rumble_lua_hook_on_accept }, { 0, 0 } };
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_getaccounts(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    cvector         *accounts;
+    const char      *domain;
+    char            *mtype;
+    c_iterator      iter;
+    rumble_mailbox  *acc;
+    int             x = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    domain = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    accounts = rumble_database_accounts_list(domain);
+    lua_newtable(L);
+    cforeach((rumble_mailbox *), acc, accounts, iter) {
+        mtype = "unknown";
+        switch (acc->type)
+        {
+        case RUMBLE_MTYPE_ALIAS:    mtype = "alias"; break;
+        case RUMBLE_MTYPE_FEED:     mtype = "feed"; break;
+        case RUMBLE_MTYPE_MBOX:     mtype = "mailbox"; break;
+        case RUMBLE_MTYPE_MOD:      mtype = "module"; break;
+        case RUMBLE_MTYPE_RELAY:    mtype = "relay"; break;
+        default:                    break;
+        }
+
+        x++;
+        lua_pushinteger(L, x);
+        lua_newtable(L);
+        lua_pushliteral(L, "id");
+        lua_pushinteger(L, acc->uid);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "name");
+        lua_pushstring(L, acc->user);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "password");
+        lua_pushstring(L, acc->hash);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "type");
+        lua_pushstring(L, mtype);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "arguments");
+        lua_pushstring(L, acc->arg);
+        lua_rawset(L, -3);
+        lua_rawset(L, -3);
+    }
+
+    rumble_database_accounts_free(accounts);
+    return (1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_getaccount(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *user, *domain;
+    char            *mtype;
+    rumble_mailbox  *acc;
+    int             x = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    luaL_checktype(L, 2, LUA_TSTRING);
+    domain = lua_tostring(L, 1);
+    user = lua_tostring(L, 2);
+    lua_pop(L, 2);
+    acc = rumble_account_data(0, user, domain);
+    if (acc) {
+        mtype = "unknown";
+        switch (acc->type)
+        {
+        case RUMBLE_MTYPE_ALIAS:    mtype = "alias"; break;
+        case RUMBLE_MTYPE_FEED:     mtype = "feed"; break;
+        case RUMBLE_MTYPE_MBOX:     mtype = "mailbox"; break;
+        case RUMBLE_MTYPE_MOD:      mtype = "module"; break;
+        case RUMBLE_MTYPE_RELAY:    mtype = "relay"; break;
+        default:                    break;
+        }
+        
+        lua_newtable(L);
+        lua_pushliteral(L, "id");
+        lua_pushinteger(L, acc->uid);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "name");
+        lua_pushstring(L, acc->user);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "password");
+        lua_pushstring(L, acc->hash);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "type");
+        lua_pushstring(L, mtype);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "arguments");
+        lua_pushstring(L, acc->arg);
+        lua_rawset(L, -3);
+        rumble_free_account(acc);
+        return (1);
+    }
+    return 0;
+}
+
+static const luaL_reg   Foo_methods[] =
+{
+    { "listDomains", rumble_lua_getdomains },
+    { "listAccounts", rumble_lua_getaccounts },
+    { "readAccount", rumble_lua_getaccount },
+    { "SetHook", rumble_lua_hook_on_accept },
+    { 0, 0 }
+};
 static const luaL_reg   Foo_meta[] = { { 0, 0 } };  /* { "__tostring", Foo_tostring }, { 0, 0 }
                                                      * };
                                                      * */

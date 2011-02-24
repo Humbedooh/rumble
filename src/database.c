@@ -193,10 +193,9 @@ rumble_mailbox *rumble_account_data(sessionHandle *session, const char *user, co
     void            *state;
     char            *tmp;
     rumble_mailbox  *acc;
-    masterHandle    *master = (masterHandle *) session->_master;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    state = rumble_database_prepare(master->_core.db,
+    state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                     "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",
                                 domain, user);
     rc = rumble_database_run(state);
@@ -314,13 +313,11 @@ rumble_domain *rumble_domain_copy(const char *domain) {
     d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~*/
 
-    rc = (rumble_domain *) malloc(sizeof(rumble_domain));
-    rc->id = 0;
-    rc->path = 0;
-    rc->name = 0;
+    rc = 0;
     rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
     foreach((rumble_domain *), dmn, rumble_database_master_handle->domains.list, iter) {
         if (!strcmp(dmn->name, domain)) {
+            rc = (rumble_domain *) malloc(sizeof(rumble_domain));
             rc->name = (char *) calloc(1, strlen(dmn->name) + 1);
             rc->path = (char *) calloc(1, strlen(dmn->path) + 1);
             strcpy(rc->name, dmn->name);
@@ -362,6 +359,102 @@ cvector *rumble_domains_list(void) {
 
     rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
     return (cvec);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+cvector *rumble_database_accounts_list(const char *domain) {
+
+    /*~~~~~~~~~~~~~~~~~~~*/
+    int             rc,
+                    l;
+    void            *state;
+    cvector         *cvec;
+    c_iterator      iter;
+    rumble_mailbox  *acc;
+    char            *tmp;
+    /*~~~~~~~~~~~~~~~~~~~*/
+
+    cvec = cvector_init();
+    if (rumble_domain_exists(domain)) {
+        state = rumble_database_prepare(rumble_database_master_handle->_core.db,
+                                        "SELECT id, user, password, type, arg FROM accounts WHERE domain = %s", domain);
+        rc = rumble_database_run(state);
+        acc = NULL;
+        while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
+
+            /*~~*/
+            int l;
+            /*~~*/
+
+            acc = (rumble_mailbox *) malloc(sizeof(rumble_mailbox));
+            if (!acc) merror();
+
+            /* Account UID */
+            acc->uid = sqlite3_column_int((sqlite3_stmt *) state, 0);
+
+            /* Account Username */
+            l = sqlite3_column_bytes((sqlite3_stmt *) state, 1);
+            acc->user = (char *) calloc(1, l + 1);
+            memcpy((char *) acc->user, sqlite3_column_text((sqlite3_stmt *) state, 1), l);
+
+            /* Password (hashed) */
+            l = sqlite3_column_bytes((sqlite3_stmt *) state, 2);
+            acc->hash = (char *) calloc(1, l + 1);
+            memcpy((char *) acc->hash, sqlite3_column_text((sqlite3_stmt *) state, 2), l);
+
+            /* Account type */
+            l = sqlite3_column_bytes((sqlite3_stmt *) state, 3);
+            tmp = (char *) calloc(1, l + 1);
+            if (!tmp) merror();
+            memcpy((char *) tmp, sqlite3_column_text((sqlite3_stmt *) state, 3), l);
+            rumble_string_lower(tmp);
+            acc->type = RUMBLE_MTYPE_MBOX;
+            if (!strcmp(tmp, "alias")) acc->type = RUMBLE_MTYPE_ALIAS;
+            else if (!strcmp(tmp, "mod"))
+                acc->type = RUMBLE_MTYPE_MOD;
+            else if (!strcmp(tmp, "feed"))
+                acc->type = RUMBLE_MTYPE_FEED;
+            else if (!strcmp(tmp, "relay"))
+                acc->type = RUMBLE_MTYPE_FEED;
+            free(tmp);
+
+            /* Account args */
+            l = sqlite3_column_bytes((sqlite3_stmt *) state, 4);
+            acc->arg = (char *) calloc(1, l + 1);
+            memcpy((char *) acc->arg, sqlite3_column_text((sqlite3_stmt *) state, 4), l);
+            acc->domain = 0;
+            printf("Added %s\n", acc->user);
+            cvector_add(cvec, acc);
+        }
+
+        rumble_database_cleanup(state);
+    }
+
+    return (cvec);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_database_accounts_free(cvector *accounts) {
+
+    /*~~~~~~~~~~~~~~~~~~*/
+    c_iterator      citer;
+    rumble_mailbox  *acc;
+    /*~~~~~~~~~~~~~~~~~~*/
+
+    cforeach((rumble_mailbox *), acc, accounts, citer) {
+        if (acc->hash) free(acc->hash);
+        if (acc->user) free(acc->user);
+        if (acc->arg) free(acc->arg);
+        free(acc);
+    }
+
+    cvector_destroy(accounts);
 }
 
 /*
