@@ -95,8 +95,8 @@ rumble_sendmail_response *rumble_send_email(
     printf("connecting to %s...\n", mailserver);
     c.tls = 0;
     c.socket = comm_open(master, mailserver, 25);
-    c.recv = (dummySocketOp) recv;
-    c.send = (dummySocketOp) send;
+    c.recv = 0;
+    c.send = 0;
     me = rumble_get_dictionary_value(master->_core.conf, "servername");
     FD_ZERO(&c.fd);
     FD_SET(c.socket, &c.fd);
@@ -182,12 +182,23 @@ void *rumble_worker_process(void *m) {
     ssize_t         rc;
     masterHandle    *master = (masterHandle *) m;
     sessionHandle   *sess = (sessionHandle *) malloc(sizeof(sessionHandle));
+    clientHandle    c;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    sess->client = &c;
     if (!sess) merror();
     sess->_master = m;
     tmp = (char *) calloc(1, 256);
-    sleep(5);
+    sleep(3);
+    for (rc = 0; rc < 1; rc++) {
+        c.socket = comm_open(master, "localhost", 25);
+        c.send = 0;
+        c.recv = 0;
+        rcsend(sess, "OH HAI!!\r\n");
+        rcsend(sess, "QUIT\r\n");
+        close(c.socket);
+    }
+
     while (1) {
         pthread_mutex_lock(&master->_core.workmutex);
         pthread_cond_wait(&master->_core.workcond, &master->_core.workmutex);

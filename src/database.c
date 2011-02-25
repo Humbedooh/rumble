@@ -188,12 +188,12 @@ uint32_t rumble_account_exists(sessionHandle *session, const char *user, const c
  */
 rumble_mailbox *rumble_account_data(sessionHandle *session, const char *user, const char *domain) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
     int             rc;
     void            *state;
     char            *tmp;
     rumble_mailbox  *acc;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
 
     state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                     "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",

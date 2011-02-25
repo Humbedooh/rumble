@@ -37,6 +37,7 @@
 #   include <string.h>
 #   include <time.h>
 #   include "cvector.h"
+#   include "rumble_version.h"
 
 /*$3
  =======================================================================================================================
@@ -108,7 +109,6 @@
 #   define RUMBLE_DEBUG_COMM       0x00010000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
 #   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
-#   define RUMBLE_VERSION          0x000E0632   /* Internal version for module checks */
 
 /*$3
  =======================================================================================================================

@@ -19,10 +19,10 @@ void *rumble_smtp_init(void *m) {
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
     ssize_t         rc;
-    char            *cmd,
-                    *arg,
-                    *line,
-                    *tmp;
+    char            *line;
+    char            cmd[10],
+                    arg[1024],
+                    tmp[100];
     const char      *myName;
     int             x = 0;
     time_t          now;
@@ -40,11 +40,12 @@ void *rumble_smtp_init(void *m) {
     session.recipients = dvector_init();
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session.client->tls = 0;
+    session.client->recv = 0;
+    session.client->send = 0;
     session._master = m;
     session._tflags = RUMBLE_THREAD_SMTP;   /* Identify the thread/session as SMTP */
     myName = rrdict(master->_core.conf, "servername");
     myName = myName ? myName : "??";
-    tmp = (char *) malloc(100);
     rumble_rw_stop_read(master->domains.rrw);
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
 #   ifdef PTW32_CDECL
@@ -74,11 +75,9 @@ void *rumble_smtp_init(void *m) {
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_smtp_reply_code(220), myName);   /* Hello! */
 
         /* Parse incoming commands */
-        cmd = (char *) malloc(5);
-        arg = (char *) malloc(1024);
         if (!cmd || !arg) merror();
         while (rc != RUMBLE_RETURN_FAILURE) {
-            memset(cmd, 0, 9);
+            memset(cmd, 0, 10);
             memset(arg, 0, 1024);
             line = rumble_comm_read(sessptr);
             rc = 421;
@@ -88,11 +87,10 @@ void *rumble_smtp_init(void *m) {
                 rumble_string_upper(cmd);
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
-                    break;
-                }       /* bye! */
-
-                cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
-                    if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
+                } /* bye! */ else {
+                    cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
+                        if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
+                    }
                 }
             }
 
@@ -127,8 +125,6 @@ void *rumble_smtp_init(void *m) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        free(arg);
-        free(cmd);
         rumble_clean_session(sessptr);
 
         /*$2
