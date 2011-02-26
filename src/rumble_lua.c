@@ -1,5 +1,6 @@
 /*$I0 */
 #include "rumble.h"
+#include "database.h"
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
 #   define FOO "Rumble"
@@ -365,6 +366,9 @@ static int rumble_lua_getaccounts(lua_State *L) {
         lua_pushliteral(L, "name");
         lua_pushstring(L, acc->user);
         lua_rawset(L, -3);
+        lua_pushliteral(L, "domain");
+        lua_pushstring(L, domain);
+        lua_rawset(L, -3);
         lua_pushliteral(L, "password");
         lua_pushstring(L, acc->hash);
         lua_rawset(L, -3);
@@ -380,6 +384,89 @@ static int rumble_lua_getaccounts(lua_State *L) {
     rumble_database_accounts_free(accounts);
     return (1);
 }
+
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_saveaccount(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    const char      *user,
+                    *domain, *password, *arguments;
+    const char            *mtype;
+    rumble_mailbox  *acc;
+    int             x = 0;
+    void* state;
+    uint32_t uid = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TTABLE);
+    
+    /*$2 Get the account info */
+    printf("name...");
+    lua_pushliteral(L,"name");
+    lua_gettable(L, -2);
+    luaL_checktype(L, -1, LUA_TSTRING);
+    user = lua_tostring(L, -1);
+    lua_pop(L,1);
+
+    
+    lua_pushliteral(L,"domain");
+    lua_gettable(L, -2);
+    luaL_checktype(L, -1, LUA_TSTRING);
+    domain = lua_tostring(L, -1);
+    lua_pop(L,1);
+
+    
+    lua_pushliteral(L,"type");
+    lua_gettable(L, -2);
+    luaL_checktype(L, -1, LUA_TSTRING);
+    mtype = lua_tostring(L, -1);
+    lua_pop(L,1);
+
+    
+    lua_pushliteral(L,"password");
+    lua_gettable(L, -2);
+    luaL_checktype(L, -1, LUA_TSTRING);
+    password = lua_tostring(L, -1);
+    lua_pop(L,1);
+
+    lua_pushliteral(L,"arguments");
+    lua_gettable(L, -2);
+    luaL_checktype(L, -1, LUA_TSTRING);
+    arguments = lua_tostring(L, -1);
+    lua_pop(L,1);
+
+    
+    lua_pushliteral(L,"id");
+    lua_gettable(L, -2);
+    luaL_checktype(L, -1, LUA_TNUMBER);
+    uid = lua_tointeger(L, -1);
+    lua_settop(L,0);
+    if (rumble_domain_exists(domain)) {
+        x = rumble_account_exists_raw(user, domain);
+        if (uid && x) {
+            state = rumble_database_prepare(0, "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u", user, domain, mtype, password, arguments, uid);
+            rumble_database_run(state);
+            rumble_database_cleanup(state);
+            lua_pushboolean(L, 1);
+            }
+        else if(!x) {
+            state = rumble_database_prepare(0, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)", user, domain, mtype, password, arguments);
+            rumble_database_run(state);
+            rumble_database_cleanup(state);
+            lua_pushboolean(L, 1);
+            }
+        else lua_pushboolean(L, 0);
+        }
+    else {
+        lua_pushboolean(L, 0);
+        }
+    return (1);
+}
+
 
 /*
  =======================================================================================================================
@@ -420,6 +507,9 @@ static int rumble_lua_getaccount(lua_State *L) {
         lua_pushliteral(L, "name");
         lua_pushstring(L, acc->user);
         lua_rawset(L, -3);
+        lua_pushliteral(L, "domain");
+        lua_pushstring(L, domain);
+        lua_rawset(L, -3);
         lua_pushliteral(L, "password");
         lua_pushstring(L, acc->hash);
         lua_rawset(L, -3);
@@ -432,8 +522,8 @@ static int rumble_lua_getaccount(lua_State *L) {
         rumble_free_account(acc);
         return (1);
     }
-
-    return (0);
+    lua_pushnil(L);
+    return (1);
 }
 
 
@@ -487,6 +577,7 @@ static const luaL_reg   Foo_methods[] =
     { "listDomains", rumble_lua_getdomains },
     { "listAccounts", rumble_lua_getaccounts },
     { "readAccount", rumble_lua_getaccount },
+    { "saveAccount", rumble_lua_saveaccount },
     { "accountExists", rumble_lua_accountexists },
     { "addressExists", rumble_lua_addressexists },
     { "setHook", rumble_lua_sethook },

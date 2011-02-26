@@ -88,7 +88,7 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
     strl = strlen(op);
     strncpy((char *) (sql + len), op, strl);
 #if RUMBLE_DATABASE_MODEL == RUMBLE_SQLITE3
-    rc = sqlite3_prepare_v2((sqlite3 *) db, sql, -1, (sqlite3_stmt **) &returnObject, NULL);
+    rc = sqlite3_prepare_v2((sqlite3 *) rumble_database_master_handle->_core.db, sql, -1, (sqlite3_stmt **) &returnObject, NULL);
     free(sql);
     if (rc != SQLITE_OK) return (0);
 #endif
