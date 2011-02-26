@@ -217,6 +217,27 @@ static int rumble_lua_recv(lua_State *L) {
     return (2);
 }
 
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_sha256(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *string;
+    char            *output;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    string = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    output = rumble_sha256((const unsigned char*) string);
+    lua_pushstring(L, output);
+    free(output);
+    return (1);
+}
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -415,12 +436,61 @@ static int rumble_lua_getaccount(lua_State *L) {
     return (0);
 }
 
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_accountexists(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    const char      *user,
+                    *domain;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    luaL_checktype(L, 2, LUA_TSTRING);
+    domain = lua_tostring(L, 1);
+    user = lua_tostring(L, 2);
+    lua_pop(L,2);
+    if (rumble_account_exists_raw(user, domain)) lua_pushboolean(L, TRUE);
+    else lua_pushboolean(L, FALSE);
+
+    return (1);
+}
+
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_addressexists(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    const char      *user,
+                    *domain;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    luaL_checktype(L, 2, LUA_TSTRING);
+    domain = lua_tostring(L, 1);
+    user = lua_tostring(L, 2);
+    lua_pop(L,2);
+    if (rumble_account_exists(0,user, domain)) lua_pushboolean(L, TRUE);
+    else lua_pushboolean(L, FALSE);
+    return (1);
+}
+
+
 static const luaL_reg   Foo_methods[] =
 {
     { "listDomains", rumble_lua_getdomains },
     { "listAccounts", rumble_lua_getaccounts },
     { "readAccount", rumble_lua_getaccount },
+    { "accountExists", rumble_lua_accountexists },
+    { "addressExists", rumble_lua_addressexists },
     { "setHook", rumble_lua_sethook },
+    { "SHA256", rumble_lua_sha256},
     { 0, 0 }
 };
 

@@ -576,6 +576,7 @@ rumble_sendmail_response    *rumble_send_email
  */
 
 uint32_t        rumble_domain_exists(const char *domain);
+uint32_t rumble_account_exists_raw(const char *user, const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
 cvector         *rumble_domains_list(void);
 uint32_t        rumble_account_exists(sessionHandle *session, const char *user, const char *domain);

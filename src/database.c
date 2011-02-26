@@ -171,16 +171,36 @@ uint32_t rumble_account_exists(sessionHandle *session, const char *user, const c
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int             rc;
     void            *state;
-    masterHandle    *master = (masterHandle *) session->_master;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    state = rumble_database_prepare(master->_core.db,
+    state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                     "SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1", domain,
                                     user);
     rc = rumble_database_run(state);
     rumble_database_cleanup(state);
     return (rc == RUMBLE_DB_RESULT) ? 1 : 0;
 }
+
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+uint32_t rumble_account_exists_raw(const char *user, const char *domain) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int             rc;
+    void            *state;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    state = rumble_database_prepare(rumble_database_master_handle->_core.db,
+                                    "SELECT 1 FROM accounts WHERE domain = %s AND user = %s ORDER BY LENGTH(user) DESC LIMIT 1", domain,
+                                    user);
+    rc = rumble_database_run(state);
+    rumble_database_cleanup(state);
+    return (rc == RUMBLE_DB_RESULT) ? 1 : 0;
+}
+
 
 /*
  =======================================================================================================================
