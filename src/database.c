@@ -168,10 +168,10 @@ void rumble_free_account(rumble_mailbox *user) {
  */
 uint32_t rumble_account_exists(sessionHandle *session, const char *user, const char *domain) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             rc;
-    void            *state;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~*/
+    int     rc;
+    void    *state;
+    /*~~~~~~~~~~~*/
 
     state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                     "SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1", domain,
@@ -181,17 +181,16 @@ uint32_t rumble_account_exists(sessionHandle *session, const char *user, const c
     return (rc == RUMBLE_DB_RESULT) ? 1 : 0;
 }
 
-
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
 uint32_t rumble_account_exists_raw(const char *user, const char *domain) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             rc;
-    void            *state;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~*/
+    int     rc;
+    void    *state;
+    /*~~~~~~~~~~~*/
 
     state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                     "SELECT 1 FROM accounts WHERE domain = %s AND user = %s ORDER BY LENGTH(user) DESC LIMIT 1", domain,
@@ -200,7 +199,6 @@ uint32_t rumble_account_exists_raw(const char *user, const char *domain) {
     rumble_database_cleanup(state);
     return (rc == RUMBLE_DB_RESULT) ? 1 : 0;
 }
-
 
 /*
  =======================================================================================================================
@@ -446,7 +444,6 @@ cvector *rumble_database_accounts_list(const char *domain) {
             acc->arg = (char *) calloc(1, l + 1);
             memcpy((char *) acc->arg, sqlite3_column_text((sqlite3_stmt *) state, 4), l);
             acc->domain = 0;
-            printf("Added %s\n", acc->user);
             cvector_add(cvec, acc);
         }
 

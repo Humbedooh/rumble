@@ -190,15 +190,17 @@ void *rumble_worker_process(void *m) {
     sess->_master = m;
     tmp = (char *) calloc(1, 256);
     sleep(3);
-    for (rc = 0; rc < 1; rc++) {
-        c.socket = comm_open(master, "localhost", 25);
-        c.send = 0;
-        c.recv = 0;
-        rcsend(sess, "OH HAI!!\r\n");
-        rcsend(sess, "QUIT\r\n");
-        close(c.socket);
-    }
 
+    /*
+     * for (rc = 0;
+     * rc < 1;
+     * rc++) { c.socket = comm_open(master, "localhost", 25);
+     * c.send = 0;
+     * c.recv = 0;
+     * rcsend(sess, "OH HAI!!\r\n");
+     * rcsend(sess, "QUIT\r\n");
+     * close(c.socket);
+     */
     while (1) {
         pthread_mutex_lock(&master->_core.workmutex);
         pthread_cond_wait(&master->_core.workcond, &master->_core.workmutex);

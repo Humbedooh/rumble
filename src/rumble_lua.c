@@ -1,6 +1,8 @@
 /*$I0 */
 #include "rumble.h"
 #include "database.h"
+#include "comm.h"
+#include "private.h"
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
 #   define FOO "Rumble"
@@ -176,16 +178,25 @@ static int rumble_lua_send(lua_State *L) {
     /*~~~~~~~~~~~~~~~~~~~~~*/
     const char      *message;
     sessionHandle   *session;
+    int             n = 0;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
+    n = lua_gettop(L);
     luaL_checktype(L, 1, LUA_TTABLE);
-    luaL_checktype(L, 2, LUA_TSTRING);
     lua_rawgeti(L, 1, 0);
     luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
     session = (sessionHandle *) lua_topointer(L, -1);
-    message = lua_tostring(L, 2);
-    rcsend(session, message);
-    lua_pop(L, 2);
+    lua_settop(L, n);
+    for (n = 2; n <= lua_gettop(L); n++) {
+
+        /*
+         * luaL_checktype(L, n, LUA_TSTRING);
+         */
+        message = lua_tostring(L, n);
+        if (message) rcsend(session, message);
+    }
+
+    lua_settop(L, 0);
     return (0);
 }
 
@@ -218,6 +229,30 @@ static int rumble_lua_recv(lua_State *L) {
     return (2);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_recvbytes(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    char            *line;
+    sessionHandle   *session;
+    int             len;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TTABLE);
+    luaL_checktype(L, 2, LUA_TNUMBER);
+    len = lua_tointeger(L, 2);
+    lua_rawgeti(L, 1, 0);
+    luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
+    session = (sessionHandle *) lua_topointer(L, -1);
+    line = rumble_comm_read_bytes(session, len);
+    lua_pop(L, 2);
+    lua_pushstring(L, line ? line : "");
+    lua_pushinteger(L, line ? len : -1);
+    return (2);
+}
 
 /*
  =======================================================================================================================
@@ -225,15 +260,15 @@ static int rumble_lua_recv(lua_State *L) {
  */
 static int rumble_lua_sha256(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~*/
-    const char      *string;
-    char            *output;
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *string;
+    char        *output;
+    /*~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     string = lua_tostring(L, 1);
     lua_pop(L, 1);
-    output = rumble_sha256((const unsigned char*) string);
+    output = rumble_sha256((const unsigned char *) string);
     lua_pushstring(L, output);
     free(output);
     return (1);
@@ -385,88 +420,85 @@ static int rumble_lua_getaccounts(lua_State *L) {
     return (1);
 }
 
-
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
 static int rumble_lua_saveaccount(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
     const char      *user,
-                    *domain, *password, *arguments;
-    const char            *mtype;
+                    *domain,
+                    *password,
+                    *arguments;
+    const char      *mtype;
     rumble_mailbox  *acc;
     int             x = 0;
-    void* state;
-    uint32_t uid = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    void            *state;
+    uint32_t        uid = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TTABLE);
-    
-    /*$2 Get the account info */
+
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Get the account info
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
     printf("name...");
-    lua_pushliteral(L,"name");
+    lua_pushliteral(L, "name");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TSTRING);
     user = lua_tostring(L, -1);
-    lua_pop(L,1);
-
-    
-    lua_pushliteral(L,"domain");
+    lua_pop(L, 1);
+    lua_pushliteral(L, "domain");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TSTRING);
     domain = lua_tostring(L, -1);
-    lua_pop(L,1);
-
-    
-    lua_pushliteral(L,"type");
+    lua_pop(L, 1);
+    lua_pushliteral(L, "type");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TSTRING);
     mtype = lua_tostring(L, -1);
-    lua_pop(L,1);
-
-    
-    lua_pushliteral(L,"password");
+    lua_pop(L, 1);
+    lua_pushliteral(L, "password");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TSTRING);
     password = lua_tostring(L, -1);
-    lua_pop(L,1);
-
-    lua_pushliteral(L,"arguments");
+    lua_pop(L, 1);
+    lua_pushliteral(L, "arguments");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TSTRING);
     arguments = lua_tostring(L, -1);
-    lua_pop(L,1);
-
-    
-    lua_pushliteral(L,"id");
+    lua_pop(L, 1);
+    lua_pushliteral(L, "id");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TNUMBER);
     uid = lua_tointeger(L, -1);
-    lua_settop(L,0);
+    lua_settop(L, 0);
     if (rumble_domain_exists(domain)) {
         x = rumble_account_exists_raw(user, domain);
         if (uid && x) {
-            state = rumble_database_prepare(0, "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u", user, domain, mtype, password, arguments, uid);
+            state = rumble_database_prepare(0,
+                                            "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u",
+                                            user, domain, mtype, password, arguments, uid);
             rumble_database_run(state);
             rumble_database_cleanup(state);
             lua_pushboolean(L, 1);
-            }
-        else if(!x) {
-            state = rumble_database_prepare(0, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)", user, domain, mtype, password, arguments);
+        } else if (!x) {
+            state = rumble_database_prepare(0, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)", user, domain,
+                                            mtype, password, arguments);
             rumble_database_run(state);
             rumble_database_cleanup(state);
             lua_pushboolean(L, 1);
-            }
-        else lua_pushboolean(L, 0);
-        }
-    else {
+        } else lua_pushboolean(L, 0);
+    } else {
         lua_pushboolean(L, 0);
-        }
+    }
+
     return (1);
 }
-
 
 /*
  =======================================================================================================================
@@ -522,10 +554,10 @@ static int rumble_lua_getaccount(lua_State *L) {
         rumble_free_account(acc);
         return (1);
     }
+
     lua_pushnil(L);
     return (1);
 }
-
 
 /*
  =======================================================================================================================
@@ -533,22 +565,30 @@ static int rumble_lua_getaccount(lua_State *L) {
  */
 static int rumble_lua_accountexists(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    const char      *user,
-                    *domain;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *user,
+                *domain;
+    /*~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     luaL_checktype(L, 2, LUA_TSTRING);
     domain = lua_tostring(L, 1);
     user = lua_tostring(L, 2);
-    lua_pop(L,2);
+    lua_pop(L, 2);
     if (rumble_account_exists_raw(user, domain)) lua_pushboolean(L, TRUE);
     else lua_pushboolean(L, FALSE);
-
     return (1);
 }
 
+static const luaL_reg   session_functions[] =
+{
+    { "lock", rumble_lua_lock },
+    { "unlock", rumble_lua_unlock },
+    { "send", rumble_lua_send },
+    { "receive", rumble_lua_recv },
+    { "receivebytes", rumble_lua_recvbytes },
+    { 0, 0 }
+};
 
 /*
  =======================================================================================================================
@@ -556,21 +596,228 @@ static int rumble_lua_accountexists(lua_State *L) {
  */
 static int rumble_lua_addressexists(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    const char      *user,
-                    *domain;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *user,
+                *domain;
+    /*~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     luaL_checktype(L, 2, LUA_TSTRING);
     domain = lua_tostring(L, 1);
     user = lua_tostring(L, 2);
-    lua_pop(L,2);
-    if (rumble_account_exists(0,user, domain)) lua_pushboolean(L, TRUE);
+    lua_pop(L, 2);
+    if (rumble_account_exists(0, user, domain)) lua_pushboolean(L, TRUE);
     else lua_pushboolean(L, FALSE);
     return (1);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void *rumble_lua_handle_service(void *s) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = (rumbleService *) s;
+    masterHandle    *master = (masterHandle *) rumble_database_master_handle;
+    /* Initialize a session handle and wait for incoming connections. */
+    sessionHandle   session;
+    sessionHandle   *sessptr = &session;
+    pthread_t       p = pthread_self();
+    d_iterator      iter;
+    lua_State       *L;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    session.dict = dvector_init();
+    session.recipients = dvector_init();
+    session.client = (clientHandle *) malloc(sizeof(clientHandle));
+    session.client->tls = 0;
+    session.client->recv = 0;
+    session.client->send = 0;
+    session._master = master;
+    session._tflags = 0;
+    while (1) {
+        comm_accept(svc->socket, session.client);
+        pthread_mutex_lock(&svc->mutex);
+        dvector_add(svc->handles, (void *) sessptr);
+        pthread_mutex_unlock(&svc->mutex);
+        session.flags = 0;
+        session._tflags += 0x00100000;  /* job count ( 0 through 4095) */
+        session.sender = 0;
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Handle the session stuff and run the hook
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        L = lua_newthread((lua_State *) master->_core.lua);
+        lua_settop(L, 0);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, svc->lua_handle);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Make a table for the session object and add the default session functions.
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        lua_createtable(L, 32, 32);
+        luaL_register(L, NULL, session_functions);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Push the session handle into the table as t[0].
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        lua_pushlightuserdata(L, &session);
+        lua_rawseti(L, -2, 0);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Miscellaneous session data
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        lua_pushliteral(L, "protocol");
+        lua_pushlstring(L, (session.client->client_info.ss_family == AF_INET6) ? "IPv6" : "IPv4", 4);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "address");
+        lua_pushlstring(L, session.client->addr, strlen(session.client->addr));
+        lua_rawset(L, -3);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Start the Lua function
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        lua_pcall(L, 1, 0, 0);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Clean up after the session
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        close(session.client->socket);
+        rumble_clean_session(sessptr);
+        lua_gc((lua_State *) master->_core.lua, LUA_GCSTEP, 1);
+
+        /*$2
+         ---------------------------------------------------------------------------------------------------------------
+            Update thread statistics
+         ---------------------------------------------------------------------------------------------------------------
+         */
+
+        pthread_mutex_lock(&svc->mutex);
+        foreach((sessionHandle *), s, svc->handles, iter) {
+            if (s == sessptr) {
+                dvector_delete(&iter);
+                break;
+            }
+        }
+
+        pthread_mutex_unlock(&svc->mutex);
+    }
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_serverinfo(lua_State *L) {
+    char tmp[100];
+    sprintf(tmp, "%u.%02u.%04u", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    lua_newtable(L);
+    lua_pushliteral(L, "version");
+    lua_pushstring(L, tmp);
+    lua_rawset(L, -3);
+    
+    return (1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_config(lua_State *L) {
+
+    /*~~~~~~~~~~~~*/
+    const char  *el;
+    /*~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    el = lua_tostring(L, 1);
+    if (rhdict(rumble_database_master_handle->_core.conf, el)) lua_pushstring(L, rrdict(rumble_database_master_handle->_core.conf, el));
+    else lua_pushnil(L);
+    return (1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_createservice(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc;
+    const char      *port;
+    int             threads,
+                    n;
+    socketHandle    sock;
+    pthread_t       *t;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TFUNCTION);
+    luaL_checktype(L, 2, LUA_TNUMBER);
+    luaL_checktype(L, 3, LUA_TNUMBER);
+    port = lua_tostring(L, 2);
+    threads = luaL_optinteger(L, 3, 10);
+
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Try to create a service at the given port before creating the service object
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
+    sock = comm_init(rumble_database_master_handle, port);
+    if (!sock) {
+        luaL_error(L, "Couldn't create a service at %s.", port);
+        lua_pushboolean(L, FALSE);
+        return (1);
+    }
+
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        If all went well, make the struct and set up stuff.
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
+    svc = (rumbleService *) malloc(sizeof(rumbleService));
+    lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
+    svc->lua_handle = luaL_ref(L, LUA_REGISTRYINDEX);   /* Pop the ref and store it in the registry */
+    svc->socket = sock;
+    svc->cue_hooks = cvector_init();
+    svc->init_hooks = cvector_init();
+    svc->threads = dvector_init();
+    svc->handles = dvector_init();
+    svc->commands = cvector_init();
+    svc->capabilities = cvector_init();
+    pthread_mutex_init(&svc->mutex, 0);
+    for (n = 0; n < threads; n++) {
+
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+        dvector_add(svc->threads, t);
+        pthread_create(t, NULL, rumble_lua_handle_service, svc);
+    }
+
+    lua_pushboolean(L, TRUE);
+    return (1);
+}
 
 static const luaL_reg   Foo_methods[] =
 {
@@ -580,8 +827,11 @@ static const luaL_reg   Foo_methods[] =
     { "saveAccount", rumble_lua_saveaccount },
     { "accountExists", rumble_lua_accountexists },
     { "addressExists", rumble_lua_addressexists },
+    { "createService", rumble_lua_createservice },
+    { "readConfig", rumble_lua_config },
     { "setHook", rumble_lua_sethook },
-    { "SHA256", rumble_lua_sha256},
+    { "SHA256", rumble_lua_sha256 },
+    { "serverInfo", rumble_lua_serverinfo },
     { 0, 0 }
 };
 
@@ -593,15 +843,6 @@ int Foo_register(lua_State *L) {
     luaL_register(L, "_G", Foo_methods);    /* create methods table, add it to the globals */
     return (1); /* return methods on the stack */
 }
-#endif
-static const luaL_reg   session_functions[] =
-{
-    { "lock", rumble_lua_lock },
-    { "unlock", rumble_lua_unlock },
-    { "send", rumble_lua_send },
-    { "receive", rumble_lua_recv },
-    { 0, 0 }
-};
 
 /*
  =======================================================================================================================
@@ -633,11 +874,15 @@ ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session
     lua_pushlightuserdata(L, session);
     lua_rawseti(L, -2, 0);
 
-    /*$2 Miscellaneous session data */
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Miscellaneous session data
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
     lua_pushliteral(L, "protocol");
     lua_pushlstring(L, (session->client->client_info.ss_family == AF_INET6) ? "IPv6" : "IPv4", 4);
     lua_rawset(L, -3);
-
     lua_pushliteral(L, "address");
     lua_pushlstring(L, session->client->addr, strlen(session->client->addr));
     lua_rawset(L, -3);
@@ -657,3 +902,4 @@ ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session
      */
     return (RUMBLE_RETURN_OKAY);
 }
+#endif

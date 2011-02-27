@@ -114,12 +114,12 @@ void rumble_modules_load(masterHandle *master) {
             printf("Loading script <%s>\n", el->value);
             if (!master->_core.lua) {
                 master->_core.lua = (lua_State *) luaL_newstate();
+                L = (lua_State *) master->_core.lua;
+                luaL_openlibs(L);
+                luaopen_debug(L);
+                Foo_register(L);
             }
 
-            L = (lua_State *) master->_core.lua;
-            luaL_openlibs(L);
-            lua_newtable((lua_State *) master->_core.lua);
-            Foo_register(L);
             if (luaL_loadfile(L, el->value)) {
                 fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
             } else if (lua_pcall(L, 0, LUA_MULTRET, 0)) {

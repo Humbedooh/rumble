@@ -380,6 +380,7 @@ typedef struct
     cvector         *capabilities;
     pthread_mutex_t mutex;
     dvector         *handles;
+    int             lua_handle;
     void * (*init) (void *);
 } rumbleService;
 typedef struct
@@ -556,6 +557,7 @@ const char                  *rumble_smtp_reply_code(unsigned int code);
 ssize_t                     rumble_comm_send(sessionHandle *session, const char *message);
 ssize_t                     rumble_comm_printf(sessionHandle *session, const char *d, ...);
 char                        *rumble_comm_read(sessionHandle *session);
+char                        *rumble_comm_read_bytes(sessionHandle *session, int len);
 const char                  *rumble_config_str(masterHandle *master, const char *key);
 uint32_t                    rumble_config_int(masterHandle *master, const char *key);
 void                        rumble_crypt_init(masterHandle *master);
@@ -576,7 +578,7 @@ rumble_sendmail_response    *rumble_send_email
  */
 
 uint32_t        rumble_domain_exists(const char *domain);
-uint32_t rumble_account_exists_raw(const char *user, const char *domain);
+uint32_t        rumble_account_exists_raw(const char *user, const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
 cvector         *rumble_domains_list(void);
 uint32_t        rumble_account_exists(sessionHandle *session, const char *user, const char *domain);
