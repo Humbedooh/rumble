@@ -313,7 +313,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
     t.tv_usec = 0;
     z = time(0);
-    buffer = (char *) calloc(1, len+1);
+    buffer = (char *) calloc(1, len + 1);
     f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
     if (f > 0) {
         if (session->client->recv) rc = (session->client->recv) (session->client->tls, buffer, len, 0);
@@ -336,4 +336,13 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
     if (session->client->send) return ((session->client->send) (session->client->tls, message, strlen(message), 0));
     return (send(session->client->socket, message, strlen(message), 0));
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+ssize_t rumble_comm_send_bytes(sessionHandle *session, const char *message, int len) {
+    if (session->client->send) return ((session->client->send) (session->client->tls, message, len, 0));
+    return (send(session->client->socket, message, len, 0));
 }

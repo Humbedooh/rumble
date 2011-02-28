@@ -37,7 +37,6 @@
 #   include <string.h>
 #   include <time.h>
 #   include "cvector.h"
-#   include "rumble_version.h"
 
 /*$3
  =======================================================================================================================
@@ -555,6 +554,7 @@ void                        rumble_free_address(address *a);
 void                        rumble_free_account(rumble_mailbox *user);
 const char                  *rumble_smtp_reply_code(unsigned int code);
 ssize_t                     rumble_comm_send(sessionHandle *session, const char *message);
+ssize_t                     rumble_comm_send_bytes(sessionHandle *session, const char *message, int len);
 ssize_t                     rumble_comm_printf(sessionHandle *session, const char *d, ...);
 char                        *rumble_comm_read(sessionHandle *session);
 char                        *rumble_comm_read_bytes(sessionHandle *session, int len);
@@ -640,10 +640,11 @@ uint32_t                        rumble_mailman_copy_letter
  */
 
 #   define foreach dforeach
+#   ifndef FALSE
+#      define FALSE   0
+#      define TRUE    1
+#   endif
 #   ifdef __cplusplus
 }
 #   endif
-#   define RUMBLE_MAJOR    (RUMBLE_VERSION & 0xFF000000) >> 24
-#   define RUMBLE_MINOR    (RUMBLE_VERSION & 0x00FF0000) >> 16
-#   define RUMBLE_REV      (RUMBLE_VERSION & 0x0000FFFF)
 #endif /* RUMBLE_H */

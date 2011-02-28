@@ -4,6 +4,7 @@
  */
 
 #include "rumble.h"
+#include "rumble_version.h"
 #if defined(_WIN32) && !defined(__CYGWIN__)
 #   define WINDOWS_DLL
 #   define dlclose FreeLibrary

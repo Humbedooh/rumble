@@ -3,8 +3,10 @@
 #include "database.h"
 #include "comm.h"
 #include "private.h"
+#include "rumble_version.h"
 #define RUMBLE_INITIAL_THREADS  20
 extern masterHandle *rumble_database_master_handle;
+extern int (*lua_callback) (lua_State *, void *, void *);
 
 /*
  =======================================================================================================================
@@ -24,6 +26,7 @@ int main(int argc, char **argv) {
     if (!master) merror();
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
+        printf("%d = %s\n", x, argv[x]);
     }
 
     if (rhdict(args, "--TEST")) {
@@ -31,6 +34,7 @@ int main(int argc, char **argv) {
         exit(EXIT_SUCCESS);
     }
 
+    lua_callback = rumble_lua_callback;
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     srand(time(0));
     rumble_database_master_handle = master;

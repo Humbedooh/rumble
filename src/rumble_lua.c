@@ -3,6 +3,8 @@
 #include "database.h"
 #include "comm.h"
 #include "private.h"
+#include "rumble_version.h"
+#include <sys/stat.h>
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
 #   define FOO "Rumble"
@@ -57,6 +59,52 @@ static rumble_lua_session *rumble_lua_session_create(lua_State *L, sessionHandle
      * lua_setmetatable(L, -2);
      */
     return (bar);
+}
+
+#   define __STDC__    1
+#   include <io.h>
+#   include <fcntl.h>
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_fileinfo(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    struct _stat    fileinfo;
+    const char      *filename;
+    int             r,
+                    fd;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    filename = lua_tostring(L, 1);
+    lua_settop(L, 0);
+    fd = _open(filename, _O_RDONLY);
+    if (fd == -1) lua_pushnil(L);
+    else {
+        r = _fstat(fd, &fileinfo);
+        _close(fd);
+        lua_newtable(L);
+        lua_pushliteral(L, "size");
+        lua_pushinteger(L, fileinfo.st_size);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "created");
+        lua_pushinteger(L, fileinfo.st_ctime);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "modified");
+        lua_pushinteger(L, fileinfo.st_mtime);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "accessed");
+        lua_pushinteger(L, fileinfo.st_atime);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "mode");
+        lua_pushinteger(L, fileinfo.st_mode);
+        lua_rawset(L, -3);
+    }
+
+    return (1);
 }
 
 /*
@@ -179,6 +227,7 @@ static int rumble_lua_send(lua_State *L) {
     const char      *message;
     sessionHandle   *session;
     int             n = 0;
+    size_t          len = 0;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
     n = lua_gettop(L);
@@ -186,16 +235,53 @@ static int rumble_lua_send(lua_State *L) {
     lua_rawgeti(L, 1, 0);
     luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
     session = (sessionHandle *) lua_topointer(L, -1);
-    lua_settop(L, n);
-    for (n = 2; n <= lua_gettop(L); n++) {
+    if (lua_type(L, 2) == LUA_TNUMBER) {
+        len = luaL_optnumber(L, 2, 0);
+        message = lua_tolstring(L, 3, &len);
+        if (message) rumble_comm_send_bytes(session, message, len);
+    } else {
+        lua_settop(L, n);
+        for (n = 2; n <= lua_gettop(L); n++) {
 
-        /*
-         * luaL_checktype(L, n, LUA_TSTRING);
-         */
-        message = lua_tostring(L, n);
-        if (message) rcsend(session, message);
+            /*
+             * luaL_checktype(L, n, LUA_TSTRING);
+             */
+            message = lua_tostring(L, n);
+            if (message) rcsend(session, message);
+        }
     }
 
+    lua_settop(L, 0);
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_deleteaccount(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *user,
+                    *domain;
+    int             uid = 0,
+                    n;
+    void            *state;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    if (lua_type(L, 1) == LUA_TNUMBER) {
+        uid = luaL_optnumber(L, 1, 0);
+        state = rumble_database_prepare(0, "DELETE FROM accounts WHERE id = %u", uid);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+    } else {
+        luaL_checktype(L, 1, LUA_TSTRING);
+        luaL_checktype(L, 2, LUA_TSTRING);
+        domain = lua_tostring(L, 1);
+        user = lua_tostring(L, 2);
+        state = rumble_database_prepare(0, "DELETE FROM accounts WHERE domain = %s AND user = %s", domain, user);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+    }
     lua_settop(L, 0);
     return (0);
 }
@@ -446,7 +532,6 @@ static int rumble_lua_saveaccount(lua_State *L) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    printf("name...");
     lua_pushliteral(L, "name");
     lua_gettable(L, -2);
     luaL_checktype(L, -1, LUA_TSTRING);
@@ -474,8 +559,11 @@ static int rumble_lua_saveaccount(lua_State *L) {
     lua_pop(L, 1);
     lua_pushliteral(L, "id");
     lua_gettable(L, -2);
-    luaL_checktype(L, -1, LUA_TNUMBER);
-    uid = lua_tointeger(L, -1);
+
+    /*
+     * luaL_checktype(L, -1, LUA_TNUMBER);
+     */
+    uid = luaL_optint(L, -1, 0);
     lua_settop(L, 0);
     if (rumble_domain_exists(domain)) {
         x = rumble_account_exists_raw(user, domain);
@@ -692,7 +780,7 @@ void *rumble_lua_handle_service(void *s) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        lua_pcall(L, 1, 0, 0);
+        lua_call(L, 1, 0, 0);
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -727,13 +815,33 @@ void *rumble_lua_handle_service(void *s) {
  =======================================================================================================================
  */
 static int rumble_lua_serverinfo(lua_State *L) {
-    char tmp[100];
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    char        tmp[256];
+    int         x,
+                y;
+#   ifdef RUMBLE_MSC
+    STARTUPINFO StartupInfo;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    StartupInfo.dwFlags = 0;
+#   endif
     sprintf(tmp, "%u.%02u.%04u", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     lua_newtable(L);
     lua_pushliteral(L, "version");
     lua_pushstring(L, tmp);
     lua_rawset(L, -3);
-    
+#   ifdef RUMBLE_MSC
+    GetCurrentDirectoryA(256, tmp);
+#   else
+    getcwd(tmp, 256);
+#   endif
+    y = strlen(tmp);
+    for (x = 0; x < y; x++)
+        if (tmp[x] == '\\') tmp[x] = '/';
+    lua_pushliteral(L, "path");
+    lua_pushstring(L, tmp);
+    lua_rawset(L, -3);
     return (1);
 }
 
@@ -825,11 +933,13 @@ static const luaL_reg   Foo_methods[] =
     { "listAccounts", rumble_lua_getaccounts },
     { "readAccount", rumble_lua_getaccount },
     { "saveAccount", rumble_lua_saveaccount },
+    { "deleteAccount", rumble_lua_deleteaccount},
     { "accountExists", rumble_lua_accountexists },
     { "addressExists", rumble_lua_addressexists },
     { "createService", rumble_lua_createservice },
     { "readConfig", rumble_lua_config },
     { "setHook", rumble_lua_sethook },
+    { "fstat", rumble_lua_fileinfo },
     { "SHA256", rumble_lua_sha256 },
     { "serverInfo", rumble_lua_serverinfo },
     { 0, 0 }
