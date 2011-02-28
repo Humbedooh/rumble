@@ -313,7 +313,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
     t.tv_usec = 0;
     z = time(0);
-    buffer = (char *) calloc(1, len);
+    buffer = (char *) calloc(1, len+1);
     f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
     if (f > 0) {
         if (session->client->recv) rc = (session->client->recv) (session->client->tls, buffer, len, 0);
