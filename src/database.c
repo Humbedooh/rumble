@@ -399,7 +399,6 @@ cvector *rumble_database_accounts_list(const char *domain) {
     if (rumble_domain_exists(domain)) {
         state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                         "SELECT id, user, password, type, arg FROM accounts WHERE domain = %s", domain);
-        rc = rumble_database_run(state);
         acc = NULL;
         while ((rc = rumble_database_run(state)) == RUMBLE_DB_RESULT) {
 
