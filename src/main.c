@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
 
     master = (masterHandle *) malloc(sizeof(masterHandle));
     if (!master) merror();
+    master->_core.uptime = time(0);
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(args, argv[x]);
         printf("%d = %s\n", x, argv[x]);

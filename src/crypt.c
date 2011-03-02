@@ -44,11 +44,11 @@ char *rumble_sha256_fast(const unsigned char *d) {
  */
 char *rumble_sha256(const unsigned char *d) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     unsigned int    x;
-    unsigned char   *md = (unsigned char *) malloc(33);
-    char            *ret = (char *) calloc(1, 65);
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    unsigned char   *md = (unsigned char *) calloc(1, 33);
+    char            *ret = (char *) calloc(1, 72);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!ret) merror();
     SHA256(d, strlen((const char *) d), md);

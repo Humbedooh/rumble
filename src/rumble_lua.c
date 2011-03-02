@@ -261,13 +261,22 @@ static int rumble_lua_send(lua_State *L) {
  */
 static int rumble_lua_deleteaccount(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~*/
-    const char      *user,
-                    *domain;
-    int             uid = 0,
-                    n;
-    void            *state;
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    const char                      *user,
+                                    *domain,
+                                    *path;
+    int                             uid = 0,
+                                    n;
+    void                            *state;
+    rumble_mailbox                  *acc;
+    rumble_mailman_shared_bag       *bag;
+    rumble_mailman_shared_folder    *folder;
+    rumble_letter                   *letter;
+    char                            tmp[256];
+    d_iterator                      diter,
+                                    liter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     if (lua_type(L, 1) == LUA_TNUMBER) {
         uid = luaL_optnumber(L, 1, 0);
         state = rumble_database_prepare(0, "DELETE FROM accounts WHERE id = %u", uid);
@@ -278,10 +287,26 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         luaL_checktype(L, 2, LUA_TSTRING);
         domain = lua_tostring(L, 1);
         user = lua_tostring(L, 2);
-        state = rumble_database_prepare(0, "DELETE FROM accounts WHERE domain = %s AND user = %s", domain, user);
-        rumble_database_run(state);
-        rumble_database_cleanup(state);
+        acc = rumble_account_data(0, user, domain);
+        if (acc) {
+            path = strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+            bag = rumble_mailman_open_bag(acc->uid);
+            dforeach(rmsf, folder, bag->folders, diter) {
+                dforeach((rumble_letter *), letter, folder->letters, liter) {
+                    sprintf(tmp, "%s/%s.msg", path, letter->fid);
+                    unlink(tmp);
+                }
+            }
+
+            state = rumble_database_prepare(0, "DELETE FROM accounts WHERE domain = %s AND user = %s", domain, user);
+            rumble_database_run(state);
+            rumble_database_cleanup(state);
+            state = rumble_database_prepare(0, "DELETE FROM mbox WHERE uid = %u", acc->uid);
+            rumble_database_run(state);
+            rumble_database_cleanup(state);
+        }
     }
+
     lua_settop(L, 0);
     return (0);
 }
@@ -510,6 +535,66 @@ static int rumble_lua_getaccounts(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
+static int rumble_lua_getaccount(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    const char      *domain,
+                    *user;
+    char            *mtype;
+    c_iterator      iter;
+    rumble_mailbox  *acc;
+    int             x = 0,
+                    uid = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    domain = lua_tostring(L, 1);
+    user = lua_tostring(L, 2);
+    uid = luaL_optnumber(L, 1, 0);
+    acc = rumble_account_data(uid, domain, user);
+    lua_settop(L, 1);
+    if (acc) {
+        mtype = "unknown";
+        switch (acc->type)
+        {
+        case RUMBLE_MTYPE_ALIAS:    mtype = "alias"; break;
+        case RUMBLE_MTYPE_FEED:     mtype = "feed"; break;
+        case RUMBLE_MTYPE_MBOX:     mtype = "mailbox"; break;
+        case RUMBLE_MTYPE_MOD:      mtype = "module"; break;
+        case RUMBLE_MTYPE_RELAY:    mtype = "relay"; break;
+        default:                    break;
+        }
+
+        lua_newtable(L);
+        lua_pushliteral(L, "id");
+        lua_pushinteger(L, acc->uid);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "name");
+        lua_pushstring(L, acc->user);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "domain");
+        lua_pushstring(L, domain);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "password");
+        lua_pushstring(L, acc->hash);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "type");
+        lua_pushstring(L, mtype);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "arguments");
+        lua_pushstring(L, acc->arg);
+        lua_rawset(L, -3);
+        rumble_free_account(acc);
+        return (1);
+    }
+
+    lua_pushnil(L);
+    return (1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_saveaccount(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -592,58 +677,64 @@ static int rumble_lua_saveaccount(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
-static int rumble_lua_getaccount(lua_State *L) {
+static int rumble_lua_createdomain(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    const char      *user,
-                    *domain;
-    char            *mtype;
-    rumble_mailbox  *acc;
-    int             x = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *domain,
+                *path;
+    int         x = 0;
+    void        *state;
+    /*~~~~~~~~~~~~~~~~*/
+
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Check for duplicate name
+     -------------------------------------------------------------------------------------------------------------------
+     */
 
     luaL_checktype(L, 1, LUA_TSTRING);
-    luaL_checktype(L, 2, LUA_TSTRING);
     domain = lua_tostring(L, 1);
-    user = lua_tostring(L, 2);
-    lua_pop(L, 2);
-    acc = rumble_account_data(0, user, domain);
-    if (acc) {
-        mtype = "unknown";
-        switch (acc->type)
-        {
-        case RUMBLE_MTYPE_ALIAS:    mtype = "alias"; break;
-        case RUMBLE_MTYPE_FEED:     mtype = "feed"; break;
-        case RUMBLE_MTYPE_MBOX:     mtype = "mailbox"; break;
-        case RUMBLE_MTYPE_MOD:      mtype = "module"; break;
-        case RUMBLE_MTYPE_RELAY:    mtype = "relay"; break;
-        default:                    break;
-        }
+    path = lua_tostring(L, 2);
+    lua_settop(L, 0);
+    if (!rumble_domain_exists(domain)) {
+        state = rumble_database_prepare(0, "INSERT INTO domains (domain,storagepath) VALUES (%s,%s)", domain, path);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+        rumble_database_update_domains();
+        lua_pushboolean(L, 1);
+    } else lua_pushboolean(L, 0);
+    return (1);
+}
 
-        lua_newtable(L);
-        lua_pushliteral(L, "id");
-        lua_pushinteger(L, acc->uid);
-        lua_rawset(L, -3);
-        lua_pushliteral(L, "name");
-        lua_pushstring(L, acc->user);
-        lua_rawset(L, -3);
-        lua_pushliteral(L, "domain");
-        lua_pushstring(L, domain);
-        lua_rawset(L, -3);
-        lua_pushliteral(L, "password");
-        lua_pushstring(L, acc->hash);
-        lua_rawset(L, -3);
-        lua_pushliteral(L, "type");
-        lua_pushstring(L, mtype);
-        lua_rawset(L, -3);
-        lua_pushliteral(L, "arguments");
-        lua_pushstring(L, acc->arg);
-        lua_rawset(L, -3);
-        rumble_free_account(acc);
-        return (1);
-    }
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_deletedomain(lua_State *L) {
 
-    lua_pushnil(L);
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *domain,
+                *path;
+    int         x = 0;
+    void        *state;
+    /*~~~~~~~~~~~~~~~~*/
+
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Check for duplicate name
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    domain = lua_tostring(L, 1);
+    lua_settop(L, 1);
+    if (rumble_domain_exists(domain)) {
+        state = rumble_database_prepare(0, "DELETE FROM domains WHERE domain = %s", domain);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+        rumble_database_update_domains();
+        lua_pushboolean(L, 1);
+    } else lua_pushboolean(L, 0);
     return (1);
 }
 
@@ -780,7 +871,9 @@ void *rumble_lua_handle_service(void *s) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        lua_call(L, 1, 0, 0);
+        if (lua_pcall(L, 1, 0, 0)) {
+            rcprintf(&session, "\r\n\r\nLua error: %s\n", lua_tostring(L, -1));
+        }
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -820,6 +913,7 @@ static int rumble_lua_serverinfo(lua_State *L) {
     char        tmp[256];
     int         x,
                 y;
+    double      uptime;
 #   ifdef RUMBLE_MSC
     STARTUPINFO StartupInfo;
     /*~~~~~~~~~~~~~~~~~~~~*/
@@ -842,6 +936,10 @@ static int rumble_lua_serverinfo(lua_State *L) {
     lua_pushliteral(L, "path");
     lua_pushstring(L, tmp);
     lua_rawset(L, -3);
+    uptime = difftime(time(0), rumble_database_master_handle->_core.uptime);
+    lua_pushliteral(L, "uptime");
+    lua_pushinteger(L, uptime);
+    lua_rawset(L, -3);
     return (1);
 }
 
@@ -860,6 +958,22 @@ static int rumble_lua_config(lua_State *L) {
     if (rhdict(rumble_database_master_handle->_core.conf, el)) lua_pushstring(L, rrdict(rumble_database_master_handle->_core.conf, el));
     else lua_pushnil(L);
     return (1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_debug(lua_State *L) {
+
+    /*~~~~~~~~~~~~*/
+    const char  *el;
+    /*~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    el = lua_tostring(L, 1);
+    printf("Lua error: %s\n", el);
+    return (0);
 }
 
 /*
@@ -933,15 +1047,18 @@ static const luaL_reg   Foo_methods[] =
     { "listAccounts", rumble_lua_getaccounts },
     { "readAccount", rumble_lua_getaccount },
     { "saveAccount", rumble_lua_saveaccount },
-    { "deleteAccount", rumble_lua_deleteaccount},
+    { "deleteAccount", rumble_lua_deleteaccount },
     { "accountExists", rumble_lua_accountexists },
     { "addressExists", rumble_lua_addressexists },
     { "createService", rumble_lua_createservice },
+    { "createDomain", rumble_lua_createdomain },
+    { "deleteDomain", rumble_lua_deletedomain },
     { "readConfig", rumble_lua_config },
     { "setHook", rumble_lua_sethook },
     { "fstat", rumble_lua_fileinfo },
     { "SHA256", rumble_lua_sha256 },
     { "serverInfo", rumble_lua_serverinfo },
+    { "dprint", rumble_lua_debug },
     { 0, 0 }
 };
 
@@ -962,6 +1079,7 @@ ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     lua_State   *L = lua_newthread(state);
+    int         err_func;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, ((hookHandle *) hook)->lua_callback);
@@ -996,6 +1114,8 @@ ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session
     lua_pushliteral(L, "address");
     lua_pushlstring(L, session->client->addr, strlen(session->client->addr));
     lua_rawset(L, -3);
+    lua_getglobal(L, "dprint");
+    err_func = lua_gettop(L);
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -1003,7 +1123,7 @@ ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    lua_pcall(L, 1, 0, 0);
+    lua_pcall(L, 1, 0, err_func);
 
     /*
      * lua_gc(L, LUA_GCSTEP, 1);

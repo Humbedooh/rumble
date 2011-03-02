@@ -234,7 +234,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
     tmp = (char *) calloc(1, 65);
     if (sscanf(rrdict(session->dict, "user"), "%128[^@]@%128c", usr, dmn) == 2) {
         printf("searching for user <%s> @ <%s>\n", usr, dmn);
-        if ((pops->account = rumble_account_data(session, usr, dmn))) {
+        if ((pops->account = rumble_account_data(0, usr, dmn))) {
             tmp = rumble_sha256((const unsigned char *) parameters);
             printf("matching %s against %s\n", tmp, pops->account->hash);
             if (strcmp(tmp, pops->account->hash)) {

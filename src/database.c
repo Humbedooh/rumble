@@ -19,6 +19,8 @@ void rumble_database_load(masterHandle *master) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *dbpath = (char *) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
     char    *mailpath = (char *) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
+    void    *state;
+    int     rc;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!dbpath || !mailpath) merror();
@@ -38,9 +40,43 @@ void rumble_database_load(masterHandle *master) {
         exit(EXIT_FAILURE);
     }
 
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Check if the tables exists or not
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
+    state = rumble_database_prepare(0, "PRAGMA table_info (queue)");
+    rc = rumble_database_run(state);
+    rumble_database_cleanup(state);
+    if (rc != SQLITE_ROW) {
+        printf("[OK]\r\n");
+        printf("%-48s", "Setting up tables...");
+        state = rumble_database_prepare(0,
+                                        "CREATE TABLE \"domains\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"storagepath\" VARCHAR);");
+        rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
+        rumble_database_cleanup(state);
+        state = rumble_database_prepare(0,
+                                        "CREATE TABLE \"accounts\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"user\" VARCHAR, \"password\" CHAR(64), \"type\" CHAR(5) NOT NULL  DEFAULT mbox, \"arg\" VARCHAR);");
+        rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
+        rumble_database_cleanup(state);
+        state = rumble_database_prepare(0,
+                                        "CREATE TABLE \"folders\" (\"uid\" INTEGER NOT NULL  DEFAULT 0, \"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"name\" VARCHAR NOT NULL , \"subscribed\" BOOL NOT NULL  DEFAULT false);");
+        rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
+        rumble_database_cleanup(state);
+        state = rumble_database_prepare(0,
+                                        "CREATE TABLE \"mbox\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"uid\" INTEGER NOT NULL , \"fid\" VARCHAR NOT NULL , \"size\" INTEGER NOT NULL , \"delivered\" INTEGER DEFAULT (strftime('%%s', 'now')), \"folder\" INTEGER NOT NULL DEFAULT 0, \"flags\" INTEGER NOT NULL );");
+        rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
+        rumble_database_cleanup(state);
+        state = rumble_database_prepare(0,
+                                        "CREATE TABLE \"queue\" (\"id\" INTEGER PRIMARY KEY  NOT NULL ,\"time\" INTEGER NOT NULL  DEFAULT (STRFTIME('%%s','now')) ,\"loops\" INTEGER NOT NULL  DEFAULT (0) ,\"fid\" VARCHAR NOT NULL ,\"sender\" VARCHAR NOT NULL ,\"recipient\" VARCHAR NOT NULL ,\"flags\" INTEGER NOT NULL  DEFAULT (0) );");
+        rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
+        rumble_database_cleanup(state);
+        if (rc == SQLITE_DONE) printf("[OK]\r\n");
+        else printf("[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
+    } else printf("[OK]\r\n");
     free(dbpath);
     free(mailpath);
-    printf("[OK]\n");
 }
 
 /*
@@ -204,7 +240,7 @@ uint32_t rumble_account_exists_raw(const char *user, const char *domain) {
  =======================================================================================================================
  =======================================================================================================================
  */
-rumble_mailbox *rumble_account_data(sessionHandle *session, const char *user, const char *domain) {
+rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *domain) {
 
     /*~~~~~~~~~~~~~~~~~~~*/
     int             rc;
@@ -213,9 +249,15 @@ rumble_mailbox *rumble_account_data(sessionHandle *session, const char *user, co
     rumble_mailbox  *acc;
     /*~~~~~~~~~~~~~~~~~~~*/
 
-    state = rumble_database_prepare(rumble_database_master_handle->_core.db,
-                                    "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",
-                                domain, user);
+    if (uid) {
+        state = rumble_database_prepare(rumble_database_master_handle->_core.db,
+                                        "SELECT id, domain, user, password, type, arg FROM accounts WHERE id = %u LIMIT 1", uid);
+    } else {
+        state = rumble_database_prepare(rumble_database_master_handle->_core.db,
+                                        "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",
+                                    domain ? domain : "", user ? user : "");
+    }
+
     rc = rumble_database_run(state);
     acc = NULL;
     if (rc == RUMBLE_DB_RESULT) {
@@ -274,14 +316,14 @@ rumble_mailbox *rumble_account_data(sessionHandle *session, const char *user, co
  =======================================================================================================================
  =======================================================================================================================
  */
-rumble_mailbox *rumble_account_data_auth(sessionHandle *session, const char *user, const char *domain, const char *pass) {
+rumble_mailbox *rumble_account_data_auth(uint32_t uid, const char *user, const char *domain, const char *pass) {
 
     /*~~~~~~~~~~~~~~~~~~*/
     rumble_mailbox  *acc;
     char            *hash;
     /*~~~~~~~~~~~~~~~~~~*/
 
-    acc = rumble_account_data(session, user, domain);
+    acc = rumble_account_data(0, user, domain);
     if (acc) {
         hash = rumble_sha256((const unsigned char *) pass);
         if (!strcmp(hash, acc->hash)) return (acc);

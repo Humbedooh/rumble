@@ -215,7 +215,7 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
     if (sscanf(parameters, "%s %s", user, pass) == 2) {
         addr = rumble_parse_mail_address(user);
         if (addr) {
-            imap->account = rumble_account_data_auth(session, addr->user, addr->domain, pass);
+            imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
             if (imap->account) {
                 rcprintf(session, "%s OK Welcome!\r\n", extra_data);
                 imap->folder = -1;
@@ -296,7 +296,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                 pass = buffer + 2 + strlen(user);
                 addr = rumble_parse_mail_address(user);
                 if (addr) {
-                    imap->account = rumble_account_data_auth(session, addr->user, addr->domain, pass);
+                    imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
                     if (imap->account) {
                         rcprintf(session, "%s OK Welcome!\r\n", extra_data);
                         imap->folder = -1;

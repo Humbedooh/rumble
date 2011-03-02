@@ -603,7 +603,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         sscanf(line, "%s", digest);
         pass = rumble_decode_base64(digest);
         addr = rumble_parse_mail_address(user);
-        if (addr) OK = rumble_account_data_auth(session, addr->user, addr->domain, pass);
+        if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(user);
         strcpy(digest, pass);
         free(pass);
@@ -616,12 +616,12 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         user = buffer + 1;
         pass = buffer + 2 + strlen(user);
         addr = rumble_parse_mail_address(user);
-        if (addr) OK = rumble_account_data_auth(session, addr->user, addr->domain, pass);
+        if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(buffer);
     }
 
     if (OK) {
-        if (rumble_account_data_auth(session, addr->user, addr->domain, pass)) {
+        if (rumble_account_data_auth(0, addr->user, addr->domain, pass)) {
             session->flags |= RUMBLE_SMTP_CAN_RELAY;
             rumble_free_account(OK);
             return (250);

@@ -1,9 +1,9 @@
 /*
  * File: greylist.c Author: Humbedooh A simple grey-listing module for rumble.
- * Created on Janu
+ * Created on Jan
  */
-#include <string.h>
 #include "../../rumble.h"
+#include <string.h>
 #define GREYLIST_MAX_AGE    172800  /* Grey-list records will linger for 48 hours. */
 #define GREYLIST_MIN_AGE    900     /* Put new triplets on hold for 15 minutes */
 dvector rumble_greyList;

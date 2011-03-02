@@ -52,6 +52,7 @@
 #      include <Ws2tcpip.h>
 #      include <WinSock2.h>
 #      include <windns.h>
+#      include <Psapi.h>
 #      if (NTDDI_VERSION < NTDDI_WIN6 || defined(FORCE_OLD_PTHREAD))
 #         include <pthread.h>
 #      else
@@ -399,6 +400,7 @@ typedef struct
         dvector         *batv;  /* BATV handles for bounce control */
         void            *lua;
         void            *tls_credentials;
+        time_t          uptime;
     } _core;
     rumbleService   smtp;
     rumbleService   pop3;
@@ -582,8 +584,8 @@ uint32_t        rumble_account_exists_raw(const char *user, const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
 cvector         *rumble_domains_list(void);
 uint32_t        rumble_account_exists(sessionHandle *session, const char *user, const char *domain);
-rumble_mailbox  *rumble_account_data(sessionHandle *session, const char *user, const char *domain);
-rumble_mailbox  *rumble_account_data_auth(sessionHandle *session, const char *user, const char *domain, const char *pass);
+rumble_mailbox  *rumble_account_data(uint32_t uid, const char *user, const char *domain);
+rumble_mailbox  *rumble_account_data_auth(uint32_t uid, const char *user, const char *domain, const char *pass);
 cvector         *rumble_database_accounts_list(const char *domain);
 void            rumble_database_accounts_free(cvector *accounts);   /* cleanup func for the function above. */
 
