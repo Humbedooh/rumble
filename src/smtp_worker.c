@@ -72,6 +72,7 @@ rumble_sendmail_response *rumble_send_email(
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     s.client = &c;
+    s._svc = 0;
     res = (rumble_sendmail_response *) malloc(sizeof(rumble_sendmail_response));
     if (!res) merror();
     res->flags = dvector_init();

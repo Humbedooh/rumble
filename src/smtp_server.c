@@ -59,10 +59,12 @@ void *rumble_smtp_init(void *m) {
         comm_accept(master->smtp.socket, session.client);
         pthread_mutex_lock(&master->smtp.mutex);
         dvector_add(master->smtp.handles, (void *) sessptr);
+        master->smtp.traffic.sessions++;
         pthread_mutex_unlock(&master->smtp.mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
+        session._svc = &master->smtp;
         now = time(0);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         strftime(tmp, 100, "%X", localtime(&now));

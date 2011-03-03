@@ -465,7 +465,7 @@ uint32_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *lett
         fclose(out);
         state = rumble_database_prepare(rumble_database_master_handle->_core.db,
                                         "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)", account->uid,
-                                        filename, folder->id, letter->size, 0);
+                                        filename, folder->id, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
         rumble_database_run(state);
         rumble_database_cleanup(state);
         free(filename);

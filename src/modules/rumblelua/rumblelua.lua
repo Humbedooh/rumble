@@ -14,6 +14,12 @@ function getFile(filename)
     return ret;
 end
 
+function comma(number)
+ local left,num,right = string.match(number,'^([^%d]*%d)(%d+)(.-)$');
+local prettyNum = (left and left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse()) or number);
+return prettyNum;
+end
+
 -- character table string
 local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
@@ -91,8 +97,8 @@ function acceptHTTP(session)
     http = parseHTTP(session); -- Parse HTTP request.
     sess = session;
     session.credentials = nil;
+    
     --[[ First, check authorization ]]--
-    print(session.address);
     if (http.headers.Authorization) then
         local t,v = http.headers.Authorization:match("^(%w+) (.+)$");
         if (v) then
@@ -169,13 +175,45 @@ function mainPage(session)
     append("<h2>Server information</h2>");
     append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
 --    append("<tr><th>Domain</th></tr>");
-    append("<tr><td>Version:</td><td>%s</td></tr>", info.version);
-    append("<tr><td>Location:</td><td>%s</td></tr>", info.path);
+    append("<tr><td>Version:</td><td class='plain_text'>%s</td></tr>", info.version);
+    append("<tr><td>Location:</td><td class='plain_text'>%s</td></tr>", info.path);
     local hours = math.floor(info.uptime/3600);
     local minutes = math.floor(math.fmod(info.uptime, 3600)/60);
     local seconds = math.fmod(info.uptime, 60);
-    append("<tr><td>Uptime:</td><td>%02u:%02u:%02u</td></tr>", hours,minutes,seconds);
+    append("<tr><td>Uptime:</td><td class='plain_text'>%02u:%02u:%02u</td></tr>", hours,minutes,seconds);
     append("</table>");
+    
+    append("<br/><br/><h2>Services</h2>");
+    for k,v in pairs({"smtp", "imap", "pop3"}) do
+        local svc = serviceInfo(v);
+        if (svc) then
+            append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
+            append("<tr><th colspan='2'>%s</th></tr>", v:upper());
+            if (svc.enabled) then 
+                append("<tr><td>Status:</td><td class='plain_text'><font color='darkgreen'>Enabled</font></td></tr>");
+                append("<tr><td>Threads:</td><td class='plain_text'>%u total, %u working, %u idling.</td></tr>", svc.workers, svc.busy, svc.idle);
+                append("<tr><td>Traffic:</td><td class='plain_text'>%s sessions, %s bytes received, %s bytes sent</td></tr>", comma(svc.sessions), comma(svc.received), comma(svc.sent));
+                append("<tr><td>Capabilities:</td><td class='plain_text'>%s</td></tr>", svc.capabilities);
+            else 
+                append("<tr><td>Status:</td><td class='plain_text'><font color='darkred'>Disabled</font></td></tr>");
+            end
+            append("</table>");
+        end
+    end
+    
+    append("<br/><br/><h2>Modules</h2>");
+    for k,mod in pairs(listModules()) do
+        local file = mod.file;
+        if not (file:match("^/") or file:match(":")) then
+            file = info.path .. "/" ..file;
+        end
+        append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
+        append("<tr><th colspan='2'>%s</th></tr>", mod.title);
+        append("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", mod.description);
+        append("<tr><td>Author:</td><td class='plain_text'>%s</td></tr>", mod.author);
+        append("<tr><td>File:</td><td class='plain_text'>%s</td></tr>", file);
+        append("</table>");
+    end
 end
 
 
@@ -388,7 +426,7 @@ do
         end
         auth[user] = {password = pass, domains = domains, admin = admin};
     end
-    print(string.format("%-48s[%s]", "Launching RumbleLua service on port 80...", (createService(acceptHTTP, 80, 5) and "OK") or "BAD"));
+    print(string.format("%-48s[%s]", "Launching RumbleLua service on port 80...", (createService(acceptHTTP, 80, 10) and "OK") or "BAD"));
     
 end
 

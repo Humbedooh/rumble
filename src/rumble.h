@@ -229,15 +229,15 @@
 #   define RUMBLE_MTYPE_RELAY  0x00000010   /* Mail is being relayed to another server */
 
 /* Letter flags (for POP3/IMAP4) */
-#   define RUMBLE_LETTER_RECENT    0x00000000
-#   define RUMBLE_LETTER_UNREAD    0x00000001
-#   define RUMBLE_LETTER_READ      0x00000002
-#   define RUMBLE_LETTER_DELETED   0x00000010
-#   define RUMBLE_LETTER_EXPUNGE   0x00000030
-#   define RUMBLE_LETTER_ANSWERED  0x00000100
-#   define RUMBLE_LETTER_FLAGGED   0x00001000
-#   define RUMBLE_LETTER_DRAFT     0x00010000
-#   define RUMBLE_LETTER_UPDATED   0x00100000
+#   define RUMBLE_LETTER_RECENT    0x00000001
+#   define RUMBLE_LETTER_UNREAD    0x00000010
+#   define RUMBLE_LETTER_READ      0x00000020
+#   define RUMBLE_LETTER_DELETED   0x00000100
+#   define RUMBLE_LETTER_EXPUNGE   0x00000300
+#   define RUMBLE_LETTER_ANSWERED  0x00001000
+#   define RUMBLE_LETTER_FLAGGED   0x00010000
+#   define RUMBLE_LETTER_DRAFT     0x00100000
+#   define RUMBLE_LETTER_UPDATED   0x01000000
 
 /*$5
  #######################################################################################################################
@@ -353,6 +353,7 @@ typedef struct
     uint32_t        _tflags;
     void            *_master;
     void            *_svcHandle;
+    void            *_svc;
 } sessionHandle;
 typedef struct
 {
@@ -383,6 +384,11 @@ typedef struct
     int             lua_handle;
     void * (*init) (void *);
     int             enabled;
+    struct {
+        size_t sent;
+        size_t received;
+        size_t sessions;
+    } traffic;
 } rumbleService;
 typedef struct
 {

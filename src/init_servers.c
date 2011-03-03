@@ -29,6 +29,9 @@ void rumble_master_init(masterHandle *master) {
     master->smtp.init = rumble_smtp_init;
     pthread_mutex_init(&master->smtp.mutex, 0);
     master->smtp.enabled = 0;
+    master->smtp.traffic.received = 0;
+    master->smtp.traffic.sent = 0;
+    master->smtp.traffic.sessions = 0;
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -84,6 +87,9 @@ void rumble_master_init(masterHandle *master) {
     master->pop3.init = rumble_pop3_init;
     pthread_mutex_init(&master->pop3.mutex, 0);
     master->pop3.enabled = 0;
+    master->pop3.traffic.received = 0;
+    master->pop3.traffic.sent = 0;
+    master->pop3.traffic.sessions = 0;
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -132,6 +138,9 @@ void rumble_master_init(masterHandle *master) {
     master->imap.init = rumble_imap_init;
     pthread_mutex_init(&master->imap.mutex, 0);
     master->imap.enabled = 0;
+    master->imap.traffic.received = 0;
+    master->imap.traffic.sent = 0;
+    master->imap.traffic.sessions = 0;
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------

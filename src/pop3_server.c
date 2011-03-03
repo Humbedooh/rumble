@@ -44,6 +44,7 @@ void *rumble_pop3_init(void *m) {
     session._svcHandle = (accountSession *) malloc(sizeof(accountSession));
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session._master = m;
+    session._svc = &master->pop3;
     pops = (accountSession *) session._svcHandle;
     pops->account = 0;
     pops->bag = 0;

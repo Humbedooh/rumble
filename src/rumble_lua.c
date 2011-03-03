@@ -823,6 +823,7 @@ void *rumble_lua_handle_service(void *s) {
         session.flags = 0;
         session._tflags += 0x00100000;  /* job count ( 0 through 4095) */
         session.sender = 0;
+        session._svc = s;
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -947,9 +948,12 @@ static int rumble_lua_serverinfo(lua_State *L) {
 static int rumble_lua_serviceinfo(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
-    int         workers,busy,idle;
+    int         workers,busy,idle,sessions,out,in;
     rumbleService* svc = 0;
+    char capa[1024];
     const char* svcName;
+    c_iterator iter;
+    char* c;
     
     luaL_checktype(L, 1, LUA_TSTRING);
     svcName = lua_tostring(L, 1);
@@ -962,6 +966,9 @@ static int rumble_lua_serviceinfo(lua_State *L) {
         workers = svc->threads->size;   /* Number of threads alive */
         busy = svc->handles->size;      /* Number of threads busy */
         idle = workers - busy;          /* Number of threads idling */
+        sessions = svc->traffic.sessions;
+        out = svc->traffic.sent;
+        in = svc->traffic.received;
         pthread_mutex_unlock(&(svc->mutex));
         lua_newtable(L);
         lua_pushliteral(L, "workers");
@@ -976,9 +983,53 @@ static int rumble_lua_serviceinfo(lua_State *L) {
         lua_pushliteral(L, "enabled");
         lua_pushboolean(L, svc->enabled);
         lua_rawset(L, -3);
+        lua_pushliteral(L, "sessions");
+        lua_pushinteger(L, sessions);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "sent");
+        lua_pushinteger(L, out);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "received");
+        lua_pushinteger(L, in);
+        lua_rawset(L, -3);
+        memset(capa,0,1024);
+        cforeach((char*), c, svc->capabilities, iter) {
+            sprintf(&(capa[strlen(capa)]), "%s ", c);
+        }
+        lua_pushliteral(L, "capabilities");
+        lua_pushstring(L, strlen(capa) ? capa : "");
+        lua_rawset(L, -3);
         return(1);
     }
     lua_pushnil(L);
+    return(1);
+}
+
+
+static int rumble_lua_listmodules(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    rumble_module_info* mod;
+    int x = 0;
+    d_iterator iter;
+    lua_newtable(L);
+    dforeach((rumble_module_info*), mod, rumble_database_master_handle->_core.modules, iter) {
+        x++;
+        lua_newtable(L);
+        lua_pushliteral(L, "title");
+        lua_pushstring(L, mod->title?mod->title : "");
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "description");
+        lua_pushstring(L, mod->description?mod->description : "");
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "author");
+        lua_pushstring(L, mod->author?mod->author : "Unknown");
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "file");
+        lua_pushstring(L, mod->file?mod->file : "");
+        lua_rawset(L, -3);
+        lua_rawseti(L, -2, x);
+    }
     return(1);
 }
 /*
@@ -1064,6 +1115,9 @@ static int rumble_lua_createservice(lua_State *L) {
     svc->handles = dvector_init();
     svc->commands = cvector_init();
     svc->capabilities = cvector_init();
+    svc->traffic.received = 0;
+    svc->traffic.sent = 0;
+    svc->traffic.sessions = 0;
     pthread_mutex_init(&svc->mutex, 0);
     for (n = 0; n < threads; n++) {
 
@@ -1097,6 +1151,7 @@ static const luaL_reg   Foo_methods[] =
     { "SHA256", rumble_lua_sha256 },
     { "serverInfo", rumble_lua_serverinfo },
     { "serviceInfo", rumble_lua_serviceinfo},
+    { "listModules", rumble_lua_listmodules},
     { "dprint", rumble_lua_debug },
     { 0, 0 }
 };

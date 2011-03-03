@@ -4,7 +4,7 @@
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
-#define RUMBLE_INITIAL_THREADS  25
+#define RUMBLE_INITIAL_THREADS  10
 extern masterHandle *rumble_database_master_handle;
 extern int (*lua_callback) (lua_State *, void *, void *);
 

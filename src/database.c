@@ -65,7 +65,7 @@ void rumble_database_load(masterHandle *master) {
         rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
         rumble_database_cleanup(state);
         state = rumble_database_prepare(0,
-                                        "CREATE TABLE \"mbox\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"uid\" INTEGER NOT NULL , \"fid\" VARCHAR NOT NULL , \"size\" INTEGER NOT NULL , \"delivered\" INTEGER DEFAULT (strftime('%%s', 'now')), \"folder\" INTEGER NOT NULL DEFAULT 0, \"flags\" INTEGER NOT NULL );");
+                                        "CREATE TABLE \"mbox\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"uid\" INTEGER NOT NULL , \"fid\" VARCHAR NOT NULL , \"size\" INTEGER NOT NULL , \"delivered\" INTEGER DEFAULT (strftime('%%s', 'now')), \"folder\" INTEGER NOT NULL DEFAULT 0, \"flags\" INTEGER NOT NULL DEFAULT 1 );");
         rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
         rumble_database_cleanup(state);
         state = rumble_database_prepare(0,

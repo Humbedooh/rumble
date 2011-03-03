@@ -96,10 +96,13 @@ table.elements tr {
 table.elements td {
 
 	padding: 4px;
-
-
-		border: none;
+	border: none;
 }
+
+.plain_text {
+	font-weight:normal;
+}
+
 table.elements a {
 	color:#371E1E;
 }
