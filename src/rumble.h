@@ -382,6 +382,7 @@ typedef struct
     dvector         *handles;
     int             lua_handle;
     void * (*init) (void *);
+    int             enabled;
 } rumbleService;
 typedef struct
 {

@@ -831,7 +831,7 @@ void *rumble_lua_handle_service(void *s) {
          */
 
         L = lua_newthread((lua_State *) master->_core.lua);
-        lua_settop(L, 0);
+        lua_pop((lua_State *) master->_core.lua,1); /* pop the thread from the stack to ensure proper GC */
         lua_rawgeti(L, LUA_REGISTRYINDEX, svc->lua_handle);
 
         /*$2
@@ -840,7 +840,8 @@ void *rumble_lua_handle_service(void *s) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        lua_createtable(L, 32, 32);
+        /*lua_createtable(L, 32, 32);*/
+        lua_newtable(L);
         luaL_register(L, NULL, session_functions);
 
         /*$2
@@ -883,7 +884,7 @@ void *rumble_lua_handle_service(void *s) {
 
         close(session.client->socket);
         rumble_clean_session(sessptr);
-        lua_gc((lua_State *) master->_core.lua, LUA_GCSTEP, 1);
+       /* lua_gc((lua_State *) master->_core.lua, LUA_GCSTEP, 1);*/
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -943,6 +944,43 @@ static int rumble_lua_serverinfo(lua_State *L) {
     return (1);
 }
 
+static int rumble_lua_serviceinfo(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    int         workers,busy,idle;
+    rumbleService* svc = 0;
+    const char* svcName;
+    
+    luaL_checktype(L, 1, LUA_TSTRING);
+    svcName = lua_tostring(L, 1);
+    
+    if (!strcmp(svcName, "smtp")) svc = &rumble_database_master_handle->smtp;
+    if (!strcmp(svcName, "imap")) svc = &rumble_database_master_handle->imap;
+    if (!strcmp(svcName, "pop3")) svc = &rumble_database_master_handle->pop3;
+    if (svc) {
+        pthread_mutex_lock(&(svc->mutex));
+        workers = svc->threads->size;   /* Number of threads alive */
+        busy = svc->handles->size;      /* Number of threads busy */
+        idle = workers - busy;          /* Number of threads idling */
+        pthread_mutex_unlock(&(svc->mutex));
+        lua_newtable(L);
+        lua_pushliteral(L, "workers");
+        lua_pushinteger(L, workers);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "busy");
+        lua_pushinteger(L, busy);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "idle");
+        lua_pushinteger(L, idle);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "enabled");
+        lua_pushboolean(L, svc->enabled);
+        lua_rawset(L, -3);
+        return(1);
+    }
+    lua_pushnil(L);
+    return(1);
+}
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -1036,7 +1074,7 @@ static int rumble_lua_createservice(lua_State *L) {
         dvector_add(svc->threads, t);
         pthread_create(t, NULL, rumble_lua_handle_service, svc);
     }
-
+    
     lua_pushboolean(L, TRUE);
     return (1);
 }
@@ -1058,6 +1096,7 @@ static const luaL_reg   Foo_methods[] =
     { "fstat", rumble_lua_fileinfo },
     { "SHA256", rumble_lua_sha256 },
     { "serverInfo", rumble_lua_serverinfo },
+    { "serviceInfo", rumble_lua_serviceinfo},
     { "dprint", rumble_lua_debug },
     { 0, 0 }
 };

@@ -29,8 +29,8 @@ ssize_t rumble_whitelist(sessionHandle *session) {
         }
     }
 
-    /* Return with EXIT_SUCCESS and let the server continue. */
-    return (EXIT_SUCCESS);
+    /* Return with RUMBLE_RETURN_OKAY and let the server continue. */
+    return (RUMBLE_RETURN_OKAY);
 }
 
 /*

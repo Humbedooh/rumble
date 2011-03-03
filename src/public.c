@@ -173,7 +173,7 @@ void rumble_scan_flags(dvector *dict, const char *flags) {
         if (strlen(pch) >= 3) {
             memset(key, 0, 99);
             memset(val, 0, 99);
-            if (sscanf(pch, "%99[^=]=%99c", key, val) == 2) {
+            if (sscanf(pch, "%99[^=]=%99c", key, val) >= 1) {
                 rumble_string_upper(key);
                 rsdict(dict, key, val);
             }
