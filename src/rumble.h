@@ -383,11 +383,12 @@ typedef struct
     dvector         *handles;
     int             lua_handle;
     void * (*init) (void *);
-    int             enabled;
-    struct {
-        size_t sent;
-        size_t received;
-        size_t sessions;
+    int enabled;
+    struct
+    {
+        size_t  sent;
+        size_t  received;
+        size_t  sessions;
     } traffic;
 } rumbleService;
 typedef struct
