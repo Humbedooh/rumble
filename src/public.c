@@ -1,7 +1,6 @@
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
-#include <fcntl.h>
-#include <io.h>
+
 /*
  =======================================================================================================================
     This file contains public functions for rumble (usable by both server and modules
@@ -371,16 +370,14 @@ char *rumble_create_filename(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-#   if R_WINDOWS
-#      define open    _open
-#   endif
+
 size_t rumble_file_exists(const char *filename) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    ssize_t fd = open(filename, 0);
+    FILE* fd = fopen(filename, "r");
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    if (fd == -1) return (0);
-    close(fd);
+    if (!fd) return (0);
+    fclose(fd);
     return (1);
 }
