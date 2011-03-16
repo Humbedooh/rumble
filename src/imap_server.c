@@ -859,7 +859,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     rumble_letter                   *letter;
     rumble_args                     *parts;
     rumble_mailman_shared_folder    *folder;
-    uint32_t                        a,
+    size_t                          a,
                                     b,
                                     c,
                                     d,
@@ -931,7 +931,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     d = 0;
     foreach((rumble_letter *), letter, folder->letters, iter) {
         a++;
-        printf("%d %s %u\n", a, letter->fid, letter->id);
+        printf("%d %s %llu\n", a, letter->fid, letter->id);
         if (w_uid && (letter->id < first || (last > 0 && letter->id > last))) continue;
         if (!w_uid && (a < first || (last > 0 && a > last))) continue;
         d++;
@@ -942,7 +942,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
                      (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
         }
 
-        if (uid || w_uid) rcprintf(session, "UID %u ", letter->id);
+        if (uid || w_uid) rcprintf(session, "UID %llu ", letter->id);
         if (size) rcprintf(session, "RFC822.SIZE %u ", letter->size);
         if (internaldate) rcprintf(session, "INTERNALDATE %u ", letter->delivered);
         if (body) letter->flags -= (letter->flags & RUMBLE_LETTER_RECENT);  /* Remove \Recent flag since we're not peeking. */
@@ -1113,7 +1113,7 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
 ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int                             first,
+    size_t                          first,
                                     last,
                                     a,
                                     useUID;

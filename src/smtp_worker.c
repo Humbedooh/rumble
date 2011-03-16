@@ -65,7 +65,7 @@ rumble_sendmail_response *rumble_send_email(
     sessionHandle               s;
     clientHandle                c;
     FILE                        *fp;
-    uint32_t                    fsize,
+    size_t                      fsize,
                                 chunk;
     char                        buffer[2048];
     const char                  *me;
@@ -155,7 +155,7 @@ rumble_sendmail_response *rumble_send_email(
         while (!feof(fp)) {
             memset(buffer, 0, 2000);
             chunk = fread(buffer, 1, 2000, fp);
-            send(c.socket, buffer, chunk, 0);
+            send(c.socket, buffer, (int) chunk, 0);
         }
 
         rcsend(&s, ".\r\n");
@@ -230,9 +230,9 @@ void *rumble_worker_process(void *m) {
             user = rumble_account_data(0, item->recipient->user, item->recipient->domain);
             if (user) {
 
-                /*~~~~~~~~~~~~~~*/
-                uint32_t    fsize;
-                /*~~~~~~~~~~~~~~*/
+                /*~~~~~~~~~~*/
+                size_t  fsize;
+                /*~~~~~~~~~~*/
 
                 item->account = user;
 

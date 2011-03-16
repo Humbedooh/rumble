@@ -37,13 +37,14 @@ int main(int argc, char **argv) {
 
 #ifndef RUMBLE_MSC
     if (rhdict(args, "--D")) {
-        printf("forking!\n");
+
         /*~~~~~~~~~~~~~*/
         int pid = fork();
         /*~~~~~~~~~~~~~*/
 
         if (pid < 0) exit(EXIT_FAILURE);
         if (pid > 0) exit(EXIT_SUCCESS);
+        fclose(stdout);
         setsid();
     }
 #endif

@@ -92,7 +92,7 @@ char *rumble_decode_base64(const char *src) {
     /*~~~~~~~~~~~~*/
     BIO     *b64,
             *bmem;
-    ssize_t len;
+    size_t  len;
     char    *buffer,
             *copy;
     /*~~~~~~~~~~~~*/
@@ -102,9 +102,9 @@ char *rumble_decode_base64(const char *src) {
     copy = (char *) calloc(1, len + 3);
     sprintf(copy, "%s\r\n", src);
     b64 = BIO_new(BIO_f_base64());
-    bmem = BIO_new_mem_buf((void *) copy, len + 2);
+    bmem = BIO_new_mem_buf((void *) copy, (int) len + 2);
     bmem = BIO_push(b64, bmem);
-    BIO_read(bmem, buffer, len);
+    BIO_read(bmem, buffer, (int) len);
     BIO_free_all(bmem);
     free(copy);
     return (buffer);

@@ -1,8 +1,4 @@
-/*$I0
- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- */
-
+/*$I0 */
 #pragma warning(disable : 244)
 #pragma warning(disable : 13)
 
@@ -132,7 +128,7 @@ struct pthread_attr_t
 {
     unsigned    p_state;
     void        *stack;
-    size_t      s_size;
+    unsigned    s_size;
 };
 typedef long                pthread_once_t;
 typedef unsigned            pthread_mutexattr_t;
@@ -842,7 +838,7 @@ static int pthread_attr_getstacksize(pthread_attr_t *attr, size_t *size) {
  =======================================================================================================================
  =======================================================================================================================
  */
-static int pthread_attr_setstacksize(pthread_attr_t *attr, size_t size) {
+static int pthread_attr_setstacksize(pthread_attr_t *attr, unsigned size) {
     attr->s_size = size;
     return (0);
 }

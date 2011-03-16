@@ -95,9 +95,9 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
     void        *returnObject;
     va_list     vl;
     int         rc;
-    ssize_t     len = 0,
-                strl = 0,
-                at = 0;
+    size_t      len = 0,
+                strl = 0;
+    int         at = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     memset(injects, 0, 32);

@@ -52,13 +52,18 @@
  =======================================================================================================================
  */
 
-/* #define FORCE_OLD_PTHREAD
- * comment out this field to use native windows
+/*
+ * #define FORCE_OLD_PTHREAD comment out this field to use native windows
  * threading (vista or above)
  */
 #   ifdef RUMBLE_MSC
 #      define RUMBLE_WINSOCK
 #      define HAVE_STRUCT_TIMESPEC
+
+/*
+ * Disable the useless Microsoft warnings about unsafe operators and not-yet
+ * defined functions (this is C, not C++, morons)
+ */
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
 #      include <Ws2tcpip.h>
@@ -293,7 +298,7 @@ typedef long long           int64_t;
  =======================================================================================================================
  */
 
-typedef ssize_t (*dummySocketOp) (void *a, const void *b, int c, int d);
+typedef ssize_t (*dummySocketOp) (void *a, const void *b, size_t c, int d);
 typedef int socketHandle;
 
 /*$5
@@ -564,6 +569,7 @@ void            rumble_service_add_capability(rumbleService *svc, const char *co
  =======================================================================================================================
  */
 
+size_t                      rumble_file_exists(const char *filename);
 void                        rumble_test(void);
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
 char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
@@ -584,7 +590,7 @@ void                        rumble_free_address(address *a);
 void                        rumble_free_account(rumble_mailbox *user);
 const char                  *rumble_smtp_reply_code(unsigned int code);
 ssize_t                     rumble_comm_send(sessionHandle *session, const char *message);
-ssize_t                     rumble_comm_send_bytes(sessionHandle *session, const char *message, int len);
+ssize_t                     rumble_comm_send_bytes(sessionHandle *session, const char *message, size_t len);
 ssize_t                     rumble_comm_printf(sessionHandle *session, const char *d, ...);
 char                        *rumble_comm_read(sessionHandle *session);
 char                        *rumble_comm_read_bytes(sessionHandle *session, int len);
@@ -632,7 +638,7 @@ void                            rumble_mailman_update_folders(rumble_mailman_sha
 uint32_t                        rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder);
 void                            rumble_mailman_free(rumble_mailman_shared_bag *bag);
 uint32_t                        rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
-uint32_t                        rumble_mailman_copy_letter
+size_t                          rumble_mailman_copy_letter
                                 (
                                     rumble_mailbox                  *account,
                                     rumble_letter                   *letter,

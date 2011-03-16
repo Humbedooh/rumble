@@ -69,7 +69,7 @@ void rumble_clean_session(sessionHandle *session) {
  =======================================================================================================================
  =======================================================================================================================
  */
-uint32_t rumble_copy_mail(masterHandle *m, const char *fid, const char *usr, const char *dmn, char **pfid) {
+size_t rumble_copy_mail(masterHandle *m, const char *fid, const char *usr, const char *dmn, char **pfid) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     const char  *path = rumble_config_str(m, "storagefolder");
@@ -78,7 +78,7 @@ uint32_t rumble_copy_mail(masterHandle *m, const char *fid, const char *usr, con
     char        *ofilename = (char *) calloc(1, strlen(path) + 26);
     FILE        *fp,
                 *ofp;
-    uint32_t    fsize = 0;
+    size_t      fsize = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!filename || !ofilename) merror();

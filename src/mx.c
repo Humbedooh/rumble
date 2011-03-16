@@ -27,7 +27,7 @@ dvector *comm_mxLookup(const char *domain) {
             if (rec->wType == DNS_TYPE_MX) {
 
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                ssize_t     len;
+                size_t      len;
                 mxRecord    *mx = (mxRecord *) malloc(sizeof(mxRecord));
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -108,7 +108,7 @@ dvector *comm_mxLookup(const char *domain) {
 
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
             char            *b;
-            ssize_t         len;
+            size_t          len;
             struct in_addr  x;
             mxRecord        *mx = (mxRecord *) calloc(1, sizeof(mxRecord));
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

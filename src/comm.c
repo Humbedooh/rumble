@@ -209,7 +209,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     if (!buffer) merror();
     vsprintf(buffer, d, vl);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
-    else len = send(session->client->socket, buffer, strlen(buffer), 0);
+    else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
     printf("[%s]: %s", rumble_mtime(), buffer);
     free(buffer);
     return (len);
@@ -340,15 +340,15 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += strlen(message);
     if (session->client->send) return ((session->client->send) (session->client->tls, message, strlen(message), 0));
-    return (send(session->client->socket, message, strlen(message), 0));
+    return (send(session->client->socket, message, (int) strlen(message), 0));
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_comm_send_bytes(sessionHandle *session, const char *message, int len) {
+ssize_t rumble_comm_send_bytes(sessionHandle *session, const char *message, size_t len) {
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += len;
     if (session->client->send) return ((session->client->send) (session->client->tls, message, len, 0));
-    return (send(session->client->socket, message, len, 0));
+    return (send(session->client->socket, message, (int) len, 0));
 }

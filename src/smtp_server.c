@@ -78,7 +78,6 @@ void *rumble_smtp_init(void *m) {
         else printf("hrmmm %d\n", rc);
 
         /* Parse incoming commands */
-        if (!cmd || !arg) merror();
         while (rc != RUMBLE_RETURN_FAILURE) {
             memset(cmd, 0, 10);
             memset(arg, 0, 1024);

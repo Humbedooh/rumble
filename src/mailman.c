@@ -423,13 +423,13 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
  =======================================================================================================================
  =======================================================================================================================
  */
-uint32_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter, rumble_mailman_shared_folder *folder) {
+size_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter, rumble_mailman_shared_folder *folder) {
 
     /*~~~~~~~~~~~~~~~~~~*/
     char    *path,
             *filename,
             fullname[512];
-    int     len;
+    size_t  len;
     FILE    *in,
             *out;
     char    buffer[4096];

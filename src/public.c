@@ -1,6 +1,7 @@
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
-
+#include <fcntl.h>
+#include <io.h>
 /*
  =======================================================================================================================
     This file contains public functions for rumble (usable by both server and modules
@@ -126,10 +127,10 @@ address *rumble_parse_mail_address(const char *addr) {
  */
 void rumble_string_lower(char *d) {
 
-    /*~~*/
-    int a,
-        b;
-    /*~~*/
+    /*~~~~~~*/
+    size_t  a,
+            b;
+    /*~~~~~~*/
 
     b = strlen(d);
     for (a = 0; a < b; a++) {
@@ -143,10 +144,10 @@ void rumble_string_lower(char *d) {
  */
 void rumble_string_upper(char *d) {
 
-    /*~~*/
-    int a,
-        b;
-    /*~~*/
+    /*~~~~~~*/
+    size_t  a,
+            b;
+    /*~~~~~~*/
 
     b = strlen(d);
     for (a = 0; a < b; a++) {
@@ -232,12 +233,14 @@ const char *rumble_get_dictionary_value(dvector *dict, const char *flag) {
  */
 uint32_t rumble_has_dictionary_value(dvector *dict, const char *flag) {
 
-    /*~~~~~~~~~~~~~~~~~~*/
-    dvector_element *curr;
-    /*~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    dvector_element     *curr;
+    rumbleKeyValuePair  *el;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     for (curr = dict->first; curr != NULL; curr = curr->next) {
-        if (!strcmp(flag, (const char *) ((rumbleKeyValuePair *) curr->object)->key)) return (1);
+        el = curr->object;
+        if (!strcmp(flag, el->key) && strlen(el->value)) return (1);
     }
 
     return (0);
@@ -362,4 +365,22 @@ char *rumble_create_filename(void) {
     }
 
     return (name);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+#   if R_WINDOWS
+#      define open    _open
+#   endif
+size_t rumble_file_exists(const char *filename) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    ssize_t fd = open(filename, 0);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    if (fd == -1) return (0);
+    close(fd);
+    return (1);
 }

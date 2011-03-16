@@ -7,8 +7,10 @@
 #include "rumble_version.h"
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
-#   define FOO         "Rumble"
-#   define __STDC__    1
+#   define FOO "Rumble"
+#   ifndef __STDC__
+#      define __STDC__    1
+#   endif
 #   include <io.h>
 #   include <fcntl.h>
 
@@ -270,7 +272,7 @@ static int rumble_lua_recv(lua_State *L) {
     /*~~~~~~~~~~~~~~~~~~~~~*/
     char            *line;
     sessionHandle   *session;
-    int             len;
+    size_t          len;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -490,8 +492,7 @@ static int rumble_lua_getaccount(lua_State *L) {
                     *user;
     char            *mtype;
     rumble_mailbox  *acc;
-    int             x = 0,
-                    uid = 0;
+    int             uid = 0;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     domain = lua_tostring(L, 1);
@@ -628,7 +629,6 @@ static int rumble_lua_createdomain(lua_State *L) {
     /*~~~~~~~~~~~~~~~~*/
     const char  *domain,
                 *path;
-    int         x = 0;
     void        *state;
     /*~~~~~~~~~~~~~~~~*/
 
@@ -660,7 +660,6 @@ static int rumble_lua_deletedomain(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~*/
     const char  *domain;
-    int         x = 0;
     void        *state;
     /*~~~~~~~~~~~~~~~~*/
 
@@ -747,7 +746,6 @@ void *rumble_lua_handle_service(void *s) {
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
-    pthread_t       p = pthread_self();
     d_iterator      iter;
     lua_State       *L;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -863,7 +861,7 @@ static int rumble_lua_serverinfo(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
     char        tmp[256];
-    int         x,
+    size_t      x,
                 y;
     double      uptime;
 #   ifdef RUMBLE_MSC
@@ -902,7 +900,7 @@ static int rumble_lua_serverinfo(lua_State *L) {
 static int rumble_lua_serviceinfo(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             workers,
+    size_t          workers,
                     busy,
                     idle,
                     sessions,
