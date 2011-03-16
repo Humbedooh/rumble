@@ -1,14 +1,13 @@
 /*$I0 */
+#include <sys/stat.h>
 #include "rumble.h"
 #include "database.h"
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
-#include <sys/stat.h>
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
-#   define FOO "Rumble"
-
+#   define FOO         "Rumble"
 #   define __STDC__    1
 #   include <io.h>
 #   include <fcntl.h>
@@ -17,23 +16,27 @@ extern masterHandle *rumble_database_master_handle;
  =======================================================================================================================
  =======================================================================================================================
  */
-static int rumble_lua_fileinfo(lua_State *L) {
+static int rumble_lua_fileinfo(lua_State *L)
+{
+#   if R_WINDOWS
+#      define open    _open
+#   endif
 
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
-    struct _stat    fileinfo;
-    const char      *filename;
-    int             r,
-                    fd;
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~*/
+    struct stat fileinfo;
+    const char  *filename;
+    int         r,
+                fd;
+    /*~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     filename = lua_tostring(L, 1);
     lua_settop(L, 0);
-    fd = _open(filename, _O_RDONLY);
+    fd = open(filename, _O_RDONLY);
     if (fd == -1) lua_pushnil(L);
     else {
-        r = _fstat(fd, &fileinfo);
-        _close(fd);
+        r = fstat(fd, &fileinfo);
+        close(fd);
         lua_newtable(L);
         lua_pushliteral(L, "size");
         lua_pushinteger(L, fileinfo.st_size);
@@ -68,7 +71,6 @@ static int rumble_lua_sethook(lua_State *L) {
                     svcCommand[32];
     rumbleService   *svc = 0;
     cvector         *svchooks = 0;
-    int             len;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     hook->flags = 0;
@@ -162,7 +164,7 @@ static int rumble_lua_sethook(lua_State *L) {
      */
 
     cvector_add(svchooks, hook);
-    lua_settop(L,0);
+    lua_settop(L, 0);
     return (0);
 }
 
@@ -214,8 +216,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
     const char                      *user,
                                     *domain,
                                     *path;
-    int                             uid = 0,
-                                    n;
+    int                             uid = 0;
     void                            *state;
     rumble_mailbox                  *acc;
     rumble_mailman_shared_bag       *bag;
@@ -342,7 +343,6 @@ static int rumble_lua_lock(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~~*/
     sessionHandle   *session;
-    int             len;
     rumbleService   *svc;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -372,7 +372,6 @@ static int rumble_lua_unlock(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~~*/
     sessionHandle   *session;
-    int             len;
     rumbleService   *svc;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -490,7 +489,6 @@ static int rumble_lua_getaccount(lua_State *L) {
     const char      *domain,
                     *user;
     char            *mtype;
-    c_iterator      iter;
     rumble_mailbox  *acc;
     int             x = 0,
                     uid = 0;
@@ -546,17 +544,16 @@ static int rumble_lua_getaccount(lua_State *L) {
  */
 static int rumble_lua_saveaccount(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~*/
-    const char      *user,
-                    *domain,
-                    *password,
-                    *arguments;
-    const char      *mtype;
-    rumble_mailbox  *acc;
-    int             x = 0;
-    void            *state;
-    uint32_t        uid = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
+    const char  *user,
+                *domain,
+                *password,
+                *arguments;
+    const char  *mtype;
+    int         x = 0;
+    void        *state;
+    uint32_t    uid = 0;
+    /*~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TTABLE);
 
@@ -662,8 +659,7 @@ static int rumble_lua_createdomain(lua_State *L) {
 static int rumble_lua_deletedomain(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~*/
-    const char  *domain,
-                *path;
+    const char  *domain;
     int         x = 0;
     void        *state;
     /*~~~~~~~~~~~~~~~~*/
@@ -781,7 +777,6 @@ void *rumble_lua_handle_service(void *s) {
          */
 
         L = lua_newthread((lua_State *) master->_core.lua);
-        
         lua_pop((lua_State *) master->_core.lua, 1);    /* pop the thread from the stack to ensure proper GC */
         lua_rawgeti(L, LUA_REGISTRYINDEX, svc->lua_handle);
 
@@ -1017,7 +1012,7 @@ static int rumble_lua_config(lua_State *L) {
 
     luaL_checktype(L, 1, LUA_TSTRING);
     el = lua_tostring(L, 1);
-    lua_pop(L,1);
+    lua_pop(L, 1);
     if (rhdict(rumble_database_master_handle->_core.conf, el)) lua_pushstring(L, rrdict(rumble_database_master_handle->_core.conf, el));
     else lua_pushnil(L);
     return (1);
@@ -1036,7 +1031,7 @@ static int rumble_lua_debug(lua_State *L) {
     luaL_checktype(L, 1, LUA_TSTRING);
     el = lua_tostring(L, 1);
     printf("Lua error: %s\n", el);
-    lua_pop(L,1);
+    lua_pop(L, 1);
     return (0);
 }
 
@@ -1052,7 +1047,6 @@ static int rumble_lua_createservice(lua_State *L) {
     int             threads,
                     n;
     socketHandle    sock;
-    pthread_t       *t;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -1060,7 +1054,7 @@ static int rumble_lua_createservice(lua_State *L) {
     luaL_checktype(L, 3, LUA_TNUMBER);
     port = lua_tostring(L, 2);
     threads = luaL_optinteger(L, 3, 10);
-    
+
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Try to create a service at the given port before creating the service object
@@ -1083,7 +1077,7 @@ static int rumble_lua_createservice(lua_State *L) {
     svc = (rumbleService *) malloc(sizeof(rumbleService));
     lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
     svc->lua_handle = luaL_ref(L, LUA_REGISTRYINDEX);   /* Pop the ref and store it in the registry */
-    lua_settop(L,0);
+    lua_settop(L, 0);
     svc->socket = sock;
     svc->cue_hooks = cvector_init();
     svc->init_hooks = cvector_init();
@@ -1104,7 +1098,7 @@ static int rumble_lua_createservice(lua_State *L) {
         dvector_add(svc->threads, t);
         pthread_create(t, NULL, rumble_lua_handle_service, svc);
     }
-    
+
     lua_pushboolean(L, TRUE);
     return (1);
 }
@@ -1145,12 +1139,13 @@ int Foo_register(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session) {
+signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    lua_State   *L = lua_newthread(state);
-    int         err_func;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    lua_State       *L = lua_newthread(state);
+    int             err_func;
+    sessionHandle   *sess = (sessionHandle *) session;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, ((hookHandle *) hook)->lua_callback);
 
@@ -1179,10 +1174,10 @@ ssize_t rumble_lua_callback(lua_State *state, void *hook, sessionHandle *session
      */
 
     lua_pushliteral(L, "protocol");
-    lua_pushlstring(L, (session->client->client_info.ss_family == AF_INET6) ? "IPv6" : "IPv4", 4);
+    lua_pushlstring(L, (sess->client->client_info.ss_family == AF_INET6) ? "IPv6" : "IPv4", 4);
     lua_rawset(L, -3);
     lua_pushliteral(L, "address");
-    lua_pushlstring(L, session->client->addr, strlen(session->client->addr));
+    lua_pushlstring(L, sess->client->addr, strlen(sess->client->addr));
     lua_rawset(L, -3);
     lua_getglobal(L, "dprint");
     err_func = lua_gettop(L);

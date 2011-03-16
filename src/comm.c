@@ -210,7 +210,6 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     vsprintf(buffer, d, vl);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, strlen(buffer), 0);
-    
     printf("[%s]: %s", rumble_mtime(), buffer);
     free(buffer);
     return (len);
@@ -309,7 +308,6 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     /*~~~~~~~~~~~~~~~~~~~~*/
     char            *buffer;
     ssize_t         rc = 0;
-    uint32_t        p;
     struct timeval  t;
     signed int      f;
     time_t          z;

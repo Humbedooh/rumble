@@ -3,7 +3,6 @@
  * for rumble. Created on January 3, 2011, 8:08
  */
 #include "../../rumble.h"
-#include <pthread.h>
 #define FOREMAN_MAX_JOBS        250 /* Maximum amount of "jobs" each worker is allowed before it's destroyed */
 #define FOREMAN_MAX_THREADS     750 /* Max number of threads each service is allowed to run at once. */
 #define FOREMAN_FALLBACK        10  /* Fall back to a minimum of 10 workers per service when idling */

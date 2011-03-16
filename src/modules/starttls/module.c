@@ -1,6 +1,6 @@
 /*
  * File: module.c Author: Humbedooh A simple (but efficient) load balancing module
- * for rumble. Created on January 3, 2011, 8:08 PM
+ * for rumble. Created on January 3, 2011, 8:08 P
  */
 #include "../../rumble.h"
 #include <gnutls/gnutls.h>
@@ -89,6 +89,7 @@ ssize_t rumble_tls_stop(sessionHandle *session) {
 
     session->client->recv = 0;
     session->client->send = 0;
+    return (0);
 }
 
 /*

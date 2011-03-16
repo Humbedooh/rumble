@@ -34,15 +34,19 @@ int main(int argc, char **argv) {
         rumble_test();
         exit(EXIT_SUCCESS);
     }
+
 #ifndef RUMBLE_MSC
-    if (rhdict(args, "-D") {
+    if (rhdict(args, "-D")) {
+
+        /*~~~~~~~~~~~~~*/
         int pid = fork();
+        /*~~~~~~~~~~~~~*/
+
         if (pid < 0) exit(EXIT_FAILURE);
         if (pid > 0) exit(EXIT_SUCCESS);
         setsid();
     }
 #endif
-
     lua_callback = rumble_lua_callback;
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     srand(time(0));
@@ -63,6 +67,7 @@ int main(int argc, char **argv) {
         /*~~*/
         int n;
         /*~~*/
+
         master->smtp.enabled = 1;
         printf("%-48s", "Launching SMTP service...");
         master->smtp.socket = comm_init(master, rumble_config_str(master, "smtpport"));
@@ -80,6 +85,7 @@ int main(int argc, char **argv) {
         /*~~*/
         int n;
         /*~~*/
+
         master->pop3.enabled = 1;
         printf("%-48s", "Launching POP3 service...");
         master->pop3.socket = comm_init(master, rumble_config_str(master, "pop3port"));
@@ -97,6 +103,7 @@ int main(int argc, char **argv) {
         /*~~*/
         int n;
         /*~~*/
+
         master->imap.enabled = 1;
         printf("%-48s", "Launching IMAP4 service...");
         master->imap.socket = comm_init(master, rumble_config_str(master, "imap4port"));

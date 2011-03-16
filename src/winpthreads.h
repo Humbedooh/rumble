@@ -1,3 +1,11 @@
+/*$I0
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
+
+#pragma warning(disable : 244)
+#pragma warning(disable : 13)
+
 /*
  * Posix Threads library for Microsoft Windows Use at own risk, there is no
  * implied warranty to this code. It uses undocumented features of Microsoft
@@ -30,6 +38,7 @@
 #   include <errno.h>
 #   include <sys/timeb.h>
 #   include <intrin.h>
+#   include <process.h>
 #   define ETIMEDOUT                   110
 #   define ENOTSUP                     134
 #   define PTHREAD_CANCEL_DISABLE      0
@@ -105,7 +114,7 @@ struct _pthread_v
     HANDLE h;
     int cancelled;
     unsigned p_state;
-    int keymax;
+    unsigned int keymax;
     void **keyval;
     jmp_buf jb;
 };
@@ -144,8 +153,8 @@ DWORD                       _pthread_tls;
 
 /* Note initializer is zero, so this works */
 pthread_rwlock_t            _pthread_key_lock;
-long                        _pthread_key_max;
-long                        _pthread_key_sch;
+unsigned long               _pthread_key_max;
+unsigned long               _pthread_key_sch;
 void (**_pthread_key_dest) (void *);
 #   define pthread_cleanup_push(F, A) { \
         const _pthread_cleanup  _pthread_cup = \
@@ -357,10 +366,10 @@ static void pthread_tls_init(void) {
  */
 static void _pthread_cleanup_dest(pthread_t t) {
 
-    /*~~*/
-    int i,
-        j;
-    /*~~*/
+    /*~~~~~~~~~~~~~~*/
+    unsigned int    i,
+                    j;
+    /*~~~~~~~~~~~~~~*/
 
     for (j = 0; j < PTHREAD_DESTRUCTOR_ITERATIONS; j++) {
 
@@ -404,11 +413,11 @@ static pthread_t pthread_self(void) {
     /*~~~~~~~~~~*/
 
     _pthread_once_raw(&_pthread_tls_once, pthread_tls_init);
-    t = TlsGetValue(_pthread_tls);
+    t = (pthread_t) TlsGetValue(_pthread_tls);
 
     /* Main thread? */
     if (!t) {
-        t = malloc(sizeof(struct _pthread_v));
+        t = (pthread_t) malloc(sizeof(struct _pthread_v));
 
         /* If cannot initialize main thread, then the only thing we can do is abort */
         if (!t) abort();
@@ -883,13 +892,11 @@ static int pthread_setcanceltype(int type, int *oldtype) {
  =======================================================================================================================
  =======================================================================================================================
  */
-static int pthread_create_wrapper(void *args) {
+static unsigned int __stdcall pthread_create_wrapper(void *args) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    struct _pthread_v   *tv = args;
-    int                 i,
-                        j;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    struct _pthread_v   *tv = (pthread_t) args;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     _pthread_once_raw(&_pthread_tls_once, pthread_tls_init);
     TlsSetValue(_pthread_tls, tv);
@@ -919,10 +926,10 @@ static int pthread_create_wrapper(void *args) {
  */
 static int pthread_create(pthread_t *th, pthread_attr_t *attr, void * (*func) (void *), void *arg) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    struct _pthread_v   *tv = malloc(sizeof(struct _pthread_v));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    struct _pthread_v   *tv = (pthread_t) malloc(sizeof(struct _pthread_v));
     unsigned            ssize = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!tv) return (1);
     *th = tv;
@@ -1235,11 +1242,11 @@ static int pthread_barrierattr_getpshared(void **attr, int *s) {
  */
 static int pthread_key_create(pthread_key_t *key, void (*dest) (void *)) {
 
-    /*~~~~~~~~~*/
-    int     i;
-    long    nmax;
+    /*~~~~~~~~~~~~~~~~~*/
+    unsigned int    i;
+    long            nmax;
     void (**d) (void *);
-    /*~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~*/
 
     if (!key) return (EINVAL);
     pthread_rwlock_wrlock(&_pthread_key_lock);
@@ -1347,10 +1354,10 @@ static int pthread_setspecific(pthread_key_t key, const void *value) {
 
     if (key > t->keymax) {
 
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         int     keymax = (key + 1) * 2;
-        void    **kv = realloc(t->keyval, keymax * sizeof(void *));
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        void    **kv = (void **) realloc(t->keyval, keymax * sizeof(void *));
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         if (!kv) return (ENOMEM);
 

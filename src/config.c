@@ -5,6 +5,20 @@
 
 #include "rumble.h"
 #include <stdarg.h>
+typedef struct
+{
+    const char      *key;
+    unsigned int    val;
+} _cft;
+static _cft rumble_conf_tags[] =
+{
+    { "windows", R_WINDOWS },
+    { "unix", R_POSIX && !R_CYGWIN },
+    { "cygwin", R_CYGWIN },
+    { "x64", R_ARCH == 64 },
+    { "x86", R_ARCH == 32 },
+    { 0, 0 }
+};
 
 /*
  =======================================================================================================================
@@ -54,15 +68,19 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         }
     }
 
+#define CYGWIN  __CYGWIN__
     config = fopen(cfgfile, "r");
     if (config) {
 
-        /*~~~~~~~~~~~~*/
-        int     p = 0;
-        char    *key,
-                *value,
-                *buffer;
-        /*~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+        int             p = 0;
+        unsigned int    ignore = 0,
+                        n = 0;
+        char            *key,
+                        *value,
+                        *buffer,
+                        line[512];
+        /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
         buffer = (char *) malloc(512);
         key = (char *) calloc(1, 512);
@@ -70,12 +88,37 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         if (!buffer || !key || !value) merror();
         while (!feof(config)) {
             memset(buffer, 0, 512);
+            memset(line, 0, 512);
             fgets(buffer, 511, config);
+            if (sscanf(buffer, "%*[ \t]%511[^\r\n]", line) == 0) sscanf(buffer, "%511[^\r\n]", line);
             p++;
             if (!ferror(config)) {
                 memset(key, 0, 512);
                 memset(value, 0, 512);
-                if (sscanf(buffer, "%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2) {
+                if (sscanf(line, "<%511[^ \t>]%*[ \t]%511[^\r\n>]", key, value) >= 1) {
+                    rumble_string_lower(key);
+                    rumble_string_lower(value);
+                    if (!strcmp(key, "/if")) ignore >>= 1;
+                    if (!strcmp(key, "if") && !ignore) {
+                        ignore = (ignore << 1) + 1;
+                        for (n = 0; rumble_conf_tags[n].key; n++)
+                            if (!strcmp(value, rumble_conf_tags[n].key) && rumble_conf_tags[n].val) ignore &= 0xFFFFFFFE;
+                    }
+
+                    if (!strcmp(key, "else-if")) {
+                        ignore &= 0xFFFFFFFE;
+                        ignore++;
+                        for (n = 0; rumble_conf_tags[n].key; n++)
+                            if (!strcmp(value, rumble_conf_tags[n].key) && rumble_conf_tags[n].val) ignore &= 0xFFFFFFFE;
+                    }
+
+                    if (!strcmp(key, "else") && !(ignore & 0xFFFFFFFE)) ignore = (ignore & 0xFFFFFFFE) | (!(ignore & 0x00000001));
+                }
+
+                if (sscanf(line, "%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
+                    rumble_string_lower(key);
+                    rsdict(master->_core.conf, key, value);
+                } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(master->_core.conf, key, value);
                 }

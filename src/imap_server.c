@@ -693,12 +693,11 @@ ssize_t rumble_server_imap_list(masterHandle *master, sessionHandle *session, co
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_args                     *args;
     char                            *mbox,
-                                    *pattern,
-                                    *pfolder;
+                                    *pattern;
     rumble_mailman_shared_folder    *pair;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     d_iterator                      iter;
-    rumble_mailman_shared_folder* folder;
+    rumble_mailman_shared_folder    *folder;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     args = rumble_read_words(parameters);
@@ -708,12 +707,9 @@ ssize_t rumble_server_imap_list(masterHandle *master, sessionHandle *session, co
 
         /* Shared Object Reader Lock */
         rumble_rw_start_read(imap->bag->rrw);
-
         folder = rumble_mailman_current_folder(imap);
-
         if (!folder) rcsend(session, "* LIST (\\Noselect) \".\" \"\"\r\n");
         else rcprintf(session, "* LIST (\\Noselect) \"\" \"%s\"\r\n", folder->name);
-
         foreach(rmsf, pair, imap->bag->folders, iter) {
             if (!strlen(pattern) || !strncmp(pair->name, pattern, strlen(pattern))) {
                 rcprintf(session, "* LIST () \".\" \"%s\"\r\n", pair->name);
@@ -863,7 +859,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     rumble_letter                   *letter;
     rumble_args                     *parts;
     rumble_mailman_shared_folder    *folder;
-    int                             a,
+    uint32_t                        a,
                                     b,
                                     c,
                                     d,

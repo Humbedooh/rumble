@@ -8,9 +8,9 @@
  */
 void rumble_args_free(rumble_args *d) {
 
-    /*~~*/
-    int p;
-    /*~~*/
+    /*~~~~~~~~~~*/
+    uint32_t    p;
+    /*~~~~~~~~~~*/
 
     for (p = 0; p < d->argc; p++) {
         free(d->argv[p]);

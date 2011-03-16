@@ -6,7 +6,6 @@
 #include "rumble.h"
 #include "rumble_version.h"
 #if defined(_WIN32) && !defined(__CYGWIN__)
-#   define WINDOWS_DLL
 #   define dlclose FreeLibrary
 #   define dlsym   GetProcAddress
 #   include <Windows.h>
@@ -45,7 +44,7 @@ void rumble_modules_load(masterHandle *master) {
         el = (rumbleKeyValuePair *) line->object;
         if (!strcmp(el->key, "loadmodule"))
         {
-#ifdef WINDOWS_DLL
+#if R_WINDOWS
             handle = LoadLibraryA(el->value);
 #else
             handle = dlopen(el->value, RTLD_LAZY | RTLD_NODELETE);
@@ -113,7 +112,8 @@ void rumble_modules_load(masterHandle *master) {
             /*~~~~~~~~~~~*/
 
             printf("Loading script <%s>\n", el->value);
-            if (!master->_core.lua) {
+            L = (lua_State *) master->_core.lua;
+            if (!L) {
                 master->_core.lua = (lua_State *) luaL_newstate();
                 L = (lua_State *) master->_core.lua;
                 luaL_openlibs(L);

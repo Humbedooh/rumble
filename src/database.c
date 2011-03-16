@@ -428,11 +428,9 @@ cvector *rumble_domains_list(void) {
 cvector *rumble_database_accounts_list(const char *domain) {
 
     /*~~~~~~~~~~~~~~~~~~~*/
-    int             rc,
-                    l;
+    int             rc;
     void            *state;
     cvector         *cvec;
-    c_iterator      iter;
     rumble_mailbox  *acc;
     char            *tmp;
     /*~~~~~~~~~~~~~~~~~~~*/

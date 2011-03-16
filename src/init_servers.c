@@ -48,6 +48,7 @@ void rumble_master_init(masterHandle *master) {
     rumble_service_add_command(&master->smtp, "VRFY", rumble_server_smtp_vrfy);
     rumble_service_add_command(&master->smtp, "RSET", rumble_server_smtp_rset);
     rumble_service_add_command(&master->smtp, "AUTH", rumble_server_smtp_auth);
+    rumble_service_add_capability(&master->smtp, "IMPLEMENTATION Rumble Mail Server");
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------

@@ -13,6 +13,14 @@
 
 /* pragma message("Non-C99 compliant compiler used, boooooo!") */
 #   endif
+#   define R_WINDOWS   0
+#   define R_POSIX     0
+#   define R_ARCH      32
+#   define R_CYGWIN    0
+#   ifdef __CYGWIN__
+#      undef R_CYGWIN
+#      define R_CYGWIN    1
+#   endif
 
 /* Checks for Microsoft compiler */
 #   if ((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__))
@@ -44,16 +52,26 @@
  =======================================================================================================================
  */
 
-#   define FORCE_OLD_PTHREAD    /* comment out this field to use native windows threading (vista or above) */
+/*
+ * define FORCE_OLD_PTHREAD /* comment out this field to use native windows
+ * threading (vista or above)
+ */
 #   ifdef RUMBLE_MSC
 #      define RUMBLE_WINSOCK
 #      define HAVE_STRUCT_TIMESPEC
 #      pragma warning(disable : 5)
+#      pragma warning(disable : 996)
 #      include <Ws2tcpip.h>
 #      include <WinSock2.h>
 #      include <windns.h>
 #      include <Psapi.h>
-#      if (NTDDI_VERSION < NTDDI_WIN6 || defined(FORCE_OLD_PTHREAD))
+#      undef R_WINDOWS
+#      define R_WINDOWS   1
+#      ifdef _WIN64
+#         undef R_ARCH
+#         define R_ARCH  64
+#      endif
+#      if (WINVER < _WIN32_WINNT_VISTA || defined(FORCE_OLD_PTHREAD))
 #         include <pthread.h>
 #      else
 #         include "winpthreads.h"
@@ -66,6 +84,8 @@
  =======================================================================================================================
  */
 
+#      undef R_POSIX
+#      define R_POSIX 1
 #      include <unistd.h>
 #      include <sys/types.h>
 #      include <sys/socket.h>

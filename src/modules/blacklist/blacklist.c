@@ -1,6 +1,6 @@
 /*
  * File: blacklist.c Author: Humbedooh A simple black-listing module for rumble.
- * Created on January 3, 2011, 8:08 PM
+ * Created on January 3, 2011, 8:08 P
  */
 #include "../../rumble.h"
 
@@ -173,20 +173,17 @@ ssize_t rumble_blacklist(sessionHandle *session) {
 #endif
                     if (blacklist_logfile) {
 
-                        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                        FILE    *fp = fopen(blacklist_logfile, "w+");
-                        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                        FILE    *fp = fopen(blacklist_logfile, "a");
+                        char    *mtime;
+                        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                         if (fp) {
-
-                            /*~~~~~~~~~~~~*/
-                            time_t  rawtime;
-                            /*~~~~~~~~~~~~*/
-
-                            time(&rawtime);
-                            fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n", ctime(&rawtime), session->client->addr,
-                                    addr, dnshost);
+                            mtime = rumble_mtime();
+                            fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n", mtime, session->client->addr, addr,
+                                    dnshost);
                             fclose(fp);
+                            free(mtime);
                         }
                     }
 
@@ -221,6 +218,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
     modinfo->title = "Blacklisting module";
     modinfo->description = "Standard blacklisting module for rumble.";
+    modinfo->author = "Humbedooh (humbedooh@cord.dk)";
     blacklist_badhosts = dvector_init();
     blacklist_baddomains = dvector_init();
     blacklist_dnsbl = dvector_init();
