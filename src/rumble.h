@@ -52,8 +52,8 @@
  =======================================================================================================================
  */
 
-/*
- * define FORCE_OLD_PTHREAD /* comment out this field to use native windows
+/* #define FORCE_OLD_PTHREAD
+ * comment out this field to use native windows
  * threading (vista or above)
  */
 #   ifdef RUMBLE_MSC

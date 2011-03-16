@@ -36,8 +36,8 @@ int main(int argc, char **argv) {
     }
 
 #ifndef RUMBLE_MSC
-    if (rhdict(args, "-D")) {
-
+    if (rhdict(args, "--D")) {
+        printf("forking!\n");
         /*~~~~~~~~~~~~~*/
         int pid = fork();
         /*~~~~~~~~~~~~~*/

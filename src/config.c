@@ -99,25 +99,25 @@ void rumble_config_load(masterHandle *master, dvector *args) {
                     rumble_string_lower(key);
                     rumble_string_lower(value);
                     if (!strcmp(key, "/if")) ignore >>= 1;
-                    if (!strcmp(key, "if") && !ignore) {
+                    if (!strcmp(key, "if")) {
                         ignore = (ignore << 1) + 1;
                         for (n = 0; rumble_conf_tags[n].key; n++)
                             if (!strcmp(value, rumble_conf_tags[n].key) && rumble_conf_tags[n].val) ignore &= 0xFFFFFFFE;
                     }
 
-                    if (!strcmp(key, "else-if")) {
+                    if (!strcmp(key, "else-if") && !(ignore & 0xFFFFFFFE)) {
                         ignore &= 0xFFFFFFFE;
                         ignore++;
                         for (n = 0; rumble_conf_tags[n].key; n++)
                             if (!strcmp(value, rumble_conf_tags[n].key) && rumble_conf_tags[n].val) ignore &= 0xFFFFFFFE;
                     }
-
                     if (!strcmp(key, "else") && !(ignore & 0xFFFFFFFE)) ignore = (ignore & 0xFFFFFFFE) | (!(ignore & 0x00000001));
                 }
 
                 if (sscanf(line, "%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
-                    rsdict(master->_core.conf, key, value);
+                    if (!strcmp(key, "comment")) printf("Config: %s\r\n", value);
+                    else rsdict(master->_core.conf, key, value);
                 } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(master->_core.conf, key, value);
