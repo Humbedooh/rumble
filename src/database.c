@@ -14,29 +14,38 @@ masterHandle    *rumble_database_master_handle = 0;
     Database constructors and wrappers
  =======================================================================================================================
  */
-void rumble_database_load(masterHandle *master) {
+void rumble_database_load(masterHandle *master, FILE* runlog) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *dbpath = (char *) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
     char    *mailpath = (char *) calloc(1, strlen(rumble_config_str(master, "datafolder")) + 32);
     void    *state;
     int     rc;
+	FILE* ftmp;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!dbpath || !mailpath) merror();
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
+	ftmp = fopen(dbpath, "r");
+	if (!ftmp) sprintf(dbpath, "%s/%s/rumble.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
+	else fclose(ftmp);
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
     printf("%-48s", "Loading database...");
-
+	fprintf(runlog, "%-48s", "Loading database...\r\n");
+	fflush(runlog);
     /* Domains and accounts */
     if (sqlite3_open(dbpath, (sqlite3 **) &master->_core.db)) {
-        fprintf(stderr, "Can't open database <%s>: %s\n", dbpath, sqlite3_errmsg((sqlite3 *) master->_core.db));
+		fprintf(runlog, "Can't open database <%s>: %s\r\n", dbpath, sqlite3_errmsg((sqlite3 *) master->_core.db));
+		fflush(runlog);
+        fprintf(stderr, "Can't open database <%s>: %s\r\n", dbpath, sqlite3_errmsg((sqlite3 *) master->_core.db));
         exit(EXIT_FAILURE);
     }
 
     /* Letters */
     if (sqlite3_open(mailpath, (sqlite3 **) &master->_core.mail)) {
-        fprintf(stderr, "Can't open database <%s>: %s\n", mailpath, sqlite3_errmsg((sqlite3 *) master->_core.mail));
+		fprintf(runlog, "Can't open database <%s>: %s\r\n", mailpath, sqlite3_errmsg((sqlite3 *) master->_core.mail));
+		fflush(runlog);
+		fprintf(stderr, "Can't open database <%s>: %s\r\n", mailpath, sqlite3_errmsg((sqlite3 *) master->_core.mail));
         exit(EXIT_FAILURE);
     }
 
@@ -52,6 +61,8 @@ void rumble_database_load(masterHandle *master) {
     if (rc != SQLITE_ROW) {
         printf("[OK]\r\n");
         printf("%-48s", "Setting up tables...");
+		fprintf(runlog, "New installation, creating DB\r\n");
+		fflush(runlog);
         state = rumble_database_prepare(0,
                                         "CREATE TABLE \"domains\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"storagepath\" VARCHAR);");
         rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
@@ -73,10 +84,16 @@ void rumble_database_load(masterHandle *master) {
         rc = (rumble_database_run(state) == SQLITE_DONE) ? SQLITE_DONE : SQLITE_ERROR;
         rumble_database_cleanup(state);
         if (rc == SQLITE_DONE) printf("[OK]\r\n");
-        else printf("[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
+        else {
+			fprintf(runlog, "[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
+			fflush(runlog);
+			printf("[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
+		}
     } else printf("[OK]\r\n");
     free(dbpath);
     free(mailpath);
+	fprintf(runlog, "DB loaded\r\n");
+	fflush(runlog);
 }
 
 /*

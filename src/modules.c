@@ -22,7 +22,7 @@ typedef uint32_t (*rumbleVerCheck) (void);
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_modules_load(masterHandle *master) {
+void rumble_modules_load(masterHandle *master, FILE* runlog) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;

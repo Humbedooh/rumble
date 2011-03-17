@@ -182,8 +182,10 @@ void *rumble_worker_process(void *m) {
     void            *state;
     ssize_t         rc;
     masterHandle    *master = (masterHandle *) m;
-    sessionHandle   *sess = (sessionHandle *) malloc(sizeof(sessionHandle));
+    sessionHandle   *sess = (sessionHandle *) malloc(sizeof(sessionHandle)),
+                    *s;
     clientHandle    c;
+    d_iterator      diter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sess->client = &c;
@@ -203,13 +205,15 @@ void *rumble_worker_process(void *m) {
      * close(c.socket);
      */
     while (1) {
-        pthread_mutex_lock(&master->_core.workmutex);
-        pthread_cond_wait(&master->_core.workcond, &master->_core.workmutex);
+        pthread_mutex_lock(&master->mailman.mutex);
+        pthread_cond_wait(&master->mailman.cond, &master->mailman.mutex);
+        dvector_add(master->mailman.handles, (void *) sess);
+        master->mailman.traffic.sessions++;
 
         /* Make a private copy of the mail struct address and reset the global one */
         item = current;
         current = 0;
-        pthread_mutex_unlock(&master->_core.workmutex);
+        pthread_mutex_unlock(&master->mailman.mutex);
         if (!item) continue;
 
         /* Check for rampant loops */
@@ -400,6 +404,12 @@ void *rumble_worker_process(void *m) {
         if (item->flags) free((char *) item->flags);
         item->account = 0;
         free(item);
+        foreach((sessionHandle *), s, master->mailman.handles, diter) {
+            if (s == sess) {
+                dvector_delete(&diter);
+                break;
+            }
+        }
     }
 }
 
@@ -418,20 +428,17 @@ void *rumble_worker_init(void *m) {
     int             rc;
     sqlite3_stmt    *state;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     sqlite3_prepare_v2((sqlite3 *) master->_core.db, statement, -1, &state, NULL);
-    pthread_mutex_init(&master->_core.workmutex, NULL);
-    pthread_cond_init(&master->_core.workcond, NULL);
+    pthread_cond_init(&master->mailman.cond, NULL);
     ignmx = rrdict(master->_core.conf, "ignoremx");
     badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
-    for (x = 0; x < 10; x++) {
-
+    for (x = 0; x < 25; x++) {
+		
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-        dvector_add(master->_core.workers, t);
+        dvector_add(master->mailman.threads, t);
         pthread_create(t, NULL, rumble_worker_process, m);
     }
 
@@ -485,10 +492,10 @@ void *rumble_worker_init(void *m) {
                 zErrMsg = 0;
                 l = sqlite3_exec((sqlite3 *) master->_core.db, sql, 0, 0, &zErrMsg);
                 free(sql);
-                pthread_mutex_lock(&master->_core.workmutex);
+                pthread_mutex_lock(&master->mailman.mutex);
                 current = item;
-                pthread_cond_signal(&master->_core.workcond);
-                pthread_mutex_unlock(&master->_core.workmutex);
+                pthread_cond_signal(&master->mailman.cond);
+                pthread_mutex_unlock(&master->mailman.mutex);
             }
         } else {
             sqlite3_reset(state);

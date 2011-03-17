@@ -200,7 +200,6 @@ ssize_t rumble_blacklist(sessionHandle *session) {
     }
 
     free(client);
-
     /* Return with EXIT_SUCCESS and let the server continue. */
     return (RUMBLE_RETURN_OKAY);
 }

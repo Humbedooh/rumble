@@ -188,12 +188,29 @@ void rumble_master_init(masterHandle *master) {
 
     /*$3
      ===================================================================================================================
-        Core vectors
+        Mailman service
+     ===================================================================================================================
+     */
+
+    master->mailman.cue_hooks = cvector_init();
+    master->mailman.init_hooks = cvector_init();
+    master->mailman.threads = dvector_init();
+    master->mailman.handles = dvector_init();
+    master->mailman.commands = cvector_init();
+    master->mailman.capabilities = cvector_init();
+    pthread_mutex_init(&master->mailman.mutex, 0);
+    master->mailman.enabled = 1;
+    master->mailman.traffic.received = 0;
+    master->mailman.traffic.sent = 0;
+    master->mailman.traffic.sessions = 0;
+
+    /*$3
+     ===================================================================================================================
+        Core config vectors
      ===================================================================================================================
      */
 
     master->_core.modules = dvector_init();
-    master->_core.workers = dvector_init();
     master->_core.feed_hooks = cvector_init();
     master->_core.parser_hooks = cvector_init();
     master->_core.batv = dvector_init();

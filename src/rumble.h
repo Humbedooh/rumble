@@ -15,11 +15,16 @@
 #   endif
 #   define R_WINDOWS   0
 #   define R_POSIX     0
+#   define R_LINUX     0
 #   define R_ARCH      32
 #   define R_CYGWIN    0
 #   ifdef __CYGWIN__
 #      undef R_CYGWIN
 #      define R_CYGWIN    1
+#   endif
+#   ifdef __linux__
+#      undef R_LINUX
+#      define R_LINUX 1
 #   endif
 
 /* Checks for Microsoft compiler */
@@ -62,7 +67,7 @@
 
 /*
  * Disable the useless Microsoft warnings about unsafe operators and not-yet
- * defined functions (this is C, not C++, morons)
+ * defined functions (this is C, not C++, morons
  */
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
@@ -405,6 +410,7 @@ typedef struct
     cvector         *commands;
     cvector         *capabilities;
     pthread_mutex_t mutex;
+    pthread_cond_t  cond;
     dvector         *handles;
     int             lua_handle;
     void * (*init) (void *);
@@ -421,9 +427,6 @@ typedef struct
     struct __core
     {
         dvector         *conf;
-        dvector         *workers;
-        pthread_cond_t  workcond;
-        pthread_mutex_t workmutex;
         const char      *currentSO;
         dvector         *modules;
         cvector         *parser_hooks;
@@ -438,6 +441,7 @@ typedef struct
     rumbleService   smtp;
     rumbleService   pop3;
     rumbleService   imap;
+    rumbleService   mailman;
     struct
     {
         rumble_readerwriter *rrw;

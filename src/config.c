@@ -6,6 +6,7 @@
 #include "rumble.h"
 #include <stdarg.h>
 #include <fcntl.h>
+
 typedef struct
 {
     const char  *key;
@@ -15,6 +16,7 @@ static _cft rumble_conf_tags[] =
 {
     { "windows", R_WINDOWS ? "1" : "" },
     { "unix", R_POSIX && !R_CYGWIN ? "1" : "" },
+    { "linux", R_LINUX ? "1" : "" },
     { "cygwin", R_CYGWIN ? "1" : "" },
     { "x64", R_ARCH == 64 ? "1" : "" },
     { "x86", R_ARCH == 32 ? "1" : "" },
@@ -49,7 +51,7 @@ static int rumble_compare_value(masterHandle *master, const char *key, const cha
 void rumble_config_load(masterHandle *master, dvector *args) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char                *paths[3] = { "config", "/var/rumble/config", "C:/cygwin/home/Administrator/rumble/config" };
+    char                *paths[3] = { "config", "/var/rumble/config", "g:/home/vaps/rumble/config" };
     char                *cfgfile;
     const char          *cfgpath;
     FILE                *config;

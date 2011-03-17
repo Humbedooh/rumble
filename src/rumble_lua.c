@@ -860,15 +860,15 @@ void *rumble_lua_handle_service(void *s) {
 static int rumble_lua_serverinfo(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
-    char        tmp[256];
+    char        tmp[256],
+                *os;
     size_t      x,
                 y;
     double      uptime;
 #   ifdef RUMBLE_MSC
-    STARTUPINFO StartupInfo;
+
     /*~~~~~~~~~~~~~~~~~~~~*/
 
-    StartupInfo.dwFlags = 0;
 #   endif
     sprintf(tmp, "%u.%02u.%04u", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     lua_newtable(L);
@@ -889,6 +889,16 @@ static int rumble_lua_serverinfo(lua_State *L) {
     uptime = difftime(time(0), rumble_database_master_handle->_core.uptime);
     lua_pushliteral(L, "uptime");
     lua_pushnumber(L, uptime);
+    lua_rawset(L, -3);
+    lua_pushliteral(L, "os");
+    os = "POSIX compatible system";
+    if (R_LINUX) os = "Linux";
+    if (R_CYGWIN) os = "Cygwin";
+    if (R_WINDOWS) os = "Windows";
+    lua_pushstring(L, os);
+    lua_rawset(L, -3);
+    lua_pushliteral(L, "arch");
+    lua_pushnumber(L, R_ARCH);
     lua_rawset(L, -3);
     return (1);
 }
@@ -918,6 +928,7 @@ static int rumble_lua_serviceinfo(lua_State *L) {
     if (!strcmp(svcName, "smtp")) svc = &rumble_database_master_handle->smtp;
     if (!strcmp(svcName, "imap")) svc = &rumble_database_master_handle->imap;
     if (!strcmp(svcName, "pop3")) svc = &rumble_database_master_handle->pop3;
+    if (!strcmp(svcName, "core")) svc = &rumble_database_master_handle->mailman;
     if (svc) {
         pthread_mutex_lock(&(svc->mutex));
         workers = svc->threads->size;   /* Number of threads alive */
