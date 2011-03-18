@@ -1051,17 +1051,11 @@ static int rumble_lua_fileexists(lua_State *L) {
 
     /*~~~~~~~~~~~~*/
     const char  *el;
-    FILE* fd;
     /*~~~~~~~~~~~~*/
-
     luaL_checktype(L, 1, LUA_TSTRING);
     el = lua_tostring(L, 1);
     lua_pop(L, 1);
-    fd = fopen(el, "r");
-    if (fd) {
-        lua_pushboolean(L,1);
-        fclose(fd);
-    }
+    if (access(el, 0) == 0) lua_pushboolean(L,1);
     else lua_pushboolean(L,0);
     return (1);
 }
