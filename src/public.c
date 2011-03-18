@@ -371,6 +371,12 @@ char *rumble_create_filename(void) {
  =======================================================================================================================
  */
 size_t rumble_file_exists(const char *filename) {
+#ifdef RUMBLE_MSC
+    FILE* fd = fopen(filename, "r");
+    if (fd) { fclose(fd); return 1; }
+#else
     if (access(filename,0) == 0) return 1;
+#endif
     else return 0;
+	return 1;
 }
