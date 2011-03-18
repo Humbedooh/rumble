@@ -1,12 +1,39 @@
---_G.dprint = function(a,b,c) print("mooo") end
+local portNum = 2580; -- Port number for the web interface
+local fileCache = {};
 
+-- function for retrieving files
 function getFile(filename)
-    local f = io.open(filename, "rb");
-    local ret = "";
-    if (f) then
-        ret = f:read("*a");
-        f:close();
-    end
+	local found = false;
+	local ret = "";
+	for k, entry in pairs(fileCache) do
+		if ( entry.filename == filename ) then
+			found = true;
+			local fstat = file.stat(filename);
+			if ( entry.modified ~= fstat.modified ) then
+				local f = io.open(filename, "rb");
+				if ( f ) then 
+					entry.contents = f:read("*a");
+					f:close();
+				end
+			end
+			ret = entry.contents;
+			break;
+		end
+	end
+	if (not found) then
+		local entry = { filename = filename };
+		local fstat = file.stat(filename);
+		entry.modified = fstat.modified;
+		entry.contents = "";
+		local f = io.open(filename, "rb");
+		if (f) then
+			entry.contents = f:read("*a");
+			f:close();
+		end
+		ret = entry.contents;
+		table.insert(fileCache, entry);
+	end
+
     return ret;
 end
 
@@ -97,8 +124,11 @@ function acceptHTTP(session)
     session.path = session.info.path .. "/" .. d.short_src:match("^(.-)%w+%.lua$");
     local auth = {};
     
+	--session:lock();
     session.output = getFile(session.path .. "/template.html");
     local config = getFile(session.path .. "/auth.cfg");
+	--session:unlock();
+	
     for user,pass,rights in config:gmatch("([^:\r\n]+):([^:\r\n]+):([^:\r\n]+)") do
         local domains = {};
         local admin = false;
@@ -132,21 +162,27 @@ function acceptHTTP(session)
     end
     
     --[[ Then, check if a specific file was requested rather than an action ]]--
-    if ( http.URL:len() > 0 and not http.URL:match("auth%.cfg")) then 
-        local info = file.stat(session.path .. http.URL);
-        if (info) then
-            local f = io.open(session.path .. "/" .. http.URL, "rb");
-            output = f:read("*a");
-            f:close();
-            session:send("HTTP/1.1 200 OK\r\n");
-            if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
-            elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
-            elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
-            else session:send("Content-Type: binary/octet-stream\r\n");
-            end
-            session:send("\r\n");
-            session:send(output:len(), output);
-            output = nil;
+    if ( http.URL:len() > 0 and not http.URL:match("auth%.cfg")) then
+		--session:lock();
+		local exists = file.exists(session.path .. http.URL);
+		--session:unlock();
+        if (exists) then
+            local f = io.open(session.path .. http.URL, "rb");
+			if (f) then
+				output = f:read("*a");
+				f:close();
+				session:send("HTTP/1.1 200 OK\r\n");
+				if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
+				elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
+				elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
+				else session:send("Content-Type: binary/octet-stream\r\n");
+				end
+				session:send("\r\n");
+				if (output) then session:send(output:len(), output); end
+				output = nil;
+			else
+				session:send("HTTP/1.1 501 Boooo\r\n\r\nSomething went wrong, I/O wise :(\r\n");
+			end
             return;
         end
     end
@@ -203,11 +239,6 @@ end
 
 
 function mainPage(session)
-	local mx = network.getMX("sourceforge.net");
-	for k, mxEntry in pairs(mx) do
-		append("%u: %s<br/>", mxEntry.preference, mxEntry.host);
-	end
-	append("%s!", network.getHostByName("lua.org"));
 	
     append("<h2>Server information</h2>");
     append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
@@ -319,7 +350,7 @@ append("<h2>Domains</h2>", domain);
     table.sort(t);
     for k,v in pairs(t) do
         if (session.credentials.admin or session.credentials.domains[v]) then
-            append("<tr><td><a href='/domains:%s'>%s</a></td><td>domain</td><td>[Edit] [<a href=\"/domains?domain=%s&delete=true\">Delete</a>]</td></tr>", v,v,v);
+            append("<tr><td><img src='/bullet.png' align='absmiddle'/><a href='/domains:%s'>%s</a></td><td>domain</td><td>[Edit] [<a href=\"/domains?domain=%s&delete=true\">Delete</a>]</td></tr>", v,v,v);
         end
     end
     if (#t == 0) then
@@ -454,7 +485,7 @@ end
 
 do
     
-    print(string.format("%-48s[%s]", "Launching RumbleLua service on port 80...", (Rumble.createService(acceptHTTP, 80, 10) and "OK") or "BAD"));
+    print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", (Rumble.createService(acceptHTTP, portNum, 10) and "OK") or "BAD"));
     
 end
 

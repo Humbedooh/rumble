@@ -1635,7 +1635,7 @@ static int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *a, int s) {
  =======================================================================================================================
  */
 #   define system(...)             (pthread_testcancel(), system(__VA_ARGS__))
-#   define access(...)             (pthread_testcancel(), access(__VA_ARGS__))
+#   define access(...)             (pthread_testcancel(), _access(__VA_ARGS__))
 #   define asctime(...)            (pthread_testcancel(), asctime(__VA_ARGS__))
 #   define asctime_r(...)          (pthread_testcancel(), asctime_r(__VA_ARGS__))
 #   define catclose(...)           (pthread_testcancel(), catclose(__VA_ARGS__))

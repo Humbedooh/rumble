@@ -27,18 +27,14 @@ static int rumble_lua_fileinfo(lua_State *L)
     /*~~~~~~~~~~~~~~~~~~*/
     struct stat fileinfo;
     const char  *filename;
-    int         r,
-                fd;
     /*~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     filename = lua_tostring(L, 1);
     lua_settop(L, 0);
-    fd = open(filename, _O_RDONLY);
-    if (fd == -1) lua_pushnil(L);
+    
+    if (stat(filename, &fileinfo) == -1) lua_pushnil(L);
     else {
-        r = fstat(fd, &fileinfo);
-        close(fd);
         lua_newtable(L);
         lua_pushliteral(L, "size");
         lua_pushinteger(L, fileinfo.st_size);
@@ -352,14 +348,7 @@ static int rumble_lua_lock(lua_State *L) {
     lua_rawgeti(L, 1, 0);
     luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
     session = (sessionHandle *) lua_topointer(L, -1);
-    svc = 0;
-    switch (session->_tflags & RUMBLE_THREAD_SVCMASK)
-    {
-    case RUMBLE_THREAD_SMTP:    svc = &((masterHandle *) session->_master)->smtp; break;
-    case RUMBLE_THREAD_POP3:    svc = &((masterHandle *) session->_master)->pop3; break;
-    case RUMBLE_THREAD_IMAP:    svc = &((masterHandle *) session->_master)->imap; break;
-    default:                    break;
-    }
+    svc = (rumbleService*) session->_svc;
 
     if (svc) pthread_mutex_lock(&svc->mutex);
     lua_pop(L, 1);
@@ -381,14 +370,7 @@ static int rumble_lua_unlock(lua_State *L) {
     lua_rawgeti(L, 1, 0);
     luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
     session = (sessionHandle *) lua_topointer(L, -1);
-    svc = 0;
-    switch (session->_tflags & RUMBLE_THREAD_SVCMASK)
-    {
-    case RUMBLE_THREAD_SMTP:    svc = &((masterHandle *) session->_master)->smtp; break;
-    case RUMBLE_THREAD_POP3:    svc = &((masterHandle *) session->_master)->pop3; break;
-    case RUMBLE_THREAD_IMAP:    svc = &((masterHandle *) session->_master)->imap; break;
-    default:                    break;
-    }
+    svc = (rumbleService*) session->_svc;
 
     if (svc) pthread_mutex_unlock(&svc->mutex);
     lua_pop(L, 1);
@@ -821,6 +803,7 @@ void *rumble_lua_handle_service(void *s) {
         if (lua_pcall(L, 1, 0, 0)) {
             rcprintf(&session, "\r\n\r\nLua error: %s\n", lua_tostring(L, -1));
         }
+        pthread_mutex_unlock(&svc->mutex);
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -1057,13 +1040,14 @@ static int rumble_lua_fileexists(lua_State *L) {
     el = lua_tostring(L, 1);
     lua_pop(L, 1);
 #ifdef RUMBLE_MSC
+    if (access(el, 0) == 0) lua_pushboolean(L,1);
+#else
     fd = fopen(el, "r");
     if (fd) {
-       lua_pushboolean(L,1);
-       fclose(fd);
+        fclose(fd);
+        lua_pushboolean(L,1); 
     }
-#else
-    if (access(el, 0) == 0) lua_pushboolean(L,1);
+    //if (faccessat(0, el, R_OK, AT_EACCESS) == 0) lua_pushboolean(L,1);
 #endif
     else lua_pushboolean(L,0);
     return (1);
@@ -1309,13 +1293,7 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
     lua_pcall(L, 1, 0, err_func);
     
     /*$1 Unlock the service mutex in case a Lua script forgot to */
-    switch (sess->_tflags & RUMBLE_THREAD_SVCMASK)
-    {
-    case RUMBLE_THREAD_SMTP:    svc = &((masterHandle *) sess->_master)->smtp; break;
-    case RUMBLE_THREAD_POP3:    svc = &((masterHandle *) sess->_master)->pop3; break;
-    case RUMBLE_THREAD_IMAP:    svc = &((masterHandle *) sess->_master)->imap; break;
-    default:                    break;
-    }
+        svc = (rumbleService*) sess->_svc;
     if (svc) pthread_mutex_unlock(&svc->mutex);
     
     
