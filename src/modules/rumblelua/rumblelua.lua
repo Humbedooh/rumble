@@ -1,16 +1,12 @@
 --_G.dprint = function(a,b,c) print("mooo") end
-local servername = readConfig("servername");
-local info = serverInfo();
-
-local d = debug.getinfo(1);
-local path = info.path .. "/" .. d.short_src:match("^(.-)%w+%.lua$");
-local template = "";
-local auth = {};
 
 function getFile(filename)
-    local f = io.open(path .. filename, "rb");
-    local ret = f:read("*a");
-    f:close();
+    local f = io.open(filename, "rb");
+    local ret = "";
+    if (f) then
+        ret = f:read("*a");
+        f:close();
+    end
     return ret;
 end
 
@@ -23,7 +19,7 @@ end
 -- character table string
 local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
--- encoding
+-- base64 encoding
 function enc(data)
     return ((data:gsub('.', function(x) 
         local r,b='',x:byte()
@@ -37,7 +33,7 @@ function enc(data)
     end)..({ '', '==', '=' })[#data%3+1])
 end
 
--- decoding
+-- base64 decoding
 function dec(data)
     data = string.gsub(data, '[^'..b..'=]', '')
     return (data:gsub('.', function(x)
@@ -55,7 +51,7 @@ end
 
 --[[ parseHTTP: Parses a HTTP request into URL, headers and form data ]] --
 function parseHTTP(session) 
-    local ret = { URL = "/", headers = {}, form = {}};
+    local ret = { URL = "", headers = {}, form = {}};
     local formdata = "";
     
     --[[  Read request headers  ]]--
@@ -94,9 +90,29 @@ end
 
 
 function acceptHTTP(session)
+    local servername = Rumble.readConfig("servername");
+    
+    session.info = Rumble.serverInfo();
+    local d = debug.getinfo(1);
+    session.path = session.info.path .. "/" .. d.short_src:match("^(.-)%w+%.lua$");
+    local auth = {};
+    
+    session.output = getFile(session.path .. "/template.html");
+    local config = getFile(session.path .. "/auth.cfg");
+    for user,pass,rights in config:gmatch("([^:\r\n]+):([^:\r\n]+):([^:\r\n]+)") do
+        local domains = {};
+        local admin = false;
+        if ( rights == "*" ) then admin = true;
+        else
+            for domain in rights:gmatch("([^, ]+)") do domains[domain] = true; end
+        end
+        auth[user] = {password = pass, domains = domains, admin = admin};
+    end
+
     http = parseHTTP(session); -- Parse HTTP request.
     sess = session;
     session.credentials = nil;
+    
     
     --[[ First, check authorization ]]--
     if (http.headers.Authorization) then
@@ -104,7 +120,7 @@ function acceptHTTP(session)
         if (v) then
             local cred = dec(v);
             local user, pass = cred:match("^([^:]+):([^:]+)$");
-            local pass_hash = SHA256(pass or "");
+            local pass_hash = (pass or ""):SHA256();
             for _user, cred in pairs(auth) do
                 if (_user == user and pass_hash == cred.password) then session.credentials = cred; break; end
             end
@@ -116,10 +132,10 @@ function acceptHTTP(session)
     end
     
     --[[ Then, check if a specific file was requested rather than an action ]]--
-    if ( http.URL:len() and not http.URL:match("auth%.cfg")) then 
-        local info = fstat(path .. http.URL);
+    if ( http.URL:len() > 0 and not http.URL:match("auth%.cfg")) then 
+        local info = file.stat(session.path .. http.URL);
         if (info) then
-            local f = io.open(path .. http.URL, "rb");
+            local f = io.open(session.path .. "/" .. http.URL, "rb");
             output = f:read("*a");
             f:close();
             session:send("HTTP/1.1 200 OK\r\n");
@@ -139,9 +155,9 @@ function acceptHTTP(session)
     session:send("HTTP/1.1 200 OK\r\n");
     session:send("Content-Type: text/html\r\n");
     session:send("\r\n");
-    local output = template:gsub("%[%%header%%%]", ("RumbleLua on %s"):format(servername));
-    output = output:gsub("%[%%title%%%]", "Main page");
-    output = output:gsub("%[%%footer%%%]", ("Powered by Rumble Mail Server v/%s - %s"):format(info.version, os.date()));
+    session.output = session.output:gsub("%[%%header%%%]", ("RumbleLua on %s"):format(servername));
+    session.output = session.output:gsub("%[%%title%%%]", "Main page");
+    session.output = session.output:gsub("%[%%footer%%%]", ("Powered by Rumble Mail Server v/%s - %s"):format(session.info.version, os.date()));
     local section,subSection = http.URL:lower():match("^([^:]+):?(.-)$");
     
     session.contents = "";
@@ -153,39 +169,60 @@ function acceptHTTP(session)
     else
         mainPage(session);
     end
-    output = output:gsub("%[%%contents%%%]", session.contents);
-    session:send(output);
-    --[[
-    session:send( string.format("Hello %s!<hr/><h2>Domains I host:</h2>", (http.form['smarmy'] and http.form['smarmy']) or session.address));
-    for k,v in pairs(listDomains()) do
-        local t = listAccounts(v);
-        session:send(string.format("<h3>%s (%d accounts)</h3>", v, #t));
-        
-        for k, account in pairs(t) do
-         --   session:send("- " .. account.name .. "@" .. account.domain .. "<br/>");
-        end
-    end
-    session:send( string.format("<br/><small>Powered by RumbleLua on Rumble v/%s</small>", info.version));
-    
-    ]]--
+    session.output = session.output:gsub("%[%%contents%%%]", session.contents);
+    session:send(session.output);
+
 end
 
+_LUA_TMP = "";
+
+function lprintf(...)
+    _LUA_TMP = _LUA_TMP .. string.format(...);
+end
+function lprint(...)
+    _LUA_TMP = _LUA_TMP .. string.format(...);
+end
+
+
+function parseLua(data)
+    local prev = _LUA_TMP;
+    local _print, _printf = print, printf;
+    print = lprint;
+    printf = lprintf;
+    _LUA_TMP = "";
+    for snippet in data:gmatch("%b<>") do
+        if (snippet:sub(1,5) == "<?lua") then
+            local code = snippet:sub(6,snippet:len()-2);
+            _print(code);
+        end
+    end
+    print = _print;
+    printf = _printf;
+    _LUA_TMP = prev;
+end
+
+
 function mainPage(session)
-    info = serverInfo();
+	local mx = network.getMX("sourceforge.net");
+	for k, mxEntry in pairs(mx) do
+		append("%u: %s<br/>", mxEntry.preference, mxEntry.host);
+	end
+	append("%s!", network.getHostByName("lua.org"));
+	
     append("<h2>Server information</h2>");
     append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
---    append("<tr><th>Domain</th></tr>");
-    append("<tr><td>Version:</td><td class='plain_text'>%s</td></tr>", info.version);
-    append("<tr><td>Location:</td><td class='plain_text'>%s</td></tr>", info.path);
-    local hours = math.floor(info.uptime/3600);
-    local minutes = math.floor(math.fmod(info.uptime, 3600)/60);
-    local seconds = math.fmod(info.uptime, 60);
+    append("<tr><td>Version:</td><td class='plain_text'>%s</td></tr>", session.info.version);
+	append("<tr><td>System:</td><td class='plain_text'>%s (%s)</td></tr>", session.info.os, (session.info.arch == 32 and "x86") or "x64");
+    append("<tr><td>Location:</td><td class='plain_text'>%s</td></tr>", session.info.path);
+    local hours = math.floor(session.info.uptime/3600);
+    local minutes = math.floor(math.fmod(session.info.uptime, 3600)/60);
+    local seconds = math.fmod(session.info.uptime, 60);
     append("<tr><td>Uptime:</td><td class='plain_text'>%02u:%02u:%02u</td></tr>", hours,minutes,seconds);
     append("</table>");
     
     append("<br/><br/><h2>Services</h2>");
-    for k,v in pairs({"smtp", "imap", "pop3"}) do
-        local svc = serviceInfo(v);
+    for k,v in pairs({"smtp", "imap", "pop3", "core"}) do
+        local svc = Rumble.serviceInfo(v);
         if (svc) then
             append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
             append("<tr><th colspan='2'>%s</th></tr>", v:upper());
@@ -193,7 +230,9 @@ function mainPage(session)
                 append("<tr><td>Status:</td><td class='plain_text'><font color='darkgreen'>Enabled</font></td></tr>");
                 append("<tr><td>Threads:</td><td class='plain_text'>%u total, %u working, %u idling.</td></tr>", svc.workers, svc.busy, svc.idle);
                 append("<tr><td>Traffic:</td><td class='plain_text'>%s sessions, %s bytes received, %s bytes sent</td></tr>", comma(svc.sessions), comma(svc.received), comma(svc.sent));
-                append("<tr><td>Capabilities:</td><td class='plain_text'>%s</td></tr>", svc.capabilities);
+				if (svc.capabilities:len() > 0) then
+					append("<tr><td>Capabilities:</td><td class='plain_text'>%s</td></tr>", svc.capabilities);
+				end	
             else 
                 append("<tr><td>Status:</td><td class='plain_text'><font color='darkred'>Disabled</font></td></tr>");
             end
@@ -202,15 +241,15 @@ function mainPage(session)
     end
     
     append("<br/><br/><h2>Modules</h2>");
-    for k,mod in pairs(listModules()) do
+    for k,mod in pairs(Rumble.listModules()) do
         local file = mod.file;
         if not (file:match("^/") or file:match(":")) then
-            file = info.path .. "/" ..file;
+            file = session.info.path .. "/" ..file;
         end
         append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
         append("<tr><th colspan='2'>%s</th></tr>", mod.title);
         append("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", mod.description);
-        append("<tr><td>Author:</td><td class='plain_text'>%s</td></tr>", mod.author);
+        if (mod.author ~= "Unknown") then append("<tr><td>Author:</td><td class='plain_text'>%s</td></tr>", mod.author); end
         append("<tr><td>File:</td><td class='plain_text'>%s</td></tr>", file);
         append("</table>");
     end
@@ -229,13 +268,13 @@ append("<h2>Domains</h2>", domain);
     
         if (http.form.domain) then
             if (http.form.delete) then
-                if (deleteDomain(http.form.domain)) then
+                if (Mailman.deleteDomain(http.form.domain)) then
                     append("<tr><td><b><font color='red'>Deleted domain %s.</font></b></td></tr>", http.form.domain);
                 else
                     append("<tr><td><b><font color='red'>Could not delete domain %s!</font></b></td></tr>", http.form.domain);
                 end
             elseif (http.form.create) then
-                createDomain(http.form.domain, http.form.path or "");
+                Mailman.createDomain(http.form.domain, http.form.path or "");
                 append("<tr><td><b><font color='darkgreen'>Domain %s has been created.</font></b></td></tr>", http.form.domain);
             end
         end
@@ -276,11 +315,11 @@ append("<h2>Domains</h2>", domain);
     
     append("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
     append("<tr><th>Domain</th><th>Type</th><th>Actions</th></tr>");
-    local t = listDomains();
+    local t = Mailman.listDomains(); 
     table.sort(t);
     for k,v in pairs(t) do
         if (session.credentials.admin or session.credentials.domains[v]) then
-            append("<tr><td><a href='/domains:%s'>%s</a></td><td>%s</td><td>[Edit] [<a href=\"/domains?domain=%s&delete=true\">Delete</a>]</td></tr>", v,v,v,v);
+            append("<tr><td><a href='/domains:%s'>%s</a></td><td>domain</td><td>[Edit] [<a href=\"/domains?domain=%s&delete=true\">Delete</a>]</td></tr>", v,v,v);
         end
     end
     if (#t == 0) then
@@ -300,14 +339,14 @@ function accountsPage(session, domain)
     
     if (http.form.user) then
         if (http.form.delete) then
-            local acc = readAccount(tonumber(http.form.user));
+            local acc = Mailman.readAccount(tonumber(http.form.user));
             if ( acc ) then
-                deleteAccount(tonumber(http.form.user));
+                Mailman.deleteAccount(tonumber(http.form.user));
                 append("<tr><td><b><font color='red'>Deleted account %s@%s.</font></b></td></tr>", acc.name, domain);
             end
             
         elseif (http.form.create) then
-            if (accountExists(domain, http.form.user)) then
+            if (Mailman.accountExists(domain, http.form.user)) then
                 append("<tr><td><b><font color='red'>Error: Account %s@%s already exists!</font></b></td></tr>", http.form.user, domain);
             else
                 local acc = {};
@@ -316,7 +355,7 @@ function accountsPage(session, domain)
                 acc.type = http.form.type or "mbox";
                 acc.password = SHA256(http.form.password or "");
                 acc.arguments = http.form.arguments or "";
-                saveAccount(acc);
+                Mailman.saveAccount(acc);
                 append("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
             end
         end
@@ -401,8 +440,7 @@ function accountsPage(session, domain)
     
     append("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
     append("<tr><th>Account</th><th>Type</th><th>Actions</th></tr>");
-    local t = listAccounts(domain);
-    --table.sort(t);
+    local t = Mailman.listAccounts(domain);
     for k,v in pairs(t) do
         append("<tr><td><a href='/accounts:%u'>%s@%s</a></td><td>%s</td><td>[Edit] [<a href=\"/domains:%s?user=%u&delete=true\">Delete</a>]</td></tr>", v.id,v.name,domain,v.type,domain,v.id);
     end
@@ -415,48 +453,8 @@ end
 --[[ Initialize the service ]]--
 
 do
-    template = getFile("template.html");
-    local config = getFile("auth.cfg");
-    for user,pass,rights in config:gmatch("([^:\r\n]+):([^:\r\n]+):([^:\r\n]+)") do
-        local domains = {};
-        local admin = false;
-        if ( rights == "*" ) then admin = true;
-        else
-            for domain in rights:gmatch("([^, ]+)") do domains[domain] = true; end
-        end
-        auth[user] = {password = pass, domains = domains, admin = admin};
-    end
-    print(string.format("%-48s[%s]", "Launching RumbleLua service on port 80...", (createService(acceptHTTP, 80, 10) and "OK") or "BAD"));
+    
+    print(string.format("%-48s[%s]", "Launching RumbleLua service on port 80...", (Rumble.createService(acceptHTTP, 80, 10) and "OK") or "BAD"));
     
 end
 
-
---[[
-if (http.form.user) then
-            if (http.form.delete) then
-                print("Deleting account", http.form.user);
-                deleteAccount(tonumber(http.form.user));
-            else
-                if (accountExists("gruno.dk", http.form.user)) then
-                    append(session, "<li><font color='red'>Error: Account already exists!</font></li>");
-                else
-                    local acc = {};
-                    acc.name = http.form.user;
-                    acc.domain = "gruno.dk";
-                    acc.type = "mbox";
-                    acc.password = SHA256("smurf");
-                    acc.arguments = "";
-                    saveAccount(acc);
-                    append(session, "<li><font color='blue'>Account saved!</font></li>");
-                end
-            end
-        end
-        
-        t = listAccounts("gruno.dk");
-        for k, account in pairs(t) do
-             append(session, ("<li>%s@%s [<a href='/account?user=%u&delete=true'>delete</a>]</li>\n"):format(account.name, account.domain, account.id));
-        end
-        append(session,"</ul>");
-        
-        ]]--
-        

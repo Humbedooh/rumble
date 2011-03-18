@@ -1,10 +1,12 @@
 @charset "utf-8";
 body {
-	font: 100%/1.4 Verdana, Arial, Helvetica, sans-serif;
 	background: #42413C;
 	margin: 0;
 	padding: 0;
 	color: #000;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	line-height: 1.4;
 }
 
 /* ~~ Element/tag selectors ~~ */
@@ -134,6 +136,7 @@ ul.nav {
 	list-style: none; /* this removes the list marker */
 	border-top: 1px solid #666; /* this creates the top border for the links - all others are placed using a bottom border on the LI */
 	margin-bottom: 15px; /* this creates the space between the navigation on the content below */
+	font-weight: bold;
 }
 ul.nav li {
 	border-bottom: 1px solid #666; /* this creates the button separation */
