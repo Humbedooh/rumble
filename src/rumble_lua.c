@@ -1013,6 +1013,25 @@ static int rumble_lua_listmodules(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
+static int rumble_lua_gethostbyname(lua_State *L) {
+
+    /*~~~~~~~~~~~~*/
+    const char  *host;
+    struct hostent* server;
+    /*~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    host = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    server = gethostbyname(host);
+    if (server) {
+        lua_pushstring(L, inet_ntoa(*(struct in_addr *) *server->h_addr_list));
+    }
+    else lua_pushnil(L);
+    return (1);
+}
+
+
 static int rumble_lua_config(lua_State *L) {
 
     /*~~~~~~~~~~~~*/
@@ -1024,6 +1043,42 @@ static int rumble_lua_config(lua_State *L) {
     lua_pop(L, 1);
     if (rhdict(rumble_database_master_handle->_core.conf, el)) lua_pushstring(L, rrdict(rumble_database_master_handle->_core.conf, el));
     else lua_pushnil(L);
+    return (1);
+}
+
+
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_mx(lua_State *L) {
+
+    /*~~~~~~~~~~~~*/
+    const char  *host;
+    d_iterator iter;
+    dvector* mxlist;
+    int x = 0;
+    mxRecord* mx;
+    /*~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    host = lua_tostring(L, 1);
+    lua_pop(L, 1);
+    lua_newtable(L);
+    mxlist = comm_mxLookup(host);
+    dforeach((mxRecord*), mx, mxlist, iter) {
+        x++;
+        lua_pushinteger(L, x);
+        lua_newtable(L);
+        lua_pushliteral(L, "preference");
+        lua_pushinteger(L, mx->preference);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "host");
+        lua_pushstring(L, mx->host);
+        lua_rawset(L, -3);
+        lua_rawset(L, -3);
+    }
     return (1);
 }
 
@@ -1112,7 +1167,33 @@ static int rumble_lua_createservice(lua_State *L) {
     return (1);
 }
 
-static const luaL_reg   Foo_methods[] =
+static const luaL_reg   File_methods[] =
+{
+    { "stat", rumble_lua_fileinfo },
+    { 0, 0 }
+};
+
+static const luaL_reg   String_methods[] =
+{
+    { "SHA256", rumble_lua_sha256 },
+    { 0, 0 }
+};
+
+
+static const luaL_reg   Rumble_methods[] =
+{
+    { "createService", rumble_lua_createservice },
+    { "readConfig", rumble_lua_config },
+    { "setHook", rumble_lua_sethook },
+    { "serverInfo", rumble_lua_serverinfo },
+    { "serviceInfo", rumble_lua_serviceinfo },
+    { "listModules", rumble_lua_listmodules },
+    { "dprint", rumble_lua_debug },
+    { 0, 0 }
+};
+
+
+static const luaL_reg   Mailman_methods[] =
 {
     { "listDomains", rumble_lua_getdomains },
     { "listAccounts", rumble_lua_getaccounts },
@@ -1121,17 +1202,15 @@ static const luaL_reg   Foo_methods[] =
     { "deleteAccount", rumble_lua_deleteaccount },
     { "accountExists", rumble_lua_accountexists },
     { "addressExists", rumble_lua_addressexists },
-    { "createService", rumble_lua_createservice },
     { "createDomain", rumble_lua_createdomain },
     { "deleteDomain", rumble_lua_deletedomain },
-    { "readConfig", rumble_lua_config },
-    { "setHook", rumble_lua_sethook },
-    { "fstat", rumble_lua_fileinfo },
-    { "SHA256", rumble_lua_sha256 },
-    { "serverInfo", rumble_lua_serverinfo },
-    { "serviceInfo", rumble_lua_serviceinfo },
-    { "listModules", rumble_lua_listmodules },
-    { "dprint", rumble_lua_debug },
+    { 0, 0 }
+};
+
+static const luaL_reg   Network_methods[] =
+{
+    { "getHostByName", rumble_lua_gethostbyname },
+    { "getMX", rumble_lua_mx },
     { 0, 0 }
 };
 
@@ -1140,7 +1219,12 @@ static const luaL_reg   Foo_methods[] =
  =======================================================================================================================
  */
 int Foo_register(lua_State *L) {
-    luaL_register(L, "_G", Foo_methods);    /* create methods table, add it to the globals */
+    
+    luaL_register(L, "Mailman", Mailman_methods);    /* create methods table, add it to the globals */
+    luaL_register(L, "Rumble", Rumble_methods);    /* create methods table, add it to the globals */
+    luaL_register(L, "file", File_methods);    /* create methods table, add it to the globals */
+    luaL_register(L, "string", String_methods);    /* create methods table, add it to the globals */
+    luaL_register(L, "network", Network_methods);    /* create methods table, add it to the globals */
     return (1); /* return methods on the stack */
 }
 
@@ -1154,6 +1238,7 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
     lua_State       *L = lua_newthread(state);
     int             err_func;
     sessionHandle   *sess = (sessionHandle *) session;
+    rumbleService* svc = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, ((hookHandle *) hook)->lua_callback);
@@ -1198,7 +1283,18 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
      */
 
     lua_pcall(L, 1, 0, err_func);
-
+    
+    /*$1 Unlock the service mutex in case a Lua script forgot to */
+    switch (sess->_tflags & RUMBLE_THREAD_SVCMASK)
+    {
+    case RUMBLE_THREAD_SMTP:    svc = &((masterHandle *) sess->_master)->smtp; break;
+    case RUMBLE_THREAD_POP3:    svc = &((masterHandle *) sess->_master)->pop3; break;
+    case RUMBLE_THREAD_IMAP:    svc = &((masterHandle *) sess->_master)->imap; break;
+    default:                    break;
+    }
+    if (svc) pthread_mutex_unlock(&svc->mutex);
+    
+    
     /*
      * lua_gc(L, LUA_GCSTEP, 1);
      * ;
