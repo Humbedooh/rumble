@@ -1,5 +1,6 @@
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
+FILE* sysLog = 0;
 
 /*
  =======================================================================================================================
@@ -379,4 +380,25 @@ size_t rumble_file_exists(const char *filename) {
 #endif
     else return 0;
 	return 1;
+}
+
+
+void statusLog(const char* msg, ...) {
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    time_t      rawtime;
+    struct tm   *timeinfo;
+    char        txt[130];
+    va_list vl;
+    int rc = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    if (sysLog) {
+        va_start(vl,msg);
+        time(&rawtime);
+        timeinfo = gmtime(&rawtime);
+        strftime(txt, 128, "%Y/%m/%d %X", timeinfo);
+        fprintf(sysLog, "%s: \t", txt);
+        vfprintf(sysLog, msg, vl);
+        rc = fprintf(sysLog, "\r\n");
+        fflush(sysLog);
+    }
 }

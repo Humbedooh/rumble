@@ -610,7 +610,7 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *sender,
                                 address         *recipient
                             );
-
+void statusLog(const char* msg, ...);
 /*$3
  =======================================================================================================================
     Account and domain handling

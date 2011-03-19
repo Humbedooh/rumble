@@ -53,6 +53,7 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
             if (!handle) {
                 error = error ? error : "(no such file?)";
                 fprintf(stderr, "\nError loading %s: %s\n", el->value, error);
+                statusLog("MOD: Error loading %s: %s", el->value, error);
                 exit(1);
             }
 
@@ -68,7 +69,10 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
             init = (rumbleModInit) dlsym(handle, "rumble_module_init");
             mcheck = (rumbleVerCheck) dlsym(handle, "rumble_module_check");
             error = (init == 0 || mcheck == 0) ? "no errors" : 0;
-            if (error != NULL) fprintf(stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
+            if (error != NULL) {
+                fprintf(stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
+                statusLog("Warning: %s does not contain required module functions.\n", el->value);
+            }
             if (init && mcheck) {
                 master->_core.currentSO = el->value;
                 dvector_add(master->_core.modules, modinfo);
@@ -80,14 +84,19 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
                         fprintf(stderr,
                                 "\nError: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
                             el->value, ver, RUMBLE_VERSION);
+                        statusLog("Error: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
+                            el->value, ver, RUMBLE_VERSION);
                     } else {
                         fprintf(stderr,
                                 "\nError: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
+                            el->value, ver, RUMBLE_VERSION);
+                        statusLog("Error: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
                             el->value, ver, RUMBLE_VERSION);
                     }
                 } else x = init(master, modinfo);
                 if (x != EXIT_SUCCESS) {
                     fprintf(stderr, "\nError: %s failed to load!\n", el->value);
+                    statusLog("Error: %s failed to load!\n", el->value);
                     dlclose(handle);
                 }
 
@@ -123,8 +132,10 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
 
             if (luaL_loadfile(L, el->value)) {
                 fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
+               statusLog("Couldn't load file: %s\n", lua_tostring(L, -1));
             } else if (lua_pcall(L, 0, LUA_MULTRET, 0)) {
                 fprintf(stderr, "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
+                statusLog("Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
             }
         }
 #endif

@@ -7,9 +7,8 @@
 #define RUMBLE_INITIAL_THREADS  25
 extern masterHandle *rumble_database_master_handle;
 extern int (*lua_callback) (lua_State *, void *, void *);
-
+extern FILE* sysLog;
 static dvector* s_args;
- FILE* runlog;
 
 #ifdef RUMBLE_MSC
 SERVICE_STATUS          ServiceStatus; 
@@ -49,7 +48,7 @@ int InitService() {
 void ServiceMain(int argc, char** argv) 
 { 
    int error; 
-	fprintf(runlog, "Running ServiceMain()\r\n");
+   statusLog("Running as a Windows Service");
    ServiceStatus.dwServiceType = 
       SERVICE_WIN32; 
    ServiceStatus.dwCurrentState = 
@@ -68,17 +67,16 @@ void ServiceMain(int argc, char** argv)
    if (hStatus == (SERVICE_STATUS_HANDLE)0) 
    { 
       // Registering Control Handler failed
-	   fprintf(runlog, "Register failed!\r\n");
+       statusLog("ERROR: Couldn't register as a Windows service");
       return; 
    }  
-   fprintf(runlog, "Initializing service\r\n");
+   statusLog("Successfully registered as service, running main processes");
    // Initialize Service 
    error = InitService(); 
-   fprintf(runlog, "Init done\r\n");
-   fflush(runlog);
+   statusLog("Returned from main process");
    if (error) 
    {
-	   fprintf(runlog, "rumbleStart returned badly\r\n");
+       statusLog("ERROR: rumbleStart() returned badly, shutting down.");
       // Initialization failed
       ServiceStatus.dwCurrentState = 
          SERVICE_STOPPED; 
@@ -87,7 +85,7 @@ void ServiceMain(int argc, char** argv)
 	  
       return; 
    } 
-   fprintf(runlog, "Giving the OK\r\n");
+   statusLog("Sending SERVICE_RUNNING status to Windows Services");
    // We report the running status to SCM. 
    ServiceStatus.dwCurrentState = 
       SERVICE_RUNNING; 
@@ -101,8 +99,7 @@ void ServiceMain(int argc, char** argv)
 
       Sleep(999);
    }
-   fprintf(runlog, "Program halted\r\n");
-   fclose(runlog);
+   statusLog("EXIT: Program halted by services, shutting down.");
    exit(EXIT_SUCCESS);
    return; 
 }
@@ -121,30 +118,24 @@ int rumbleStart() {
 	masterHandle    *master;
 	
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	fprintf(runlog, "Running rumbleStart()\r\n");
-	fflush(runlog);
+	
     master = (masterHandle *) malloc(sizeof(masterHandle));
     if (!master) merror();
     master->_core.uptime = time(0);
 	
 	lua_callback = rumble_lua_callback;
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    statusLog("Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     srand(time(0));
     rumble_database_master_handle = master;
     rumble_config_load(master, s_args);
     rumble_master_init(master);
-	if (rhdict(s_args, "execpath")) rsdict(master->_core.conf, "execpath", rrdict(s_args, "execpath"));
-	fprintf(runlog,"Loading db...\r\n");
-	fflush(runlog);
-    rumble_database_load(master, runlog);
-    
-	fprintf(runlog,"Loading modules...\r\n");
-	fflush(runlog);
-	rumble_database_update_domains();
-    rumble_modules_load(master, runlog);
+    if (rhdict(s_args, "execpath")) rsdict(master->_core.conf, "execpath", rrdict(s_args, "execpath"));
+    rumble_database_load(master,0);
+    rumble_database_update_domains();
+    rumble_modules_load(master, 0);
     printf("%-48s", "Launching core service...");
-	fprintf(runlog,"%-48s", "Launching core service...\r\n");
-	fflush(runlog);
+    statusLog("Launching core service");
     pthread_attr_init(&attr);
     t = (pthread_t *) malloc(sizeof(pthread_t));
 	dvector_add(master->mailman.threads, t);
@@ -158,6 +149,7 @@ int rumbleStart() {
 
         master->smtp.enabled = 1;
         printf("%-48s", "Launching SMTP service...");
+        statusLog("Launching SMTP service");
         master->smtp.socket = comm_init(master, rumble_config_str(master, "smtpport"));
         for (n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t *) malloc(sizeof(pthread_t));
@@ -176,6 +168,7 @@ int rumbleStart() {
 
         master->pop3.enabled = 1;
         printf("%-48s", "Launching POP3 service...");
+        statusLog("Launching POP3 service...");
         master->pop3.socket = comm_init(master, rumble_config_str(master, "pop3port"));
         for (n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t *) malloc(sizeof(pthread_t));
@@ -194,6 +187,7 @@ int rumbleStart() {
 
         master->imap.enabled = 1;
         printf("%-48s", "Launching IMAP4 service...");
+        statusLog("Launching IMAP4 service...");
         master->imap.socket = comm_init(master, rumble_config_str(master, "imap4port"));
         for (n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
             t = (pthread_t *) malloc(sizeof(pthread_t));
@@ -204,10 +198,10 @@ int rumbleStart() {
         printf("[OK]\n");
     }
 	if (rhdict(s_args, "--service")) {
-		fprintf(runlog, "rumbleStart() detected --service, returning to ctrl thread\r\n");
+		statusLog("Core: --service enabled, Listening for demands");
 		return (EXIT_SUCCESS);
 	}
-    fflush(runlog);
+    statusLog("Rumble is up and running, listening for incoming calls!");
     sleep(999999);
     return (EXIT_SUCCESS);
 }
@@ -218,10 +212,10 @@ int main(int argc, char **argv) {
     int             x;
 	char r_path[512];
         s_args = dvector_init();
-	runlog = fopen("rumble_status.log", "w");
+        memset(r_path, 0, 512);
 	if (argc) {
             char* m = argv[0], *n;
-            memset(r_path, 0, 512);
+            
 #ifndef RUMBLE_MSC
             while (m != NULL) {
                 n = strchr(m+1, '/');
@@ -240,21 +234,34 @@ int main(int argc, char **argv) {
             strncpy(r_path, argv[0], strlen(argv[0])-strlen(m));
             SetCurrentDirectoryA(r_path);
 #endif
-            if (strlen(r_path)) {
-                fprintf(runlog, "Entering directory: %s\r\n", r_path);
-                rsdict(s_args, "execpath", r_path);
-            }
 	}
     for (x = 0; x < argc; x++) {
         rumble_scan_flags(s_args, argv[x]);
         rsdict(s_args, argv[x], "true");
         
     }
+    if (strlen(r_path)) {
+        char tmpfile[1024];
+        sprintf(tmpfile, "%s/rumble_status.log", r_path);
+        printf("opening %s\n", tmpfile);
+        sysLog = fopen(tmpfile, "a");
+    }
+    else sysLog = fopen("rumble_status.log", "a");
+    
+    fprintf(sysLog, "\r\n------------------------------------------------------\r\n");
+    statusLog("New instance of Rumble started");
+    fprintf(sysLog, "------------------------------------------------------\r\n");
+    if (strlen(r_path)) {
+        printf("Entering %s\r\n", r_path);
+        statusLog("Entering directory: %s", r_path);
+        rsdict(s_args, "execpath", r_path);
+    }
 
-	fprintf(runlog, "Running main()\r\n");
-	fflush(runlog);
+    statusLog("Parsing exec arguments");
+	
 
     if (rhdict(s_args, "--service")) {
+        statusLog("--service detected, launching daemon process");
 #ifndef RUMBLE_MSC
         /*~~~~~~~~~~~~~*/
         int pid = fork();
