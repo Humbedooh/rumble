@@ -22,7 +22,7 @@ typedef uint32_t (*rumbleVerCheck) (void);
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_modules_load(masterHandle *master, FILE* runlog) {
+void rumble_modules_load(masterHandle *master, FILE *runlog) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
@@ -73,6 +73,7 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
                 fprintf(stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
                 statusLog("Warning: %s does not contain required module functions.\n", el->value);
             }
+
             if (init && mcheck) {
                 master->_core.currentSO = el->value;
                 dvector_add(master->_core.modules, modinfo);
@@ -85,13 +86,13 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
                                 "\nError: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
                             el->value, ver, RUMBLE_VERSION);
                         statusLog("Error: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
-                            el->value, ver, RUMBLE_VERSION);
+                              el->value, ver, RUMBLE_VERSION);
                     } else {
                         fprintf(stderr,
                                 "\nError: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
                             el->value, ver, RUMBLE_VERSION);
                         statusLog("Error: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
-                            el->value, ver, RUMBLE_VERSION);
+                              el->value, ver, RUMBLE_VERSION);
                     }
                 } else x = init(master, modinfo);
                 if (x != EXIT_SUCCESS) {
@@ -117,25 +118,36 @@ void rumble_modules_load(masterHandle *master, FILE* runlog) {
         else if (!strcmp(el->key, "loadscript")) {
 
             /*~~~~~~~~~~~*/
+            int         x;
             lua_State   *L;
             /*~~~~~~~~~~~*/
 
-            printf("Loading script <%s>\n", el->value);
-            L = (lua_State *) master->_core.lua;
-            if (!L) {
-                master->_core.lua = (lua_State *) luaL_newstate();
-                L = (lua_State *) master->_core.lua;
-                luaL_openlibs(L);
-                luaopen_debug(L);
-                Foo_register(L);
+            for (x = 0; x < RUMBLE_LSTATES; x++) {
+                if (!master->lua.states[x].state) {
+                    master->lua.states[x].state = (void *) luaL_newstate();
+                    L = (lua_State *) master->lua.states[x].state;
+                    lua_pushinteger(L, x);
+                    luaL_ref(L, LUA_REGISTRYINDEX);
+                    luaL_openlibs(L);
+                    luaopen_debug(L);
+                    Foo_register(L);
+                }
             }
 
-            if (luaL_loadfile(L, el->value)) {
-                fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
-               statusLog("Couldn't load file: %s\n", lua_tostring(L, -1));
-            } else if (lua_pcall(L, 0, LUA_MULTRET, 0)) {
-                fprintf(stderr, "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
-                statusLog("Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
+            printf("Loading script <%s>\n", el->value);
+
+            /* Load the file into all states */
+            for (x = 0; x < RUMBLE_LSTATES; x++) {
+                L = (lua_State *) master->lua.states[x].state;
+                if (luaL_loadfile(L, el->value)) {
+                    fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
+                    statusLog("Couldn't load file: %s\n", lua_tostring(L, -1));
+                    break;
+                } else if (lua_pcall(L, 0, LUA_MULTRET, 0)) {
+                    fprintf(stderr, "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
+                    statusLog("Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
+                    break;
+                }
             }
         }
 #endif

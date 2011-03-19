@@ -428,16 +428,18 @@ void *rumble_worker_init(void *m) {
     int             rc;
     sqlite3_stmt    *state;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     sqlite3_prepare_v2((sqlite3 *) master->_core.db, statement, -1, &state, NULL);
     pthread_cond_init(&master->mailman.cond, NULL);
     ignmx = rrdict(master->_core.conf, "ignoremx");
     badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
     for (x = 0; x < 25; x++) {
-		
+
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
         dvector_add(master->mailman.threads, t);
         pthread_create(t, NULL, rumble_worker_process, m);
     }

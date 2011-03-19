@@ -14,27 +14,26 @@ masterHandle    *rumble_database_master_handle = 0;
     Database constructors and wrappers
  =======================================================================================================================
  */
-void rumble_database_load(masterHandle *master, FILE* runlog) {
+void rumble_database_load(masterHandle *master, FILE *runlog) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
     char    dbpath[1024];
     char    mailpath[1024];
     void    *state;
     int     rc;
-	FILE* ftmp;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    FILE    *ftmp;
+    /*~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
-	ftmp = fopen(dbpath, "r");
-	if (!ftmp) {
-            sprintf(dbpath, "%s/%s/rumble.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
-            sprintf(mailpath, "%s/%s/mail.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
-        }
-	else fclose(ftmp);
-    
+    ftmp = fopen(dbpath, "r");
+    if (!ftmp) {
+        sprintf(dbpath, "%s/%s/rumble.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
+        sprintf(mailpath, "%s/%s/mail.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
+    } else fclose(ftmp);
     printf("%-48s", "Loading database...");
     statusLog("Loading database");
+
     /* Domains and accounts */
     if (sqlite3_open(dbpath, (sqlite3 **) &master->_core.db)) {
         statusLog("ERROR: Can't open database <%s>: %s\r\n", dbpath, sqlite3_errmsg((sqlite3 *) master->_core.db));
@@ -84,10 +83,10 @@ void rumble_database_load(masterHandle *master, FILE* runlog) {
         rumble_database_cleanup(state);
         if (rc == SQLITE_DONE) printf("[OK]\r\n");
         else {
-			fprintf(runlog, "[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
-			fflush(runlog);
-			printf("[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
-		}
+            fprintf(runlog, "[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
+            fflush(runlog);
+            printf("[%s]\r\n", sqlite3_errmsg((sqlite3 *) master->_core.db));
+        }
     } else printf("[OK]\r\n");
     statusLog("Database successfully initialized");
 }

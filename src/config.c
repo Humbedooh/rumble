@@ -6,7 +6,6 @@
 #include "rumble.h"
 #include <stdarg.h>
 #include <fcntl.h>
-
 typedef struct
 {
     const char  *key;
@@ -50,13 +49,13 @@ static int rumble_compare_value(masterHandle *master, const char *key, const cha
  */
 void rumble_config_load(masterHandle *master, dvector *args) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char                *paths[3] = { "config", "/var/rumble/config", "g:/home/vaps/rumble/config" };
     char                *cfgfile;
     const char          *cfgpath;
     FILE                *config;
     rumbleKeyValuePair  *el;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     master->_core.conf = dvector_init();
     cfgfile = (char *) calloc(1, 1024);
@@ -159,8 +158,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
                     if (!strcmp(key, "comment")) {
                         printf("%s\r\n", value);
                         statusLog("CFG: %s", value);
-                    }
-                    else rsdict(master->_core.conf, key, value);
+                    } else rsdict(master->_core.conf, key, value);
                 } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(master->_core.conf, key, value);

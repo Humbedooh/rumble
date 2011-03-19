@@ -1,6 +1,6 @@
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
-FILE* sysLog = 0;
+FILE    *sysLog = 0;
 
 /*
  =======================================================================================================================
@@ -371,28 +371,41 @@ char *rumble_create_filename(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-size_t rumble_file_exists(const char *filename) {
+size_t rumble_file_exists(const char *filename)
+{
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 #ifdef RUMBLE_MSC
-    FILE* fd = fopen(filename, "r");
-    if (fd) { fclose(fd); return 1; }
+    FILE    *fd = fopen(filename, "r");
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    if (fd) {
+        fclose(fd);
+        return (1);
+    }
+
 #else
-    if (access(filename,0) == 0) return 1;
+    if (access(filename, 0) == 0) return (1);
 #endif
-    else return 0;
-	return 1;
+    else return (0);
+    return (1);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void statusLog(const char *msg, ...) {
 
-void statusLog(const char* msg, ...) {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~*/
     time_t      rawtime;
     struct tm   *timeinfo;
     char        txt[130];
-    va_list vl;
-    int rc = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    va_list     vl;
+    int         rc = 0;
+    /*~~~~~~~~~~~~~~~~~~*/
+
     if (sysLog) {
-        va_start(vl,msg);
+        va_start(vl, msg);
         time(&rawtime);
         timeinfo = gmtime(&rawtime);
         strftime(txt, 128, "%Y/%m/%d %X", timeinfo);

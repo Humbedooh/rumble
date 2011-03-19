@@ -343,6 +343,7 @@ typedef struct
     pthread_cond_t  writing;
     pthread_mutex_t mutex;
 } rumble_readerwriter;
+#   define RUMBLE_LSTATES  25
 
 /*
  -----------------------------------------------------------------------------------------------------------------------
@@ -371,7 +372,7 @@ typedef struct
     char    *raw;
     dvector *flags;
     char    *_flags;
-    char    *tag;   /* VERP or BATV tags */
+    char    *tag;           /* VERP or BATV tags */
 } address;
 typedef struct
 {
@@ -426,17 +427,17 @@ typedef struct
 {
     struct __core
     {
-        dvector         *conf;
-        const char      *currentSO;
-        dvector         *modules;
-        cvector         *parser_hooks;
-        cvector         *feed_hooks;
-        void            *db;
-        void            *mail;
-        dvector         *batv;  /* BATV handles for bounce control */
-        void            *lua;
-        void            *tls_credentials;
-        time_t          uptime;
+        dvector     *conf;
+        const char  *currentSO;
+        dvector     *modules;
+        cvector     *parser_hooks;
+        cvector     *feed_hooks;
+        void        *db;
+        void        *mail;
+        dvector     *batv;  /* BATV handles for bounce control */
+        void        *lua;
+        void        *tls_credentials;
+        time_t      uptime;
     } _core;
     rumbleService   smtp;
     rumbleService   pop3;
@@ -453,6 +454,15 @@ typedef struct
         dvector             *list;
     } mailboxes;
     const char  *cfgdir;
+    struct
+    {
+        struct
+        {
+            int     working;
+            void    *state;
+        } states[RUMBLE_LSTATES];
+        pthread_mutex_t mutex;
+    } lua;
 } masterHandle;
 typedef struct
 {
@@ -478,7 +488,7 @@ typedef struct
     uint32_t        date;
     rumble_mailbox  *account;
     uint32_t        loops;
-    char            mType;      /* 0 = regular mail, 1 = bounce */
+    char            mType;  /* 0 = regular mail, 1 = bounce */
 } mqueue;
 typedef struct
 {
@@ -610,7 +620,8 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *sender,
                                 address         *recipient
                             );
-void statusLog(const char* msg, ...);
+void                        statusLog(const char *msg, ...);
+
 /*$3
  =======================================================================================================================
     Account and domain handling

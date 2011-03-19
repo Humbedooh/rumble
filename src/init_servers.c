@@ -8,6 +8,10 @@
  */
 void rumble_master_init(masterHandle *master) {
 
+    /*~~*/
+    int x;
+    /*~~*/
+
     /*$4
      *******************************************************************************************************************
         SMTP initialization
@@ -219,4 +223,9 @@ void rumble_master_init(masterHandle *master) {
     master->mailboxes.rrw = rumble_rw_init();
     master->mailboxes.list = dvector_init();
     master->_core.lua = 0;
+    pthread_mutex_init(&master->lua.mutex, 0);
+    for (x = 0; x < RUMBLE_LSTATES; x++) {
+        master->lua.states[x].state = 0;
+        master->lua.states[x].working = 0;
+    }
 }

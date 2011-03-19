@@ -210,7 +210,6 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     vsprintf(buffer, d, vl);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
-    printf("[%s]: %s", rumble_mtime(), buffer);
     free(buffer);
     return (len);
 }
