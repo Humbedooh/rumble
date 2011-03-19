@@ -1,4 +1,5 @@
 local portNum = 2580; -- Port number for the web interface
+
 local fileCache = {};
 
 -- function for retrieving files
@@ -118,7 +119,6 @@ end
 
 function acceptHTTP(session)
     local servername = Rumble.readConfig("servername");
-    
     session.info = Rumble.serverInfo();
     local d = debug.getinfo(1);
     session.path = session.info.path .. "/" .. d.short_src:match("^(.-)%w+%.lua$");
@@ -142,7 +142,7 @@ function acceptHTTP(session)
     http = parseHTTP(session); -- Parse HTTP request.
     sess = session;
     session.credentials = nil;
-    
+    session.http = http;
     
     --[[ First, check authorization ]]--
     if (http.headers.Authorization) then
@@ -160,39 +160,34 @@ function acceptHTTP(session)
         session:send("HTTP/1.1 401 Authorization Required\r\nWWW-Authenticate: Basic realm=\"RumbleLua\"\r\nContent-Type: text/html\r\n\r\nAuthorization required!\n");
         return;
     end
-    
+    session:send("HTTP/1.1 200 OK\r\n");
+	session:send("Connection: close\r\n");
     --[[ Then, check if a specific file was requested rather than an action ]]--
     if ( http.URL:len() > 0 and not http.URL:match("auth%.cfg")) then
 		--session:lock();
 		local exists = file.exists(session.path .. http.URL);
 		--session:unlock();
         if (exists) then
-            local f = io.open(session.path .. http.URL, "rb");
-			if (f) then
-				output = f:read("*a");
-				f:close();
-				session:send("HTTP/1.1 200 OK\r\n");
-				if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
-				elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
-				elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
-				else session:send("Content-Type: binary/octet-stream\r\n");
-				end
-				session:send("\r\n");
-				if (output) then session:send(output:len(), output); end
-				output = nil;
-			else
-				session:send("HTTP/1.1 501 Boooo\r\n\r\nSomething went wrong, I/O wise :(\r\n");
+            output = getFile(session.path .. http.URL);
+			
+			if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
+			elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
+			elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
+			else session:send("Content-Type: binary/octet-stream\r\n");
 			end
-            return;
-        end
-    end
+			session:send("\r\n");
+			if (output) then session:send(output:len(), output); end
+			output = nil;
+			return;
+		end
+     end
     
     --[[ Otherwise, start the action! ]]--
-    session:send("HTTP/1.1 200 OK\r\n");
     session:send("Content-Type: text/html\r\n");
     session:send("\r\n");
     session.output = session.output:gsub("%[%%header%%%]", ("RumbleLua on %s"):format(servername));
     session.output = session.output:gsub("%[%%title%%%]", "Main page");
+	session.output = session.output:gsub("%[%%version%%%]", session.info.version);
     session.output = session.output:gsub("%[%%footer%%%]", ("Powered by Rumble Mail Server v/%s - %s"):format(session.info.version, os.date()));
     local section,subSection = http.URL:lower():match("^([^:]+):?(.-)$");
     
@@ -207,7 +202,15 @@ function acceptHTTP(session)
     end
     session.output = session.output:gsub("%[%%contents%%%]", session.contents);
     session:send(session.output);
-
+	
+	session.credentials = nil;
+	auth = nil;
+	session = {};
+	output = "";
+	http.headers = nil;
+	http = nil;
+	_LUA_TMP = "";
+	collectgarbage();
 end
 
 _LUA_TMP = "";
@@ -239,7 +242,6 @@ end
 
 
 function mainPage(session)
-	
     append("<h2>Server information</h2>");
     append("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
     append("<tr><td>Version:</td><td class='plain_text'>%s</td></tr>", session.info.version);
@@ -484,8 +486,9 @@ end
 --[[ Initialize the service ]]--
 
 do
-    
-    print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", (Rumble.createService(acceptHTTP, portNum, 10) and "OK") or "BAD"));
+    if (Rumble.createService(acceptHTTP, portNum, 10) == true) then
+		print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", "OK"));
+	end
     
 end
 

@@ -11,7 +11,8 @@
 print("hello!!");
 ?>
 <div class="container">
-  <div class="header"><!-- end .header -->[%header%]</div>
+  <div class="header"><!-- end .header -->[%header%]<br />
+  <span class="version">Version [%version%]</span></div>
   <div class="sidebar1">
     <ul class="nav">
       <li><a href="/">Server status</a></li>
@@ -19,14 +20,14 @@ print("hello!!");
       <li><a href="/users">RumbleLua users</a></li>
       <li><a href="#">Link four</a></li>
     </ul>
-    <p class="elements"> some other stuff goes here.</p>
+    <p> some other stuff goes here.</p>
     <!-- end .sidebar1 --></div>
   <div class="content">
     <h1>[%title%]</h1>
     <p>[%contents%]</p>
     <!-- end .content --></div>
   <div class="footer">
-    <p>[%footer%]</p>
+    <p align="center">[%footer%]</p>
     <!-- end .footer --></div>
   <!-- end .container --></div>
 </body>
