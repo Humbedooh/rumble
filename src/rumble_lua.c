@@ -7,6 +7,7 @@
 #include "rumble_version.h"
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
+extern FILE             *sysLog;
 #   define FOO "Rumble"
 #   ifndef __STDC__
 #      define __STDC__    1
@@ -18,45 +19,6 @@ extern masterHandle *rumble_database_master_handle;
  =======================================================================================================================
  =======================================================================================================================
  */
-lua_State* rumble_acquire_state() {
-    int x;
-    int found = 0;
-    masterHandle* master = rumble_database_master_handle;
-    lua_State* L;
-    
-    pthread_mutex_lock(&master->lua.mutex);
-    for (x = 0; x < RUMBLE_LSTATES; x++) {
-        if (!master->lua.states[x].working) {
-            master->lua.states[x].working = 1;
-            L = (lua_State *) master->lua.states[x].state;
-            found = 1;
-            break;
-        }
-    }
-    pthread_mutex_unlock(&master->lua.mutex);
-    if (found) return L;
-    else {
-        sleep(1);
-        return rumble_acquire_state();
-    }
-}  
-
-void rumble_release_state(lua_State* X) {
-    int x;
-    int found = 0;
-    masterHandle* master = rumble_database_master_handle;
-
-    
-    pthread_mutex_lock(&master->lua.mutex);
-    for (x = 0; x < RUMBLE_LSTATES; x++) {
-        if (master->lua.states[x].state == X) {
-            master->lua.states[x].working = 0;
-            break;
-        }
-    }
-    pthread_mutex_unlock(&master->lua.mutex);
-} 
-
 static int rumble_lua_panic(lua_State *L) {
 
     /*~~~~~~~~~~~~*/
@@ -514,6 +476,39 @@ static int rumble_lua_getaccounts(lua_State *L) {
 
     rumble_database_accounts_free(accounts);
     return (1);
+}
+
+
+static int rumble_lua_updatedomain(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *domain, *newname, *newpath, *newtype;
+    void* state;
+    rumble_domain* dmn;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    luaL_checktype(L, 2, LUA_TSTRING);
+    
+    domain = lua_tostring(L, 1);
+    newname = lua_tostring(L, 2);
+    newpath = luaL_optstring(L, 3, "");
+    newtype = luaL_optstring(L, 4, "");
+    
+    dmn = rumble_domain_copy(domain);
+    if (dmn) {
+        state = rumble_database_prepare(0, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname, newpath, dmn->id);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+        rumble_database_update_domains();
+        state = rumble_database_prepare(0, "UPDATE accounts SET domain = %s WHERE domain = %s", newname, dmn->name);
+        rumble_database_run(state);
+        rumble_database_cleanup(state);
+        free(dmn->name);
+        if (dmn->path) free(dmn->path);
+    }
+    lua_settop(L, 0);    
+    return (0);
 }
 
 /*
@@ -1203,7 +1198,6 @@ static int rumble_lua_createservice(lua_State *L) {
     if (isFirstCaller) {
         sock = comm_init(rumble_database_master_handle, port);
         if (!sock) {
-            luaL_error(L, "Couldn't create a service at %s.", port);
             lua_pushboolean(L, FALSE);
             return (1);
         }
@@ -1252,6 +1246,17 @@ static int rumble_lua_createservice(lua_State *L) {
     return (1);
 }
 
+static int rumble_lua_reloadmodules(lua_State *L) {
+    rumble_modules_load(rumble_database_master_handle);
+    return 0;
+}
+
+static int rumble_lua_reloadconfig(lua_State *L) {
+    rumble_config_load(rumble_database_master_handle,0);
+    return 0;
+}
+
+
 static const luaL_reg   File_methods[] = { { "stat", rumble_lua_fileinfo }, { "exists", rumble_lua_fileexists }, { 0, 0 } };
 static const luaL_reg   String_methods[] = { { "SHA256", rumble_lua_sha256 }, { 0, 0 } };
 static const luaL_reg   Rumble_methods[] =
@@ -1263,6 +1268,8 @@ static const luaL_reg   Rumble_methods[] =
     { "serviceInfo", rumble_lua_serviceinfo },
     { "listModules", rumble_lua_listmodules },
     { "dprint", rumble_lua_debug },
+    { "reloadModules", rumble_lua_reloadmodules},
+    { "reloadConfiguration", rumble_lua_reloadconfig},
     { 0, 0 }
 };
 static const luaL_reg   Mailman_methods[] =
@@ -1276,6 +1283,7 @@ static const luaL_reg   Mailman_methods[] =
     { "addressExists", rumble_lua_addressexists },
     { "createDomain", rumble_lua_createdomain },
     { "deleteDomain", rumble_lua_deletedomain },
+    { "updateDomain", rumble_lua_updatedomain},
     { 0, 0 }
 };
 static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };

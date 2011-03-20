@@ -435,7 +435,6 @@ typedef struct
         void        *db;
         void        *mail;
         dvector     *batv;  /* BATV handles for bounce control */
-        void        *lua;
         void        *tls_credentials;
         time_t      uptime;
     } _core;
@@ -583,6 +582,8 @@ void            rumble_service_add_capability(rumbleService *svc, const char *co
  =======================================================================================================================
  */
 
+void rumble_release_state(lua_State* X);
+lua_State* rumble_acquire_state();
 size_t                      rumble_file_exists(const char *filename);
 void                        rumble_test(void);
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */

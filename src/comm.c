@@ -76,39 +76,38 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        statusLog("ERROR: getaddrinfo: %s\n", gai_strerror(rv));
         return (0);
     }
 
     /* Loop through all the results and bind to the first we can */
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {
-            perror("server: socket");
+            statusLog("ERROR: Couldn't create basic socket with protocol %#X!", p->ai_family);
             continue;
         }
 
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-            perror("setsockopt");
+            statusLog("ERROR: setsockopt failed!");
             exit(0);
         }
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             close(sockfd);
-            perror("server: bind");
+            statusLog("ERROR: Couldn't bind to socket (protocol %#X) on port %s!", p->ai_family, port);
             continue;
         }
         break;
     }
 
     if (p == NULL) {
-        fprintf(stderr, "server: failed to bind\n");
         return (0);
     }
 
     freeaddrinfo(servinfo);         /* all done with this structure */
 #endif
     if (listen(sockfd, 10) == SOCKET_ERROR) {
-        perror("listen");
+        statusLog("ERROR: Couldn't listen on socket on port %s!", port);
         exit(0);
     }
 

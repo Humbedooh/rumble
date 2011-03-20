@@ -24,8 +24,7 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    master->smtp.cue_hooks = cvector_init();
-    master->smtp.init_hooks = cvector_init();
+    
     master->smtp.threads = dvector_init();
     master->smtp.handles = dvector_init();
     master->smtp.commands = cvector_init();
@@ -83,8 +82,7 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    master->pop3.cue_hooks = cvector_init();
-    master->pop3.init_hooks = cvector_init();
+    
     master->pop3.threads = dvector_init();
     master->pop3.handles = dvector_init();
     master->pop3.commands = cvector_init();
@@ -134,8 +132,7 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    master->imap.cue_hooks = cvector_init();
-    master->imap.init_hooks = cvector_init();
+    
     master->imap.threads = dvector_init();
     master->imap.handles = dvector_init();
     master->imap.commands = cvector_init();
@@ -196,8 +193,7 @@ void rumble_master_init(masterHandle *master) {
      ===================================================================================================================
      */
 
-    master->mailman.cue_hooks = cvector_init();
-    master->mailman.init_hooks = cvector_init();
+    
     master->mailman.threads = dvector_init();
     master->mailman.handles = dvector_init();
     master->mailman.commands = cvector_init();
@@ -215,14 +211,12 @@ void rumble_master_init(masterHandle *master) {
      */
 
     master->_core.modules = dvector_init();
-    master->_core.feed_hooks = cvector_init();
-    master->_core.parser_hooks = cvector_init();
     master->_core.batv = dvector_init();
     master->domains.list = dvector_init();
     master->domains.rrw = rumble_rw_init();
     master->mailboxes.rrw = rumble_rw_init();
     master->mailboxes.list = dvector_init();
-    master->_core.lua = 0;
+
     pthread_mutex_init(&master->lua.mutex, 0);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         master->lua.states[x].state = 0;

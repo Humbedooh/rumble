@@ -7,6 +7,7 @@
 #include "servers.h"
 #include <string.h>
 #include "rumble_version.h"
+
 int (*lua_callback) (lua_State *, void *, void *);
 
 /*
@@ -120,7 +121,9 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #endif
             if (mFunc) rc = (mFunc) (session);
             else if (hook->lua_callback) {
-                rc = lua_callback((lua_State *) ((masterHandle *) session->_master)->_core.lua, (void *) hook, session);
+                lua_State* L = rumble_acquire_state();
+                rc = lua_callback(L, (void *) hook, session);
+                rumble_release_state(L);
             }
 
             if (rc == RUMBLE_RETURN_FAILURE)

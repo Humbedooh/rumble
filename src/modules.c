@@ -17,12 +17,13 @@
 #endif
 typedef int (*rumbleModInit) (void *master, rumble_module_info *modinfo);
 typedef uint32_t (*rumbleVerCheck) (void);
+extern FILE             *sysLog;
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_modules_load(masterHandle *master, FILE *runlog) {
+void rumble_modules_load(masterHandle *master) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
@@ -39,6 +40,17 @@ void rumble_modules_load(masterHandle *master, FILE *runlog) {
     rumble_module_info  *modinfo;
     char                *error = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    
+    master->_core.feed_hooks = cvector_init();
+    master->_core.parser_hooks = cvector_init();
+    master->mailman.cue_hooks = cvector_init();
+    master->mailman.init_hooks = cvector_init();
+    master->imap.cue_hooks = cvector_init();
+    master->imap.init_hooks = cvector_init();
+    master->pop3.cue_hooks = cvector_init();
+    master->pop3.init_hooks = cvector_init();
+    master->smtp.cue_hooks = cvector_init();
+    master->smtp.init_hooks = cvector_init();
 
     for (line = master->_core.conf->first; line != NULL; line = line->next) {
         el = (rumbleKeyValuePair *) line->object;

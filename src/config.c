@@ -6,11 +6,14 @@
 #include "rumble.h"
 #include <stdarg.h>
 #include <fcntl.h>
+dvector* realargs = 0;
 typedef struct
 {
     const char  *key;
     const char  *val;
 } _cft;
+
+
 static _cft rumble_conf_tags[] =
 {
     { "windows", R_WINDOWS ? "1" : "" },
@@ -59,6 +62,8 @@ void rumble_config_load(masterHandle *master, dvector *args) {
 
     master->_core.conf = dvector_init();
     cfgfile = (char *) calloc(1, 1024);
+    if (!args) args = realargs;
+    realargs = args;
     cfgpath = rumble_get_dictionary_value(args, "--CONFIG-DIR");
     if (!cfgfile) merror();
     if (strlen(cfgpath) && strcmp(cfgpath, "0")) {
