@@ -6,7 +6,7 @@ padding: 0;
 color: #000;
 	font-family: Verdana, Arial, Helvetica, sans-serif;
 	font-size: 12px;
-	line-height: 1.4;
+	line-height: 1.4;s
 }
 
 
@@ -18,6 +18,7 @@ h1, h2, h3, h4, h5, h6, p {
 	margin-top: 0;
 	padding-right: 15px;
 	padding-left: 15px;
+	font-family: Verdana, Geneva, sans-serif;
 }
 a img {
 border: none;
@@ -41,11 +42,15 @@ a:hover, a:active, a:focus {
 
 .container {
 	width: 960px;
-	margin: 0 auto;
-	background-color: #F2F2EC;
+	background-color: #FCFBF3;
 	background-image: url(sidebar_bg.png);
 	background-repeat: repeat-y;
 	background-position: -10px;
+	height: 100%;
+	margin-top: 0;
+	margin-right: auto;
+	margin-bottom: 0;
+	margin-left: auto;
 }
 
 
@@ -65,20 +70,47 @@ a:hover, a:active, a:focus {
 	background-repeat: repeat-y;
 }
 .content {
-
-padding: 10px 0;
-width: 780px;
-float: left;
+	min-width: 700px;
+	max-width: 750px;
+	float: left;
+	padding-top: 10px;
+	padding-right: 0;
+	padding-bottom: 10px;
+	padding-left: 0px;
+	margin-left: 10px;
 }
 
 
 .content ul, .content ol {
 padding: 0 15px 15px 40px;
 }
+input {
+	border: 1px solid;
+	margin: 2px;
+}
+.example_code {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 12px;
+	background-color: #FFC;
+	float: left;
+	width: auto;
+	border: 1px dashed #2D3544;
+	margin-left: 20px;
+	padding: 8px;
+	margin-right: 20px;
+	clear: none;
+	page-break-after: auto;
+	page-break-before: auto;
+	display: block;
+}
+.example_code_comment {
+	font-style: italic;
+	color: #666;
+}
 
 table.elements {
 	list-style: none;
-width: 750px;
+width: 730px;
 padding: 0px;
 margin: 10px;
 	background-color: #666;
@@ -94,12 +126,9 @@ color:#666;
 	text-align:left;
 }
 table.elements tr {
-
-height: 24px;
-
-	font-family: "Courier New", Courier, monospace;
-	font-weight: bold;
-	font-size: 14px;
+	height: 24px;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 12px;
 	background-image:url(row_bg.png);
 }
 table.elements td {
@@ -126,10 +155,13 @@ color:#371E1E;
 
 .form_element {
 width: 700px;
+height:320px;
+float:left;
 
 }
+
 .form_key {
-width: 340px;
+width: 300px;
 float: left;
 height: 28px;
 }
@@ -142,9 +174,12 @@ height: 28px;
 
 form {
 	background-color:#DDE7F0;
-border: 1px solid #036;
-padding: 5px;
+	border: 1px solid #036;
+	padding: 5px;
 	min-height: 24px;
+	background-image: url(form_bg.png);
+
+
 }
 
 ul.nav {

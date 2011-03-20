@@ -1,0 +1,51 @@
+<link href="../rumblelua.css" rel="stylesheet" type="text/css" />
+<h1><img src="../icons/smiley.png" width="48" height="48" align="absmiddle" />&nbsp;&nbsp;Welcome to RumbleLua!</h1>
+<?
+if (http.form.username and not file.exists(session.path .. "/auth.cfg")) then
+	if (not http.form.password) then
+    	printf("Please enter a password!");
+    else
+        local file = io.open(session.path .. "/auth.cfg", "w");
+        if (file) then
+            pass = http.form.password:SHA256();
+            file:write(http.form.username .. ":" .. pass .. ":*\r\n");
+            file:close();
+            session:send("HTTP/1.1 302 Moved\r\nLocation: /\r\n\r\n");
+            exit();
+        else
+        	printf("<b>Error: </b>Could not write to file <i>auth.cfg</i>. Please check permissions!");
+        end
+    end
+end
+?>
+<p>Since this is your first visit to this web interface, you'll need to create an administrator account.<br>
+  Once you've submitted the username and password below, you'll be prompted for them by your browser.
+</p>
+<form name="form1" method="post" action="">
+  <p>
+  <?
+  if (file.exists(session.path .. "/auth.cfg")) then
+  	printf("<strong><font color='#990000'>auth.cfg already exists. If you wish to reset the user accounts, please delete auth.cfg first!</font></strong>");
+  else
+	printf("Enter your prefered username and password below:");
+  end
+  ?>
+
+  <div style="width: 300px; text-align:right; float: left;">
+    <label for="username"><strong>Username:</strong></label>
+    <input name="username" type="text" id="username" value="admin">
+    <br>
+    <label for="password"><strong>Password:</strong></label>
+    <input type="password" name="password" id="password">
+    <br />
+      </div>
+    <p><br />
+      &nbsp;&nbsp;
+      <input type="submit" name="submit" id="submit" value="Submit" />
+    </p>
+</form>
+<p>&nbsp;</p>
+<div class="example_code">
+<strong>Note:</strong> <em><strong>Don't give out this username and password to anyone you don't trust!</strong></em><br />
+  You can create as many user accounts for RumbleLua as you like, <br />
+but this specific account will have administrative powers. </div>

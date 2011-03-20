@@ -1,0 +1,55 @@
+<link href="../rumblelua.css" rel="stylesheet" type="text/css" />
+<div class="content">
+<h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Server info:</h2>
+<p><strong>Operating environment: </strong>
+  <?=session.info.os?> (<?=session.info.arch?> bit)<br>
+  <strong>Server version:</strong>
+<?=session.info.version?>
+<br>
+<strong>Uptime:</strong> 
+<?
+local hours = math.floor(session.info.uptime/3600);
+local minutes = math.floor(math.fmod(session.info.uptime, 3600)/60);
+local seconds = math.fmod(session.info.uptime, 60);
+printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
+?>
+
+</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+
+<table class=\"elements\" border='0' cellspacing='1' cellpadding='5 style='max-width:300 px;'>
+<tr>
+<?
+    for k,v in pairs({"smtp", "imap", "pop3"}) do
+        local svc = Rumble.serviceInfo(v);
+        if (svc) then
+			button = ((svc.enabled and "green") or "red");
+			enabled = ((svc.enabled and "Running") or "Disabled");
+			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/%sbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>%s<br/>Traffic: %s bytes</td>", v:upper(), button, enabled, math.comma(svc.received + svc.sent));
+        end
+    end
+?>
+</tr>
+</table>
+<p>&nbsp;</p>
+<h2><img src="../icons/modules.png" alt="mods" width="64" height="68" align="absmiddle">&nbsp;Extensions:</h2>
+<p>
+<?
+for k,mod in pairs(Rumble.listModules()) do
+        local file = mod.file;
+        if not (file:match("^/") or file:match(":")) then
+            file = session.info.path .. "/" ..file;
+        end
+        printf("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
+        printf("<tr><th colspan='2'>%s</th></tr>", mod.title);
+        printf("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", mod.description);
+        if (mod.author ~= "Unknown") then printf("<tr><td>Author:</td><td class='plain_text'>%s</td></tr>", mod.author); end
+        printf("<tr><td>File:</td><td class='plain_text'>%s</td></tr>", file);
+        printf("</table>");
+    end
+?>
+</p>
+
+
+</div>

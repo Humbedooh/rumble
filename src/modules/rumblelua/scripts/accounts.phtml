@@ -1,0 +1,121 @@
+<?
+domain = session.section;
+ printf("<h2>Accounts @ %s</h2>", domain);
+    
+    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
+    printf("<tr><th>Create a new account</th></tr>");
+    
+    
+    
+    if (http.form.user) then
+        if (http.form.delete) then
+            local acc = Mailman.readAccount(tonumber(http.form.user));
+            if ( acc ) then
+                Mailman.deleteAccount(tonumber(http.form.user));
+                printf("<tr><td><b><font color='red'>Deleted account %s@%s.</font></b></td></tr>", acc.name, domain);
+            end
+            
+        elseif (http.form.create) then
+            if (Mailman.accountExists(domain, http.form.user)) then
+                printf("<tr><td><b><font color='red'>Error: Account %s@%s already exists!</font></b></td></tr>", http.form.user, domain);
+            else
+                local acc = {};
+                acc.name = http.form.user;
+                acc.domain = domain;
+                acc.type = http.form.type or "mbox";
+                acc.password = SHA256(http.form.password or "");
+                acc.arguments = http.form.arguments or "";
+                Mailman.saveAccount(acc);
+                printf("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
+            end
+        end
+    end
+    
+    printf("<tr><td>");
+    printf([[
+    
+    <form action="/domains:%s" method="post" id='create'>
+    <div>
+    <div class='form_el'>
+        <div class='form_key'>
+            Account type:
+        </div>
+        <div class='form_value'>
+            <select name="type" 
+            onChange="
+            document.getElementById('accname').style.display = 'inherit';
+            var type = this.options[this.selectedIndex].value;
+            document.getElementById('accsave').style.display = 'inherit';
+            if (type == '') {
+                document.getElementById('accarg').style.display = 'none';
+                document.getElementById('accname').style.display = 'none';
+                document.getElementById('accpass').style.display = 'none';
+                document.getElementById('accsave').style.display = 'none';
+                }
+            else if (type == 'mbox') { 
+                document.getElementById('accpass').style.display = 'inherit';
+                document.getElementById('accarg').style.display = 'none';
+            }
+            else {
+                document.getElementById('accpass').style.display = 'none';
+                document.getElementById('accarg').style.display = 'inherit';
+                }
+            "
+            >
+            <option value="">Select...</option>
+            <option value="mbox">Mailbox</option>
+            <option value="alias">Alias</option>
+            <option value="mod">Feed to module...</option>
+            <option value="feed">Feed to program...</option>
+            <option value="relay">Relay to other server</option>
+            </select>
+        </div>
+    </div>
+    <div class='form_el' style='display: none;' id='accname'>
+        <div class='form_key'>
+            Account name:
+        </div>
+        <div class='form_value'>
+            <input type="text" name="user"/> <i>@%s</i>
+        </div>
+    </div>
+    
+    <div class='form_el' style="display: none" id='accpass';>
+        <div class='form_key'>
+            Password:
+        </div>
+        <div class='form_value'>
+            <input type="password" name="password"/>
+        </div>
+    </div>
+    <div class='form_el' id='accarg' style='display: none;' >
+        <div class='form_key'>
+            Arguments: 
+        </div>
+        <div class='form_value'>
+            <input type="text" name="arguments"/>
+        </div>
+    </div>
+    <input type="hidden" name="create" value="true"/>
+    <div class='form_el' id='accsave' style='display: none;' >
+            <input type="submit" value="Save account"/>
+    </div>
+    </div>
+</form>
+    ]], domain,domain);
+    printf("</td></tr>");
+    
+    
+    printf("</table>");
+    
+    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
+    printf("<tr><th>Account</th><th>Type</th><th>Actions</th></tr>");
+    local t = Mailman.listAccounts(domain);
+    for k,v in pairs(t) do
+        printf("<tr><td><a href='/mailbox:%u'>%s@%s</a></td><td>%s</td><td> <a href=\"/accounts:%s?u=%u\"><img title='Edit account' src='/icons/action_edit.png' align='absmiddle'/></a> <a href=\"/accounts:%s?d=%u\"><img title='Delete account' src='/icons/action_delete.png' align='absmiddle'/></a></td></tr>", v.id,v.name,domain,v.type,domain,v.id,domain,v.id,v.type,domain,v.id);
+    end
+    if (#t == 0) then
+        printf("<tr><td colspan='3'><i>%s does not have any mail accounts.</i></td></tr>", domain);
+    end
+    printf("</table>");
+    ?>

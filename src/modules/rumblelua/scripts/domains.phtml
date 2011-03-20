@@ -1,0 +1,118 @@
+<h2>Domains</h2>
+<?
+    if (not session.credentials.admin) then
+    	printf("Access denied! :o");
+        return;
+	else
+	    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
+		if ( session.section ~= "" ) then
+			local domain = session.section;
+			printf("<tr><th>Editing %s:</th></tr>",domain);
+			printf("<tr><td>");
+			printf([[
+			<form action="/domains" method="post" id='edit'>
+			<div>
+			<div >
+				<div class='form_key'>
+					Domain name:
+				</div>
+				<div class='form_value'>
+					<input type="text" name="domain" value="%s"/>
+				</div>
+			</div>
+			
+			<div>
+				<div class='form_key'>
+					Optional alt. storage path:
+				</div>
+				<div class='form_value'>
+					<input type="text" name="path"/>
+				</div>
+			</div>
+			
+	
+			<div class='form_el' id='domainsave' >
+				<div class='form_key'>
+						<input type="hidden" name="edit" value="true"/>
+						<input type="hidden" name="original" value="%s"/>
+					<input type="submit" value="Save changes"/>
+					<input type="button" value="Cancel" onclick="location.href='/domains';"/>
+				</div>
+			</div>
+			<br/><br/><br/><br/><br />
+			</div>
+			</form>
+			]],domain,domain);
+			printf("</td></tr>");
+			
+		else
+			printf("<tr><th>Create a new domain</th></tr>");
+			if (http.form.domain) then
+				if (http.form.delete) then
+					if (Mailman.deleteDomain(http.form.domain)) then
+						printf("<tr><td><b><font color='red'>Deleted domain %s.</font></b></td></tr>", http.form.domain);
+					else
+						printf("<tr><td><b><font color='red'>Could not delete domain %s!</font></b></td></tr>", http.form.domain);
+					end
+				elseif (http.form.create) then
+					Mailman.createDomain(http.form.domain, http.form.path or "");
+					printf("<tr><td><b><font color='darkgreen'>Domain %s has been created.</font></b></td></tr>", http.form.domain);
+				elseif (http.form.edit) then
+					Mailman.updateDomain(http.form.original, http.form.domain, http.form.path, http.form.type);
+					printf("<tr><td><b><font color='darkgreen'>Domain %s has been updated.</font></b></td></tr>", http.form.domain);
+				end
+			end
+			
+			printf("<tr><td>");
+			printf([[
+			<form action="/domains" method="post" id='create'>
+			<div>
+			<div >
+				<div class='form_key'>
+					Domain name:
+				</div>
+				<div class='form_value'>
+					<input type="text" name="domain"/>
+				</div>
+			</div>
+			
+			<div>
+				<div class='form_key'>
+					Optional alt. storage path:
+				</div>
+				<div class='form_value'>
+					<input type="text" name="path"/>
+				</div>
+			</div>
+			
+	
+			<div class='form_el' id='domainsave' >
+				<div class='form_key'>
+						<input type="hidden" name="create" value="true"/>
+					<input type="submit" value="Save domain"/>
+					<input type="reset" value="Reset"/>
+				</div>
+			</div>
+			<br/><br/><br/><br/><br />
+			</div>
+			</form>
+			]]);
+			printf("</td></tr>");
+		end
+		printf("</table>");
+	end
+    
+    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
+    printf("<tr><th>Domain</th><th>Type</th><th>Actions</th></tr>");
+    local t = Mailman.listDomains(); 
+    table.sort(t);
+    for k,v in pairs(t) do
+        if (session.credentials.admin or session.credentials.domains[v]) then
+            printf("<tr><td><img src='/bullet.png' align='absmiddle'/>&nbsp;<a href='/accounts:%s'><strong>%s</strong></a></td><td>domain</td><td><a href=\"/domains:%s\"><img title='Edit domain' src='/icons/action_edit.png' align='absmiddle'/></a>  <a href=\"/domains?domain=%s&delete=true\"><img title='Delete domain' src='/icons/action_delete.png' align='absmiddle'/></a></td></tr>", v,v,v,v);
+        end
+    end
+    if (#t == 0) then
+        printf("<tr><td colspan='3'><i>No domains are configured for this server yet.</i></td></tr>");
+    end
+    printf("</table>");
+?>
