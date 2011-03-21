@@ -1,43 +1,95 @@
+echo "----------------------------------------"
+echo "Checking library availability"
+echo "----------------------------------------"
+for lib in sqlite3 gnutls gcrypt ssl pthread crypto lua resolv; do
+	files=0
+	msg="Checking for lib$lib..."
+	#echo -n $msg
+	printf "%-32s" "$msg"
+	for l in `whereis lib$lib`; do  files=`expr $files + 1`; done
+	if [ $files -lt 2 ]; then
+		for l in `locate --limit=2 lib$lib`; do  files=`expr $files + 1`; done
+	fi
+	if [ $files -lt 2 ]; then
+		echo "Couldn't find lib$lib!";
+		exit
+	fi
+	echo "[OK]"
+done
 
-echo "Looking for Lua5.1"
-v=0
+echo -n "Checking lua library name..."
+vone=0
+vtwo=0
 llua=""
-for l in `whereis liblua51`; do v=`expr $v + 1`; done
-echo $v
-if [ $v -gt 1 ]; then
-	echo "Found lua5.1!"
+for l in `locate liblua5.1`; do vone=`expr $vone + 1`; done
+for l in `locate liblua5.2`; do vtwo=`expr $vtwo + 1`; done
+if [ $vtwo -gt 1 ]; then
+	echo "found liblua5.2.a"
+	llua="5.2"
+elif [ $vone -gt 1 ]; then
+	echo "found liblua5.1.a"
 	llua="5.1"
-	cp /usr/include/lua5.1/*.h src/
 else
-	echo "Not found, assuming it's just called Lua then"
-	cp -p /usr/include/lua/*.h src/
+	echo "found liblua.a"
 fi
+
+echo
+echo "----------------------------------------"
+echo "Setting up build environment"
+echo "----------------------------------------"
+
+echo "Copying some headers I found..."
+for luah in lua.h lualib.h lauxlib.h; do
+	original=`locate --limit=1 $luah`
+	cp "$original" src/
+done
+
+echo "Making build directory..."
 mkdir -p build
 mkdir -p build/modules
+
+echo
+echo "----------------------------------------"
+echo "Compiling individual files"
+echo "----------------------------------------"
 l=""
 for f in src/*.c
 do
 	f=${f/.c/}
 	f=${f/src\//}
 	l="$l build/$f.o"
-	echo   "gcc -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c"
+	echo   "$f.c"
 	gcc    -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv 
 done
 
+echo
+echo "----------------------------------------"
+echo "Building library and server"
+echo "----------------------------------------"
+gcc -o build/rumble $l -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv
+if [[ $? -ne 0 ]]; then
+	echo "An error occured, trying to compile with static linkage instead";
+	gcc -static -o build/rumble $l -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv
+	if [[ $? -ne 0 ]]; then
+		echo "Meh, that didn't work either - giving up!"
+		exit
+	fi
+fi
 
-
-
-echo "gcc -o build/rumble.exe $l -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua"
-gcc -r -o build/rumble.exe $l -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua
-
-ar -rv build/librumble.a $l 
+ar -rvc build/librumble.a $l 
 ranlib build/librumble.a
+
+echo
+echo "----------------------------------------"
+echo "Compiling standard modules"
+echo "----------------------------------------"
 
 for d in src/modules/*
 do
 	l=""
 	d=${d/src\/modules\//}
 	if [ "$d" != "rumblelua" ]; then
+		echo "Building: $d...";
 		mkdir -p "build/modules/$d"
 		for f in src/modules/$d/*.c
 		do
@@ -45,7 +97,6 @@ do
 			f=${f/.c/}
 			echo $f;
 			l="$l build/modules/$d/$f.o"
-			echo   "gcc  -c -O3 -s  -MMD -MP -MF build/modules/$d/$f.o.d -o build/modules/$d/$f.o src/modules/$d/$f.c"
 			gcc   -c -O3 -s  -MMD -MP -MF build/modules/$d/$f.o.d -o build/modules/$d/$f.o src/modules/$d/$f.c
 		done
 		gcc  -shared -o build/modules/$d.so -s $l build/librumble.a  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv
@@ -53,4 +104,17 @@ do
 	fi
 done
 
+echo
+echo "----------------------------------------"
+echo "Finalizing the build process"
+echo "----------------------------------------"
+
+echo "Creating the final folders and scripts"
+cp -r src/modules/rumblelua build/modules/rumblelua
+cp -r config build/config
+mkdir build/db
+
+echo "Cleaning up..."
 rm -r build/*.o*
+
+echo "All done!!"
