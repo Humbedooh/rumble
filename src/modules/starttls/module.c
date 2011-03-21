@@ -105,12 +105,13 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     gnutls_certificate_credentials_t    *pcred;
     rumbleService* svc;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    printf("Initializing GNUTLS\r\n");
+    printf("Initializing GNUTLS (this may take a while)...  ");
+    fflush(stdout);
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";
-    gcry_control(GCRYCTL_DISABLE_SECMEM_WARN);
+    gcry_control (GCRYCTL_DISABLE_SECMEM, 0);
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-    gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
+    
     if (gnutls_global_init()) {
         fprintf(stderr, "<TLS> Failed!\r\n");
         return (EXIT_FAILURE);
@@ -129,7 +130,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     gnutls_certificate_set_dh_params(*pcred, dh_params);
     gnutls_certificate_set_rsa_export_params(*pcred, rsa_params);
 
-    printf("GNUTLS Loaded!\r\n");
+    printf("[OK]\r\n");
     /*$3
      ===================================================================================================================
         Service hooks

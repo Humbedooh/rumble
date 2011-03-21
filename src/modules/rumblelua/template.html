@@ -20,7 +20,7 @@
     </ul>
     <p> <br />
 <?
-if (session.credentials.admin) then
+if (session.credentials and session.credentials.admin) then
 	printf("<table class='elementsSmall'><tr><th>Services:</th></tr>");
     for k, svc in pairs({"smtp", "pop3", "imap4"}) do
         local svcinfo = Rumble.serviceInfo(svc);
