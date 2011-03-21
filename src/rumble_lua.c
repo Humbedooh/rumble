@@ -12,7 +12,6 @@ extern FILE             *sysLog;
 #   ifndef __STDC__
 #      define __STDC__    1
 #   endif
-#   include <io.h>
 #   include <fcntl.h>
 
 /*

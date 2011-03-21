@@ -7,6 +7,9 @@
 #   ifndef SOCKET_ERROR
 #      define SOCKET_ERROR    - 1
 #   endif
+#ifndef TCP_NODELAY
+#define TCP_NODELAY 0x200
+#endif
 void            *get_in_addr(struct sockaddr *sa);
 socketHandle    comm_init(masterHandle *m, const char *port);
 void            comm_accept(socketHandle sock, clientHandle *client);

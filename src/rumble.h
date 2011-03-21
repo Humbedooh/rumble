@@ -104,7 +104,7 @@
 #      include <arpa/inet.h>
 #      include <resolv.h>
 #      include <inttypes.h>
-#      include "pthread.h"
+#      include <pthread.h>
 #   endif
 
 /*$3
