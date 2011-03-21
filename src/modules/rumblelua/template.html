@@ -6,10 +6,7 @@
 <link href="rumblelua.css" rel="stylesheet" type="text/css" />
 </head>
 
-<body>
-<?lua
-print("hello!!");
-?>
+<body class="background">
 <div class="container">
   <div class="header"><!-- end .header -->[%header%]<br />
   <span class="version">Version [%version%]</span></div>
@@ -19,8 +16,58 @@ print("hello!!");
       <li><a href="/domains"><img src="icons/sidebar_domains.png" alt="domains" width="20" height="20" align="absmiddle" />&nbsp;Domains</a></li>
       <li><a href="/users"><img src="icons/sidebar_users.png" alt="users" width="22" height="22" align="absmiddle" />&nbsp;RumbleLua users</a></li>
       <li><a href="/settings"><img src="icons/sidebar_settings.png" alt="settings" width="22" height="22" align="absmiddle" />&nbsp;Server settings</a></li>
+      <li><a href="/modules"><img src="icons/sidebar_modules.png" alt="modules" width="22" height="22" align="absmiddle" />&nbsp;Set up modules</a></li>
     </ul>
-    <p> some other stuff goes here.</p>
+    <p> <br />
+<?
+if (session.credentials.admin) then
+	printf("<table class='elementsSmall'><tr><th>Services:</th></tr>");
+    for k, svc in pairs({"smtp", "pop3", "imap4"}) do
+        local svcinfo = Rumble.serviceInfo(svc);
+        
+        local controls = "";
+        local status = "Running";
+        local icon = "green";
+        if (svcinfo) then
+        	if ( svcinfo.enabled == 2 ) then
+            	status = "Paused";
+                icon = "yellow";
+            	controls = [[
+            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server"/></a>
+            <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
+            ]];
+            else
+            controls = [[
+            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server"/></a>
+            <a href="/services:]]..svc..[[?pause=true"><img src="icons/action_pause.png" align="absmiddle" title="Pause server"/></a>
+            ]];
+            end
+        else
+        	status = "Disabled";
+            icon = "red";
+        	controls = [[
+            <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
+            ]];
+        end
+        controls = controls.. [[
+            <a href="/info:]]..svc..[["><img src="icons/action_info.png" align="absmiddle" title="Server information"/></a>
+            ]];
+        printf(
+        [[
+        <tr><td>
+        <img src="/icons/%sbutton.png" align="absmiddle" width="24" height="24"/>&nbsp;<b>%s</b>: %s<br/><br/>
+<strong>        Actions: </strong>
+        %s <br /><br />
+
+        </td>
+        </tr>
+        ]], icon, svc:upper(), status, controls);
+
+    end
+    printf("</table>");
+end
+?>
+</p>
     <!-- end .sidebar1 --></div>
   <div class="content" style="padding-left: 10px;"> [%contents%]    <!-- end .content --></div>
   <div class="footer">

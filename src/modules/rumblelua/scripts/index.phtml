@@ -15,24 +15,31 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 ?>
 
 </p>
+
 <p>&nbsp;</p>
 <p>&nbsp;</p>
 
 <table class=\"elements\" border='0' cellspacing='1' cellpadding='5 style='max-width:300 px;'>
 <tr>
 <?
-    for k,v in pairs({"smtp", "imap", "pop3"}) do
+    for k,v in pairs({"smtp", "imap4", "pop3"}) do
         local svc = Rumble.serviceInfo(v);
         if (svc) then
-			button = ((svc.enabled and "green") or "red");
-			enabled = ((svc.enabled and "Running") or "Disabled");
-			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/%sbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>%s<br/>Traffic: %s bytes</td>", v:upper(), button, enabled, math.comma(svc.received + svc.sent));
+			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/greenbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>Running<br/>Traffic: %s bytes</td>", v:upper(), math.comma(svc.received + svc.sent));
+		else
+			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/redbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>Disabled</td>", v:upper());
         end
     end
 ?>
 </tr>
 </table>
 <p>&nbsp;</p>
+<?
+if (Rumble.readConfig("servername") == "mydomain.tld") then
+	printf("<div class='notification'>Note: Your hostname (mydomain.tld) is <font color='#a30'>incorrect</font>.<br/>Please go to the <a href='/settings'>Server settings</a> page and correct this.</div>");
+end
+?>
+
 <h2><img src="../icons/modules.png" alt="mods" width="64" height="68" align="absmiddle">&nbsp;Extensions:</h2>
 <p>
 <?
@@ -50,6 +57,7 @@ for k,mod in pairs(Rumble.listModules()) do
     end
 ?>
 </p>
+
 
 
 </div>

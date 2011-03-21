@@ -1,0 +1,22 @@
+<h3>Coming soon! :&gt;
+</h3>
+<?
+
+if (session.section == "reload" and session.credentials.admin) then
+	printf(Rumble.readConfig("config-dir") .. "/rumble.conf");
+	local f = io.open(Rumble.readConfig("config-dir") .. "/rumble.conf", "r");
+    if (f) then
+	    local cfg = f:read("*a");
+	    f:close();
+	    cfg = cfg:gsub("mydomain.tld", "gruno.dk");
+        local f = io.open(Rumble.readConfig("config-dir") .. "/rumble.conf", "w+");
+        f:write(cfg);
+        f:close();
+    end
+    Rumble.reloadConfiguration();
+--	Rumble.reloadModules();
+    printf("<b>Modules have been reloaded!</b>");
+end
+?>
+
+</pre>

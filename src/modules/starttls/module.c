@@ -3,6 +3,7 @@
  * for rumble. Created on January 3, 2011, 8:08 P
  */
 #include "../../rumble.h"
+#include "../../comm.h"
 #include <gnutls/gnutls.h>
 #include <gnutls/extra.h>
 #include <gcrypt.h>
@@ -102,6 +103,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     masterHandle                        *m = (masterHandle *) master;
     gnutls_certificate_credentials_t    *pcred;
+    rumbleService* svc;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     modinfo->title = "TLS module";
@@ -139,20 +141,24 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_command(&m->imap, "STARTTLS", rumble_tls_start);
-    rumble_service_add_command(&m->pop3, "STARTTLS", rumble_tls_start);
-    rumble_service_add_command(&m->smtp, "STARTTLS", rumble_tls_start);
+    svc = comm_serviceHandleExtern((masterHandle*) master,"smtp");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
+    
+    svc = comm_serviceHandleExtern((masterHandle*) master,"pop3");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
+    svc = comm_serviceHandleExtern((masterHandle*) master,"imap4");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
 
-    /*$2
-     -------------------------------------------------------------------------------------------------------------------
-        Announce the STARTTLS capability
-     -------------------------------------------------------------------------------------------------------------------
-     */
-
-    rumble_service_add_capability(&m->imap, "STARTTLS");
-    rumble_service_add_capability(&m->pop3, "STARTTLS");
-    rumble_service_add_capability(&m->smtp, "STARTTLS");
-
+    
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Hook onto services closing connections

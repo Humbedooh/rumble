@@ -45,13 +45,7 @@ ssize_t accept_hook(sessionHandle *session) {
     if (workload > FOREMAN_MAX_JOBS) session->_tflags |= RUMBLE_THREAD_DIE;
 
     /* Find out what service we're dealing with here. */
-    switch ((session->_tflags & RUMBLE_THREAD_SVCMASK))
-    {
-    case RUMBLE_THREAD_SMTP:    svc = &((masterHandle *) session->_master)->smtp; break;
-    case RUMBLE_THREAD_POP3:    svc = &((masterHandle *) session->_master)->pop3; break;
-    case RUMBLE_THREAD_IMAP:    svc = &((masterHandle *) session->_master)->imap; break;
-    default:                    break;
-    }
+    svc = (rumbleService*) session->_svc;
 
     if (svc) {
 

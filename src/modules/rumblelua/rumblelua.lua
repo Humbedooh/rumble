@@ -108,10 +108,18 @@ function parseHTTP(session)
     end
     ret.URL = ret.URL:gsub("%.%.", "");
     
-    --[[  Parse form data  ]]--
+    --[[  Parse form data  ]]-- 
     for k, v in string.gmatch(formdata, "([^&=]+)=([^&]+)") do
-        v = v:gsub("+", " "):gsub("%%(%w%w)", function(s) return string.char(tonumber(s,16)) end);
-       ret.form[k] = v;
+		v = v:gsub("+", " "):gsub("%%(%w%w)", function(s) return string.char(tonumber(s,16)) end);
+		if (not ret.form[k]) then
+			ret.form[k] = v;
+		else
+			if ( type(ret.form[k]) == "string") then
+				local tmp = ret.form[k];
+				ret.form[k] = {tmp};
+			end
+			table.insert(ret.form[k], v);
+		end
     end
     
     return ret;
@@ -151,6 +159,7 @@ function acceptHTTP(session)
     sess = session;
     session.credentials = nil;
     session.http = http;
+	session.auth = auth;
     
     --[[ First, check authorization ]]--
     if (http.headers.Authorization) then
@@ -160,7 +169,11 @@ function acceptHTTP(session)
             local user, pass = cred:match("^([^:]+):([^:]+)$");
             local pass_hash = (pass or ""):SHA256();
             for _user, cred in pairs(auth) do
-                if (_user == user and pass_hash == cred.password) then session.credentials = cred; break; end
+                if (_user == user and pass_hash == cred.password) then 
+					session.credentials = cred; 
+					session.credentials.user = _user; 
+					break; 
+				end
             end
         end
     end
@@ -202,27 +215,37 @@ function acceptHTTP(session)
 			local scriptFile = session.path .. "/scripts/" .. section .. ".phtml";
 			if ( http.URL == "" ) then scriptFile = session.path .. "/scripts/index.phtml"; end
 			if (file.exists(scriptFile) and not (firstVisit and http.URL ~= "welcome")) then
-				script = getFile(scriptFile);
+				session.script = getFile(scriptFile);
 			else
 				session:send("HTTP/1.1 302 Moved\r\n");
 				session:send("Location: /\r\n\r\n");
 				return;
 			end
-			script = script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or "meh"; end);
-			script = script:gsub("<%?(.-)%?>", 
+			session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or "meh"; end);
+			session.pos = "<!-- -->"
+			session.atend = nil;
+			_G.my = {};
+			session.script = session.script:gsub("<%?(.-)%?>", 
 				function(x) 
+					
 					_G.session = session;
 					local output = "";
 					local _printf = printf;
 					local xit = _G.exit;
+					_G.stop = function() session.stop = true; session.atend = session.script:find("<?"..x.."?>",1,true) + output:len();end
 					_G.exit = function() session.killed = true; return; end
 					_G.printf = function(...) output = output .. string.format(...); end;
-					loadstring(x)(); 
+					if (not session.stop) then 
+						loadstring(x)();
+					end
 					_G.printf = _printf;
 					_G.exit = xit;
+					
+					session.pos = string.format("<!-- %#08X -->", math.random(1,999999));
 					return output;
 				end);
-			session.contents = script:gsub("%[%%contents%%%]", script);
+			if (session.atend) then session.script = session.script:sub(1,session.atend); end	
+			session.contents = session.script:gsub("%[%%contents%%%]", session.script);
 		end
 		
      end
@@ -238,6 +261,24 @@ function acceptHTTP(session)
 		session.output = session.output:gsub("%[%%version%%%]", session.info.version);
 		session.output = session.output:gsub("%[%%footer%%%]", ("Powered by Rumble Mail Server v/%s - %s"):format(session.info.version, os.date()));
 		session.output = session.output:gsub("%[%%contents%%%]", session.contents);
+		_G.my = {};
+		session.output = session.output:gsub("<%?(.-)%?>", 
+			function(x) 
+				_G.session = session;
+				local output = "";
+				local _printf = printf;
+				local xit = _G.exit;
+				_G.stop = function() session.stop = true; session.atend = session.output:find("<?"..x.."?>",1,true) + output:len();end
+				_G.exit = function() session.killed = true; return; end
+				_G.printf = function(...) output = output .. string.format(...); end;
+				if (not session.stop) then 
+					loadstring(x)();
+				end
+				_G.printf = _printf;
+				_G.exit = xit;
+				return output;
+			end);
+		if (session.atend) then session.script = session.output:sub(1,session.atend); end	
 		session:send(session.output);
 	end
 	session.credentials = nil;
@@ -257,24 +298,6 @@ function lprintf(...)
 end
 function lprint(...)
     _LUA_TMP = _LUA_TMP .. string.format(...);
-end
-
-
-function parseLua(data)
-    local prev = _LUA_TMP;
-    local _print, _printf = print, printf;
-    print = lprint;
-    printf = lprintf;
-    _LUA_TMP = "";
-    for snippet in data:gmatch("%b<>") do
-        if (snippet:sub(1,5) == "<?lua") then
-            local code = snippet:sub(6,snippet:len()-2);
-            _print(code);
-        end
-    end
-    print = _print;
-    printf = _printf;
-    _LUA_TMP = prev;
 end
 
 --[[ Initialize the service ]]--
