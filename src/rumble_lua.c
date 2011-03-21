@@ -109,20 +109,11 @@ static int rumble_lua_sethook(lua_State *L) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    if (!strcmp(svcName, "smtp")) {
-        svc = &rumble_database_master_handle->smtp;
-        hook->flags |= RUMBLE_HOOK_SMTP;
-    }
+    svc = comm_serviceHandle(svcName);
 
-    if (!strcmp(svcName, "pop3")) {
-        svc = &rumble_database_master_handle->pop3;
-        hook->flags |= RUMBLE_HOOK_POP3;
-    }
-
-    if (!strcmp(svcName, "imap4")) {
-        svc = &rumble_database_master_handle->imap;
-        hook->flags |= RUMBLE_HOOK_IMAP;
-    }
+    if (!strcmp(svcName, "smtp")) hook->flags |= RUMBLE_HOOK_SMTP;
+    if (!strcmp(svcName, "pop3")) hook->flags |= RUMBLE_HOOK_POP3;
+    if (!strcmp(svcName, "imap4")) hook->flags |= RUMBLE_HOOK_IMAP;
 
     if (!svc) {
         luaL_error(L, "\"%s\" isn't a known service - choices are: smtp, imap4, pop3.", svcName);
@@ -960,10 +951,7 @@ static int rumble_lua_serviceinfo(lua_State *L) {
 
     luaL_checktype(L, 1, LUA_TSTRING);
     svcName = lua_tostring(L, 1);
-    if (!strcmp(svcName, "smtp")) svc = &rumble_database_master_handle->smtp;
-    if (!strcmp(svcName, "imap")) svc = &rumble_database_master_handle->imap;
-    if (!strcmp(svcName, "pop3")) svc = &rumble_database_master_handle->pop3;
-    if (!strcmp(svcName, "core")) svc = &rumble_database_master_handle->mailman;
+    svc = comm_serviceHandle(svcName);
     if (svc) {
         pthread_mutex_lock(&(svc->mutex));
         workers = svc->threads->size;   /* Number of threads alive */
@@ -984,7 +972,7 @@ static int rumble_lua_serviceinfo(lua_State *L) {
         lua_pushinteger(L, idle);
         lua_rawset(L, -3);
         lua_pushliteral(L, "enabled");
-        lua_pushboolean(L, svc->enabled);
+        lua_pushinteger(L, svc->enabled);
         lua_rawset(L, -3);
         lua_pushliteral(L, "sessions");
         lua_pushinteger(L, sessions);

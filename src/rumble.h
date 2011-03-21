@@ -401,8 +401,10 @@ typedef struct
     rumble_module_info  *modinfo;
     int                 lua_callback;
 } hookHandle;
+
 typedef struct
 {
+    void*  master;
     socketHandle    socket;
     dvector         *threads;
     cvector         *init_hooks;
@@ -423,6 +425,10 @@ typedef struct
         size_t  sessions;
     } traffic;
 } rumbleService;
+typedef struct {
+    char svcName[1024];
+    rumbleService* svc;
+} rumbleServicePointer;
 typedef struct
 {
     struct __core
@@ -438,10 +444,7 @@ typedef struct
         void        *tls_credentials;
         time_t      uptime;
     } _core;
-    rumbleService   smtp;
-    rumbleService   pop3;
-    rumbleService   imap;
-    rumbleService   mailman;
+    cvector* services;
     struct
     {
         rumble_readerwriter *rrw;

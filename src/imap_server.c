@@ -17,7 +17,8 @@
 void *rumble_imap_init(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    masterHandle    *master = (masterHandle *) m;
+    rumbleService* svc = (rumbleService*)m;
+    masterHandle    *master = svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
@@ -43,7 +44,7 @@ void *rumble_imap_init(void *m) {
     session.dict = dvector_init();
     session.recipients = dvector_init();
     session._svcHandle = (accountSession *) malloc(sizeof(accountSession));
-    session._svc = &master->imap;
+    session._svc = svc;
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session.client->tls = 0;
     session.client->send = 0;
@@ -66,10 +67,10 @@ void *rumble_imap_init(void *m) {
     printf("<imap4::threads> Initialized thread %#x\n", pp);
 #endif
     while (1) {
-        comm_accept(master->imap.socket, session.client);
-        pthread_mutex_lock(&master->imap.mutex);
-        dvector_add(master->imap.handles, (void *) sessptr);
-        pthread_mutex_unlock(&master->imap.mutex);
+        comm_accept(svc->socket, session.client);
+        pthread_mutex_lock(&svc->mutex);
+        dvector_add(svc->handles, (void *) sessptr);
+        pthread_mutex_unlock(&svc->mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
@@ -107,7 +108,7 @@ void *rumble_imap_init(void *m) {
                     sscanf(parameters, "%32s %1000[^\r\n]", cmd, parameters);
                     rumble_string_upper(cmd);
                 } else session.flags -= (session.flags & rumble_mailman_HAS_UID);   /* clear UID demand if not there. */
-                cforeach((svcCommandHook *), hook, master->imap.commands, citer) {
+                cforeach((svcCommandHook *), hook, svc->commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, parameters, extra_data);
                 }
 
@@ -153,8 +154,8 @@ void *rumble_imap_init(void *m) {
 
         /* End cleanup */
         printf("done!\n");
-        pthread_mutex_lock(&(master->imap.mutex));
-        foreach((sessionHandle *), s, master->imap.handles, iter) {
+        pthread_mutex_lock(&(svc->mutex));
+        foreach((sessionHandle *), s, svc->handles, iter) {
             if (s == sessptr) {
                 dvector_delete(&iter);
                 x = 1;
@@ -177,7 +178,7 @@ void *rumble_imap_init(void *m) {
 #else
             pp = p;
 #endif
-            foreach((pthread_t *), el, master->imap.threads, iter)
+            foreach((pthread_t *), el, svc->threads, iter)
             {
 #ifdef PTW32_CDECL
                 tp = el->p;
@@ -190,11 +191,13 @@ void *rumble_imap_init(void *m) {
                 }
             }
 
-            pthread_mutex_unlock(&master->imap.mutex);
+            pthread_mutex_unlock(&svc->mutex);
             pthread_exit(0);
         }
 
-        pthread_mutex_unlock(&master->imap.mutex);
+        pthread_mutex_unlock(&svc->mutex);
+        myName = rrdict(master->_core.conf, "servername");
+        myName = myName ? myName : "??";
     }
 
     pthread_exit(0);
@@ -260,7 +263,7 @@ ssize_t rumble_server_imap_capability(masterHandle *master, sessionHandle *sessi
     /*~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(capa, "* CAPABILITY");
-    cforeach((char *), el, master->imap.capabilities, iter) {
+    cforeach((char *), el, ((rumbleService*)session->_svc)->capabilities, iter) {
         sprintf(&capa[strlen(capa)], " %s", el);
     }
 

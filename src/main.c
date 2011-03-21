@@ -7,6 +7,7 @@
 #define RUMBLE_INITIAL_THREADS  25
 extern masterHandle *rumble_database_master_handle;
 extern masterHandle *public_master_handle;
+extern masterHandle *comm_master_handle;
 extern int (*lua_callback) (lua_State *, void *, void *);
 extern FILE             *sysLog;
 static dvector          *s_args;
@@ -119,104 +120,90 @@ void ServiceMain(int argc, char **argv) {
 int rumbleStart(void) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
-    pthread_t       *t;
-    pthread_attr_t  attr;
     masterHandle    *master;
+    int rc,x;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
-    master = (masterHandle *) malloc(sizeof(masterHandle));
-    if (!master) merror();
-    master->_core.uptime = time(0);
-    lua_callback = rumble_lua_callback;
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     statusLog("Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
-    srand(time(0));
+    
+    master = (masterHandle *) malloc(sizeof(masterHandle));
+    if (!master) merror();
     rumble_database_master_handle = master;
     public_master_handle = master;
+    comm_master_handle = master;
+    master->_core.uptime = time(0);
+    lua_callback = rumble_lua_callback;
+    
+    master->_core.modules = dvector_init();
+    master->_core.batv = dvector_init();
+    master->domains.list = dvector_init();
+    master->domains.rrw = rumble_rw_init();
+    master->mailboxes.rrw = rumble_rw_init();
+    master->mailboxes.list = dvector_init();
+    master->services = cvector_init();
+
+    pthread_mutex_init(&master->lua.mutex, 0);
+    for (x = 0; x < RUMBLE_LSTATES; x++) {
+        master->lua.states[x].state = 0;
+        master->lua.states[x].working = 0;
+    }
+    
+    
+    srand(time(0));
+    
     rumble_config_load(master, s_args);
-    rumble_master_init(master);
+    
     if (rhdict(s_args, "execpath")) rsdict(master->_core.conf, "execpath", rrdict(s_args, "execpath"));
     rumble_database_load(master, 0);
     rumble_database_update_domains();
-    rumble_modules_load(master);
     printf("%-48s", "Launching core service...");
     statusLog("Launching core service");
-    pthread_attr_init(&attr);
-    t = (pthread_t *) malloc(sizeof(pthread_t));
-    dvector_add(master->mailman.threads, t);
-    pthread_create(t, NULL, rumble_worker_init, master);
+    rc = comm_createService(master, "mailman", rumble_worker_init, 0, 1);
     printf("[OK]\n");
+    
     if (rumble_config_int(master, "enablesmtp")) {
 
-        /*~~*/
-        int n;
-        /*~~*/
-
-        master->smtp.enabled = 1;
         printf("%-48s", "Launching SMTP service...");
         statusLog("Launching SMTP service");
-        master->smtp.socket = comm_init(master, rumble_config_str(master, "smtpport"));
-        if (!master->smtp.socket) {
+        
+        rc = comm_createService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"),RUMBLE_INITIAL_THREADS );
+        if (!rc) {
             printf("[BAD]\r\n");
             fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
             exit(EXIT_SUCCESS);
         }
-        for (n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
-            t = (pthread_t *) malloc(sizeof(pthread_t));
-            dvector_add(master->smtp.threads, t);
-            pthread_create(t, &attr, master->smtp.init, master);
-        }
-
         printf("[OK]\n");
     }
 
     if (rumble_config_int(master, "enablepop3")) {
 
-        /*~~*/
-        int n;
-        /*~~*/
-
-        master->pop3.enabled = 1;
         printf("%-48s", "Launching POP3 service...");
         statusLog("Launching POP3 service...");
-        master->pop3.socket = comm_init(master, rumble_config_str(master, "pop3port"));
-        if (!master->pop3.socket) {
+        rc = comm_createService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"),RUMBLE_INITIAL_THREADS );
+        if (!rc) {
             printf("[BAD]\r\n");
             fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
             exit(EXIT_SUCCESS);
         }
-        for (n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
-            t = (pthread_t *) malloc(sizeof(pthread_t));
-            dvector_add(master->pop3.threads, t);
-            pthread_create(t, &attr, master->pop3.init, master);
-        }
-
         printf("[OK]\n");
     }
 
     if (rumble_config_int(master, "enableimap4")) {
 
-        /*~~*/
-        int n;
-        /*~~*/
-
-        master->imap.enabled = 1;
+        
         printf("%-48s", "Launching IMAP4 service...");
         statusLog("Launching IMAP4 service...");
-        master->imap.socket = comm_init(master, rumble_config_str(master, "imap4port"));
-        if (!master->imap.socket) {
+        rc = comm_createService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"),RUMBLE_INITIAL_THREADS );
+        if (!rc) {
             printf("[BAD]\r\n");
             fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
             exit(EXIT_SUCCESS);
         }
-        for (n = 0; n < RUMBLE_INITIAL_THREADS; n++) {
-            t = (pthread_t *) malloc(sizeof(pthread_t));
-            dvector_add(master->imap.threads, t);
-            pthread_create(t, &attr, master->imap.init, master);
-        }
-
         printf("[OK]\n");
     }
+    rumble_master_init(master);
+    rumble_modules_load(master);
 
     if (rhdict(s_args, "--service")) {
         statusLog("Core: --service enabled, Listening for demands");

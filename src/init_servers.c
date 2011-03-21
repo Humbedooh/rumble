@@ -1,6 +1,7 @@
 /*$I0 */
 #include "rumble.h"
 #include "private.h"
+#include "comm.h"
 
 /*
  =======================================================================================================================
@@ -9,7 +10,7 @@
 void rumble_master_init(masterHandle *master) {
 
     /*~~*/
-    int x;
+    rumbleService* svc;
     /*~~*/
 
     /*$4
@@ -18,40 +19,26 @@ void rumble_master_init(masterHandle *master) {
      *******************************************************************************************************************
      */
 
-    /*$2
-     -------------------------------------------------------------------------------------------------------------------
-        Vectors
-     -------------------------------------------------------------------------------------------------------------------
-     */
-
-    
-    master->smtp.threads = dvector_init();
-    master->smtp.handles = dvector_init();
-    master->smtp.commands = cvector_init();
-    master->smtp.capabilities = cvector_init();
-    master->smtp.init = rumble_smtp_init;
-    pthread_mutex_init(&master->smtp.mutex, 0);
-    master->smtp.enabled = 0;
-    master->smtp.traffic.received = 0;
-    master->smtp.traffic.sent = 0;
-    master->smtp.traffic.sessions = 0;
+    svc = comm_serviceHandle("smtp");
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Commands
      -------------------------------------------------------------------------------------------------------------------
      */
-
-    rumble_service_add_command(&master->smtp, "MAIL", rumble_server_smtp_mail);
-    rumble_service_add_command(&master->smtp, "RCPT", rumble_server_smtp_rcpt);
-    rumble_service_add_command(&master->smtp, "HELO", rumble_server_smtp_helo);
-    rumble_service_add_command(&master->smtp, "EHLO", rumble_server_smtp_ehlo);
-    rumble_service_add_command(&master->smtp, "NOOP", rumble_server_smtp_noop);
-    rumble_service_add_command(&master->smtp, "DATA", rumble_server_smtp_data);
-    rumble_service_add_command(&master->smtp, "VRFY", rumble_server_smtp_vrfy);
-    rumble_service_add_command(&master->smtp, "RSET", rumble_server_smtp_rset);
-    rumble_service_add_command(&master->smtp, "AUTH", rumble_server_smtp_auth);
-    rumble_service_add_capability(&master->smtp, "IMPLEMENTATION Rumble Mail Server");
+    if (svc) {
+        statusLog("Adding SMTP commands and capabilities");
+        rumble_service_add_command(svc, "MAIL", rumble_server_smtp_mail);
+        rumble_service_add_command(svc, "RCPT", rumble_server_smtp_rcpt);
+        rumble_service_add_command(svc, "HELO", rumble_server_smtp_helo);
+        rumble_service_add_command(svc, "EHLO", rumble_server_smtp_ehlo);
+        rumble_service_add_command(svc, "NOOP", rumble_server_smtp_noop);
+        rumble_service_add_command(svc, "DATA", rumble_server_smtp_data);
+        rumble_service_add_command(svc, "VRFY", rumble_server_smtp_vrfy);
+        rumble_service_add_command(svc, "RSET", rumble_server_smtp_rset);
+        rumble_service_add_command(svc, "AUTH", rumble_server_smtp_auth);
+        rumble_service_add_capability(svc, "IMPLEMENTATION Rumble Mail Server");
+    
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -59,40 +46,25 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_capability(&master->smtp, "EXPN");
-    rumble_service_add_capability(&master->smtp, "VRFY");
-    rumble_service_add_capability(&master->smtp, "PIPELINING");
-    rumble_service_add_capability(&master->smtp, "8BITMIME");
-    rumble_service_add_capability(&master->smtp, "AUTH LOGIN PLAIN");
-    rumble_service_add_capability(&master->smtp, "DSN");
-    rumble_service_add_capability(&master->smtp, "SIZE");
-    rumble_service_add_capability(&master->smtp, "ENHANCEDSTATUSCODES");
-    rumble_service_add_capability(&master->smtp, "XVERP");
-    rumble_service_add_capability(&master->smtp, "IMPLEMENTATION Rumble Mail Server");
+        rumble_service_add_capability(svc, "EXPN");
+        rumble_service_add_capability(svc, "VRFY");
+        rumble_service_add_capability(svc, "PIPELINING");
+        rumble_service_add_capability(svc, "8BITMIME");
+        rumble_service_add_capability(svc, "AUTH LOGIN PLAIN");
+        rumble_service_add_capability(svc, "DSN");
+        rumble_service_add_capability(svc, "SIZE");
+        rumble_service_add_capability(svc, "ENHANCEDSTATUSCODES");
+        rumble_service_add_capability(svc, "XVERP");
+        rumble_service_add_capability(svc, "IMPLEMENTATION Rumble Mail Server");
+    }
 
     /*$4
      *******************************************************************************************************************
         POP3 initialization
      *******************************************************************************************************************
      */
-
-    /*$2
-     -------------------------------------------------------------------------------------------------------------------
-        Vectors
-     -------------------------------------------------------------------------------------------------------------------
-     */
-
     
-    master->pop3.threads = dvector_init();
-    master->pop3.handles = dvector_init();
-    master->pop3.commands = cvector_init();
-    master->pop3.capabilities = cvector_init();
-    master->pop3.init = rumble_pop3_init;
-    pthread_mutex_init(&master->pop3.mutex, 0);
-    master->pop3.enabled = 0;
-    master->pop3.traffic.received = 0;
-    master->pop3.traffic.sent = 0;
-    master->pop3.traffic.sessions = 0;
+    svc = comm_serviceHandle("pop3");
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -100,14 +72,16 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_command(&master->pop3, "CAPA", rumble_server_pop3_capa);
-    rumble_service_add_command(&master->pop3, "USER", rumble_server_pop3_user);
-    rumble_service_add_command(&master->pop3, "PASS", rumble_server_pop3_pass);
-    rumble_service_add_command(&master->pop3, "TOP", rumble_server_pop3_top);
-    rumble_service_add_command(&master->pop3, "UIDL", rumble_server_pop3_uidl);
-    rumble_service_add_command(&master->pop3, "DELE", rumble_server_pop3_dele);
-    rumble_service_add_command(&master->pop3, "RETR", rumble_server_pop3_retr);
-    rumble_service_add_command(&master->pop3, "LIST", rumble_server_pop3_list);
+    if (svc) {
+        statusLog("Adding POP3 commands and capabilities");
+        rumble_service_add_command(svc, "CAPA", rumble_server_pop3_capa);
+        rumble_service_add_command(svc, "USER", rumble_server_pop3_user);
+        rumble_service_add_command(svc, "PASS", rumble_server_pop3_pass);
+        rumble_service_add_command(svc, "TOP", rumble_server_pop3_top);
+        rumble_service_add_command(svc, "UIDL", rumble_server_pop3_uidl);
+        rumble_service_add_command(svc, "DELE", rumble_server_pop3_dele);
+        rumble_service_add_command(svc, "RETR", rumble_server_pop3_retr);
+        rumble_service_add_command(svc, "LIST", rumble_server_pop3_list);
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -115,34 +89,18 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_capability(&master->pop3, "TOP");
-    rumble_service_add_capability(&master->pop3, "UIDL");
-    rumble_service_add_capability(&master->pop3, "PIPELINING");
-    rumble_service_add_capability(&master->pop3, "IMPLEMENTATION Rumble Mail Server");
+        rumble_service_add_capability(svc, "TOP");
+        rumble_service_add_capability(svc, "UIDL");
+        rumble_service_add_capability(svc, "PIPELINING");
+        rumble_service_add_capability(svc, "IMPLEMENTATION Rumble Mail Server");
 
+    }
     /*$4
      *******************************************************************************************************************
         IMAP4 initialization
      *******************************************************************************************************************
      */
 
-    /*$2
-     -------------------------------------------------------------------------------------------------------------------
-        Vectors
-     -------------------------------------------------------------------------------------------------------------------
-     */
-
-    
-    master->imap.threads = dvector_init();
-    master->imap.handles = dvector_init();
-    master->imap.commands = cvector_init();
-    master->imap.capabilities = cvector_init();
-    master->imap.init = rumble_imap_init;
-    pthread_mutex_init(&master->imap.mutex, 0);
-    master->imap.enabled = 0;
-    master->imap.traffic.received = 0;
-    master->imap.traffic.sent = 0;
-    master->imap.traffic.sessions = 0;
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -150,30 +108,34 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_command(&master->imap, "LOGIN", rumble_server_imap_login);
-    rumble_service_add_command(&master->imap, "LOGOUT", rumble_server_imap_logout);
-    rumble_service_add_command(&master->imap, "NOOP", rumble_server_imap_noop);
-    rumble_service_add_command(&master->imap, "CAPABILITY", rumble_server_imap_capability);
-    rumble_service_add_command(&master->imap, "AUTHENTICATE", rumble_server_imap_authenticate);
-    rumble_service_add_command(&master->imap, "SELECT", rumble_server_imap_select);
-    rumble_service_add_command(&master->imap, "EXAMINE", rumble_server_imap_examine);
-    rumble_service_add_command(&master->imap, "CREATE", rumble_server_imap_create);
-    rumble_service_add_command(&master->imap, "DELETE", rumble_server_imap_delete);
-    rumble_service_add_command(&master->imap, "RENAME", rumble_server_imap_rename);
-    rumble_service_add_command(&master->imap, "SUBSCRIBE", rumble_server_imap_subscribe);
-    rumble_service_add_command(&master->imap, "UNSUBSCRIBE", rumble_server_imap_unsubscribe);
-    rumble_service_add_command(&master->imap, "LIST", rumble_server_imap_list);
-    rumble_service_add_command(&master->imap, "LSUB", rumble_server_imap_lsub);
-    rumble_service_add_command(&master->imap, "STATUS", rumble_server_imap_status);
-    rumble_service_add_command(&master->imap, "APPEND", rumble_server_imap_append);
-    rumble_service_add_command(&master->imap, "CHECK", rumble_server_imap_check);
-    rumble_service_add_command(&master->imap, "CLOSE", rumble_server_imap_close);
-    rumble_service_add_command(&master->imap, "EXPUNGE", rumble_server_imap_expunge);
-    rumble_service_add_command(&master->imap, "SEARCH", rumble_server_imap_search);
-    rumble_service_add_command(&master->imap, "FETCH", rumble_server_imap_fetch);
-    rumble_service_add_command(&master->imap, "STORE", rumble_server_imap_store);
-    rumble_service_add_command(&master->imap, "COPY", rumble_server_imap_copy);
-    rumble_service_add_command(&master->imap, "IDLE", rumble_server_imap_idle);
+    svc = comm_serviceHandle("imap4");
+    
+    if (svc) {
+        statusLog("Adding IMAP4 commands and capabilities");
+        rumble_service_add_command(svc, "LOGIN", rumble_server_imap_login);
+        rumble_service_add_command(svc, "LOGOUT", rumble_server_imap_logout);
+        rumble_service_add_command(svc, "NOOP", rumble_server_imap_noop);
+        rumble_service_add_command(svc, "CAPABILITY", rumble_server_imap_capability);
+        rumble_service_add_command(svc, "AUTHENTICATE", rumble_server_imap_authenticate);
+        rumble_service_add_command(svc, "SELECT", rumble_server_imap_select);
+        rumble_service_add_command(svc, "EXAMINE", rumble_server_imap_examine);
+        rumble_service_add_command(svc, "CREATE", rumble_server_imap_create);
+        rumble_service_add_command(svc, "DELETE", rumble_server_imap_delete);
+        rumble_service_add_command(svc, "RENAME", rumble_server_imap_rename);
+        rumble_service_add_command(svc, "SUBSCRIBE", rumble_server_imap_subscribe);
+        rumble_service_add_command(svc, "UNSUBSCRIBE", rumble_server_imap_unsubscribe);
+        rumble_service_add_command(svc, "LIST", rumble_server_imap_list);
+        rumble_service_add_command(svc, "LSUB", rumble_server_imap_lsub);
+        rumble_service_add_command(svc, "STATUS", rumble_server_imap_status);
+        rumble_service_add_command(svc, "APPEND", rumble_server_imap_append);
+        rumble_service_add_command(svc, "CHECK", rumble_server_imap_check);
+        rumble_service_add_command(svc, "CLOSE", rumble_server_imap_close);
+        rumble_service_add_command(svc, "EXPUNGE", rumble_server_imap_expunge);
+        rumble_service_add_command(svc, "SEARCH", rumble_server_imap_search);
+        rumble_service_add_command(svc, "FETCH", rumble_server_imap_fetch);
+        rumble_service_add_command(svc, "STORE", rumble_server_imap_store);
+        rumble_service_add_command(svc, "COPY", rumble_server_imap_copy);
+        rumble_service_add_command(svc, "IDLE", rumble_server_imap_idle);
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -181,45 +143,12 @@ void rumble_master_init(masterHandle *master) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rumble_service_add_capability(&master->imap, "IMAP4rev1");
-    rumble_service_add_capability(&master->imap, "IDLE");
-    rumble_service_add_capability(&master->imap, "CONDSTORE");
-    rumble_service_add_capability(&master->imap, "AUTH=PLAIN");
-    rumble_service_add_capability(&master->imap, "UIDPLUS");
-
-    /*$3
-     ===================================================================================================================
-        Mailman service
-     ===================================================================================================================
-     */
-
-    
-    master->mailman.threads = dvector_init();
-    master->mailman.handles = dvector_init();
-    master->mailman.commands = cvector_init();
-    master->mailman.capabilities = cvector_init();
-    pthread_mutex_init(&master->mailman.mutex, 0);
-    master->mailman.enabled = 1;
-    master->mailman.traffic.received = 0;
-    master->mailman.traffic.sent = 0;
-    master->mailman.traffic.sessions = 0;
-
-    /*$3
-     ===================================================================================================================
-        Core config vectors
-     ===================================================================================================================
-     */
-
-    master->_core.modules = dvector_init();
-    master->_core.batv = dvector_init();
-    master->domains.list = dvector_init();
-    master->domains.rrw = rumble_rw_init();
-    master->mailboxes.rrw = rumble_rw_init();
-    master->mailboxes.list = dvector_init();
-
-    pthread_mutex_init(&master->lua.mutex, 0);
-    for (x = 0; x < RUMBLE_LSTATES; x++) {
-        master->lua.states[x].state = 0;
-        master->lua.states[x].working = 0;
+        rumble_service_add_capability(svc, "IMAP4rev1");
+        rumble_service_add_capability(svc, "IDLE");
+        rumble_service_add_capability(svc, "CONDSTORE");
+        rumble_service_add_capability(svc, "AUTH=PLAIN");
+        rumble_service_add_capability(svc, "UIDPLUS");
     }
+
+    statusLog("Done with commands and abilities");
 }

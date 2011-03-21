@@ -14,7 +14,8 @@
 void *rumble_smtp_init(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    masterHandle    *master = (masterHandle *) m;
+    rumbleService* svc = (rumbleService*)m;
+    masterHandle    *master = (masterHandle *) svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
@@ -56,15 +57,15 @@ void *rumble_smtp_init(void *m) {
     printf("<smtp::threads> Initialized thread %#x\n", pp);
 #endif
     while (1) {
-        comm_accept(master->smtp.socket, session.client);
-        pthread_mutex_lock(&master->smtp.mutex);
-        dvector_add(master->smtp.handles, (void *) sessptr);
-        master->smtp.traffic.sessions++;
-        pthread_mutex_unlock(&master->smtp.mutex);
+        comm_accept(svc->socket, session.client);
+        pthread_mutex_lock(&svc->mutex);
+        dvector_add(svc->handles, (void *) sessptr);
+        svc->traffic.sessions++;
+        pthread_mutex_unlock(&svc->mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
-        session._svc = &master->smtp;
+        session._svc = svc;
         now = time(0);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         strftime(tmp, 100, "%X", localtime(&now));
@@ -90,7 +91,7 @@ void *rumble_smtp_init(void *m) {
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
                 } /* bye! */ else {
-                    cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
+                    cforeach((svcCommandHook *), hook, svc->commands, citer) {
                         if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
                     }
                 }
@@ -135,8 +136,8 @@ void *rumble_smtp_init(void *m) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        pthread_mutex_lock(&(master->smtp.mutex));
-        foreach((sessionHandle *), s, master->smtp.handles, iter) {
+        pthread_mutex_lock(&(svc->mutex));
+        foreach((sessionHandle *), s, svc->handles, iter) {
             if (s == sessptr) {
                 dvector_delete(&iter);
                 x = 1;
@@ -164,7 +165,7 @@ void *rumble_smtp_init(void *m) {
 #else
             pp = p;
 #endif
-            foreach((pthread_t *), el, master->smtp.threads, iter)
+            foreach((pthread_t *), el, svc->threads, iter)
             {
 #ifdef PTW32_CDECL
                 tp = el->p;
@@ -177,11 +178,13 @@ void *rumble_smtp_init(void *m) {
                 }
             }
 
-            pthread_mutex_unlock(&master->smtp.mutex);
+            pthread_mutex_unlock(&svc->mutex);
             pthread_exit(0);
         }
 
-        pthread_mutex_unlock(&master->smtp.mutex);
+        pthread_mutex_unlock(&svc->mutex);
+        myName = rrdict(master->_core.conf, "servername");
+        myName = myName ? myName : "??";
     }
 
     pthread_exit(0);
@@ -396,7 +399,7 @@ ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, co
     free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
     rumble_comm_send(session, "250-Extended commands follow\r\n");
-    cforeach((char *), el, master->smtp.capabilities, iter) {
+    cforeach((char *), el, ((rumbleService*)session->_svc)->capabilities, iter) {
         rcprintf(session, "250-%s\r\n", el);
     }
 

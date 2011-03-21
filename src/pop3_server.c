@@ -17,7 +17,8 @@
 void *rumble_pop3_init(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    masterHandle    *master = (masterHandle *) m;
+    rumbleService* svc = (rumbleService*)m;
+    masterHandle    *master = (masterHandle *) svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
@@ -44,7 +45,7 @@ void *rumble_pop3_init(void *m) {
     session._svcHandle = (accountSession *) malloc(sizeof(accountSession));
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session._master = m;
-    session._svc = &master->pop3;
+    session._svc = svc;
     pops = (accountSession *) session._svcHandle;
     pops->account = 0;
     pops->bag = 0;
@@ -61,13 +62,15 @@ void *rumble_pop3_init(void *m) {
     printf("<pop3::threads> Initialized thread %#x\n", pp);
 #endif
     while (1) {
-        comm_accept(master->pop3.socket, session.client);
-        pthread_mutex_lock(&master->pop3.mutex);
-        dvector_add(master->pop3.handles, (void *) sessptr);
-        pthread_mutex_unlock(&master->pop3.mutex);
+        comm_accept(svc->socket, session.client);
+        pthread_mutex_lock(&svc->mutex);
+        dvector_add(svc->handles, (void *) sessptr);
+        svc->traffic.sessions++;
+        pthread_mutex_unlock(&svc->mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
+        session._svc = svc;
         now = time(0);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         strftime(tmp, 100, "%X", localtime(&now));
@@ -97,7 +100,7 @@ void *rumble_pop3_init(void *m) {
                     break;
                 }       /* bye! */
 
-                cforeach((svcCommandHook *), hook, master->smtp.commands, citer) {
+                cforeach((svcCommandHook *), hook, svc->commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, arg, 0);
                 }
             }
@@ -135,8 +138,8 @@ void *rumble_pop3_init(void *m) {
         rumble_mailman_close_bag(pops->bag);
 
         /* Update the thread stats */
-        pthread_mutex_lock(&(master->pop3.mutex));
-        foreach((sessionHandle *), s, master->pop3.handles, iter) {
+        pthread_mutex_lock(&(svc->mutex));
+        foreach((sessionHandle *), s, svc->handles, iter) {
             if (s == sessptr) {
                 dvector_delete(&iter);
                 x = 1;
@@ -159,7 +162,7 @@ void *rumble_pop3_init(void *m) {
 #else
             pp = p;
 #endif
-            foreach((pthread_t *), el, master->pop3.threads, iter)
+            foreach((pthread_t *), el, svc->threads, iter)
             {
 #ifdef PTW32_CDECL
                 tp = el->p;
@@ -172,11 +175,11 @@ void *rumble_pop3_init(void *m) {
                 }
             }
 
-            pthread_mutex_unlock(&master->pop3.mutex);
+            pthread_mutex_unlock(&svc->mutex);
             pthread_exit(0);
         }
 
-        pthread_mutex_unlock(&master->pop3.mutex);
+        pthread_mutex_unlock(&svc->mutex);
     }
 
     pthread_exit(0);
@@ -195,7 +198,7 @@ ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, co
     /*~~~~~~~~~~~~~*/
 
     rcsend(session, "+OK Here's what I got:\r\n");
-    cforeach((char *), el, master->pop3.capabilities, iter) {
+    cforeach((char *), el, ((rumbleService*)session->_svc)->capabilities, iter) {
         rcprintf(session, "%s\r\n", el);
     }
 

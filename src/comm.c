@@ -6,7 +6,7 @@
 #include "rumble.h"
 #include "comm.h"
 #include <stdarg.h>
-
+masterHandle* comm_master_handle = 0;
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -349,4 +349,67 @@ ssize_t rumble_comm_send_bytes(sessionHandle *session, const char *message, size
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += len;
     if (session->client->send) return ((session->client->send) (session->client->tls, message, len, 0));
     return (send(session->client->socket, message, (int) len, 0));
+}
+
+rumbleService* comm_serviceHandleExtern(masterHandle* master, const char* svcName) {
+    rumbleServicePointer* svcp = 0;
+    c_iterator iter;
+    cforeach((rumbleServicePointer*), svcp, master->services, iter) {
+        if (!strcmp(svcName, svcp->svcName)) {
+            return svcp->svc;
+        }
+    }
+    return 0;
+}
+
+rumbleService* comm_serviceHandle(const char* svcName) {
+    rumbleServicePointer* svcp = 0;
+    c_iterator iter;
+    cforeach((rumbleServicePointer*), svcp, comm_master_handle->services, iter) {
+        if (!strcmp(svcName, svcp->svcName)) {
+            return svcp->svc;
+        }
+    }
+    return 0;
+}
+
+int comm_createService(masterHandle* master, const char* svcName, void * (*init) (void *), const char* port, int threadCount) {
+    rumbleService* svc;
+    rumbleServicePointer* svcp;
+    int n;
+    pthread_t* t;
+    svc = (rumbleService*) malloc(sizeof(rumbleService));
+    if (port) {
+        svc->socket = comm_init(master, port);
+        if (!svc->socket) {
+            free(svc);
+            return 0;
+        }
+    }
+    svcp = (rumbleServicePointer*) malloc(sizeof(rumbleServicePointer));
+    svcp->svc = svc;
+    svc->master = master;
+    memset(svcp->svcName, 0, 1024);
+    strcpy(svcp->svcName, svcName);
+    
+    svc->threads = dvector_init();
+    svc->handles = dvector_init();
+    svc->commands = cvector_init();
+    svc->capabilities = cvector_init();
+    svc->init = init;
+    pthread_mutex_init(&svc->mutex, 0);
+    pthread_cond_init(&svc->cond, 0);
+    svc->enabled = 1;
+    svc->traffic.received = 0;
+    svc->traffic.sent = 0;
+    svc->traffic.sessions = 0;
+    
+    cvector_add(master->services, svcp);
+    
+    for (n = 0; n < threadCount; n++) {
+        t = (pthread_t *) malloc(sizeof(pthread_t));
+        dvector_add(svc->threads, t);
+        pthread_create(t, 0, svc->init, (void*) svc);
+    }
+    return 1;
 }
