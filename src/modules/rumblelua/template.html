@@ -33,18 +33,18 @@ if (session.credentials and session.credentials.admin) then
             	status = "Paused";
                 icon = "yellow";
             	controls = [[
-            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server"/></a>
+            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server (forcibly)"/></a>
             <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
             ]];
             else
             controls = [[
-            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server"/></a>
-            <a href="/services:]]..svc..[[?pause=true"><img src="icons/action_pause.png" align="absmiddle" title="Pause server"/></a>
+            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server (forcibly)"/></a>
+            <a href="/services:]]..svc..[[?pause=true"><img src="icons/action_pause.png" align="absmiddle" title="Pause server (gracefully)"/></a>
             ]];
             end
         else
         	status = "<em>Disabled</em>";
-            icon = "red";
+            icon = "grey";
         	
         end
         controls = controls.. [[

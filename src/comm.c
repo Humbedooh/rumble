@@ -419,6 +419,7 @@ int comm_suspendService(const char *svcName) {
                 pthread_cancel(thread->thread);
                 pthread_kill(thread->thread, 0);
 #else
+                pthread_cancel(thread->thread);
                 pthread_kill(thread->thread, 0);
 #endif
                 cvector_delete(&iter);

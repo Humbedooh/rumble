@@ -290,7 +290,6 @@ function acceptHTTP(session)
 	http.headers = nil;
 	http = nil;
 	_LUA_TMP = "";
-	print(rnd .. "done!");
 	collectgarbage();
 end
 

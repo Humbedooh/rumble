@@ -48,7 +48,7 @@ ssize_t accept_hook(sessionHandle *session) {
     /* Find out what service we're dealing with here. */
     svc = (rumbleService *) session->_svc;
     if (svc) {
-
+        if (svc->enabled != 1) return RUMBLE_RETURN_IGNORE; /* Return immediately if svc isn't running */
         /*
          * Check if there's a shortage of workers. If there is, make some more, if not,
          * just return
