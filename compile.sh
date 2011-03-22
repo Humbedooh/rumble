@@ -1,3 +1,14 @@
+add=""
+echo "----------------------------------------"
+echo "Initializing build process"
+echo "----------------------------------------"
+echo -n "Checking architecture..."
+if [ `arch` == "x86_64" ]; then
+	echo "64 bits"
+	add="-fPIC"
+else
+	echo "32 bits"
+fi
 echo "----------------------------------------"
 echo "Checking library availability"
 echo "----------------------------------------"
@@ -40,7 +51,7 @@ echo "----------------------------------------"
 
 echo "Copying some headers I found..."
 for luah in lua.h lualib.h lauxlib.h; do
-	original=`locate --limit=1 $luah`
+	original=`locate --limit=1 /$luah`
 	cp "$original" src/
 done
 
@@ -59,7 +70,7 @@ do
 	f=${f/src\//}
 	l="$l build/$f.o"
 	echo   "$f.c"
-	gcc    -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv 
+	gcc    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv 
 done
 
 echo
@@ -95,11 +106,10 @@ do
 		do
 			f=${f/src\/modules\/$d\//}
 			f=${f/.c/}
-			echo $f;
 			l="$l build/modules/$d/$f.o"
-			gcc   -c -O3 -s  -MMD -MP -MF build/modules/$d/$f.o.d -o build/modules/$d/$f.o src/modules/$d/$f.c
+			gcc  $add -c -O3 -s  -MMD -MP -MF build/modules/$d/$f.o.d -o build/modules/$d/$f.o src/modules/$d/$f.c
 		done
-		gcc  -shared -o build/modules/$d.so -s $l build/librumble.a  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv
+		gcc  $add -shared -o build/modules/$d.so -s $l build/librumble.a  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv
 		rm -rf build/modules/$d
 	fi
 done
