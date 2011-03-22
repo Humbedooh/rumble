@@ -120,17 +120,18 @@ void *rumble_database_prepare(void *db, const char *statement, ...) {
         strl = strlen(op) - strlen(p);
         strncpy((char *) (sql + len), op, strl);
         len += strl;
-        sscanf((const char *) p, "%%%c", &b);
-        if (b == '%') {
-            strncpy((char *) (sql + len), "%", 1);
-            len += 1;
-        } else {
-            strncpy((char *) (sql + len), "?", 1);
-            len += 1;
-            injects[at++] = b;
-        }
+        if (sscanf((const char *) p, "%%%c", &b)) {
+			if (b == '%') {
+				strncpy((char *) (sql + len), "%", 1);
+				len += 1;
+			} else {
+				strncpy((char *) (sql + len), "?", 1);
+				len += 1;
+				injects[at++] = b;
+			}
 
-        op = (char *) p + 2;
+			op = (char *) p + 2;
+		}
     }
 
     strl = strlen(op);

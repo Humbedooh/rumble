@@ -105,8 +105,7 @@ void *rumble_imap_init(void *m) {
 
                     /* Set UID flag if requested */
                     session.flags |= rumble_mailman_HAS_UID;
-                    sscanf(parameters, "%32s %1000[^\r\n]", cmd, parameters);
-                    rumble_string_upper(cmd);
+                    if (sscanf(parameters, "%32s %1000[^\r\n]", cmd, parameters)) rumble_string_upper(cmd);
                 } else session.flags -= (session.flags & rumble_mailman_HAS_UID);   /* clear UID demand if not there. */
                 cforeach((svcCommandHook *), hook, svc->commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, parameters, extra_data);

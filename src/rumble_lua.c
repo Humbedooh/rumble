@@ -880,6 +880,7 @@ void *rumble_lua_handle_service(void *s) {
 
         pthread_mutex_unlock(&svc->mutex);
     }
+    return 0;
 }
 
 /*
@@ -1081,7 +1082,7 @@ static int rumble_lua_fileexists(lua_State *L) {
 
     /*~~~~~~~~~~~~*/
     const char  *el;
-    FILE        *fd;
+
     /*~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
@@ -1090,15 +1091,7 @@ static int rumble_lua_fileexists(lua_State *L) {
 #   ifdef RUMBLE_MSC
     if (access(el, 0) == 0) lua_pushboolean(L, 1);
 #   else
-    fd = fopen(el, "r");
-    if (fd) {
-        fclose(fd);
-        lua_pushboolean(L, 1);
-    }
-
-    /*
-     * if (faccessat(0, el, R_OK, AT_EACCESS) == 0) lua_pushboolean(L,1);
-     */
+    if (faccessat(0, el, R_OK, AT_EACCESS) == 0) lua_pushboolean(L,1);
 #   endif
     else lua_pushboolean(L, 0);
     return (1);

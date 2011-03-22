@@ -586,8 +586,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
 
     memset(method, 0, 31);
     memset(digest, 0, 1025);
-    printf("Got: %s\n", parameters);
-    sscanf(parameters, "%30s %1024s", method, digest);
+    if (sscanf(parameters, "%30s %1024s", method, digest) != 2) return(501);
     rumble_string_lower(method);
     pass = "";
     addr = 0;
@@ -599,14 +598,14 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         /* Username */
         rcsend(session, "334 VXNlcm5hbWU6\r\n");
         line = rcread(session);
-        sscanf(line, "%s", digest);
-        user = rumble_decode_base64(digest);
+        if (!sscanf(line, "%s", digest)) user = "";
+        else user = rumble_decode_base64(digest);
 
         /* Password */
         rcsend(session, "334 UGFzc3dvcmQ6\r\n");
         line = rcread(session);
-        sscanf(line, "%s", digest);
-        pass = rumble_decode_base64(digest);
+        if (!sscanf(line, "%s", digest)) pass = "";
+        else pass = rumble_decode_base64(digest);
         addr = rumble_parse_mail_address(user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(user);

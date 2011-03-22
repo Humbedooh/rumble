@@ -5,17 +5,15 @@ domain = session.section;
     printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
     printf("<tr><th>Create a new account</th></tr>");
     
-    
-    
-    if (http.form.user) then
-        if (http.form.delete) then
-            local acc = Mailman.readAccount(tonumber(http.form.user));
-            if ( acc ) then
-                Mailman.deleteAccount(tonumber(http.form.user));
-                printf("<tr><td><b><font color='red'>Deleted account %s@%s.</font></b></td></tr>", acc.name, domain);
-            end
-            
-        elseif (http.form.create) then
+    if (http.form.d) then
+		local acc = Mailman.readAccount(tonumber(http.form.d));
+		if ( acc ) then
+			Mailman.deleteAccount(tonumber(http.form.d));
+			printf("<tr><td><b><font color='red'>Deleted account %s@%s.</font></b></td></tr>", acc.name, domain);
+		end
+	end    
+    if (http.form.user) then    
+        if (http.form.create) then
             if (Mailman.accountExists(domain, http.form.user)) then
                 printf("<tr><td><b><font color='red'>Error: Account %s@%s already exists!</font></b></td></tr>", http.form.user, domain);
             else
@@ -23,7 +21,7 @@ domain = session.section;
                 acc.name = http.form.user;
                 acc.domain = domain;
                 acc.type = http.form.type or "mbox";
-                acc.password = SHA256(http.form.password or "");
+                acc.password = (http.form.password or ""):SHA256();
                 acc.arguments = http.form.arguments or "";
                 Mailman.saveAccount(acc);
                 printf("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
@@ -34,7 +32,7 @@ domain = session.section;
     printf("<tr><td>");
     printf([[
     
-    <form action="/domains:%s" method="post" id='create'>
+    <form action="/accounts:%s" method="post" id='create'>
     <div>
     <div class='form_el'>
         <div class='form_key'>
@@ -76,7 +74,7 @@ domain = session.section;
             Account name:
         </div>
         <div class='form_value'>
-            <input type="text" name="user"/> <i>@%s</i>
+            <input type="text" name="user" autocomplete="off"/> <i>@%s</i>
         </div>
     </div>
     
@@ -85,7 +83,7 @@ domain = session.section;
             Password:
         </div>
         <div class='form_value'>
-            <input type="password" name="password"/>
+            <input type="password" name="password" autocomplete="off"/>
         </div>
     </div>
     <div class='form_el' id='accarg' style='display: none;' >

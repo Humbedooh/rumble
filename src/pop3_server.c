@@ -83,7 +83,7 @@ void *rumble_pop3_init(void *m) {
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_pop3_reply_code(101), myName);   /* Hello! */
 
         /* Parse incoming commands */
-        cmd = (char *) malloc(5);
+        cmd = (char *) malloc(9);
         arg = (char *) malloc(1024);
         if (!cmd || !arg) merror();
         while (rc != RUMBLE_RETURN_FAILURE) {

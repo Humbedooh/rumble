@@ -50,7 +50,7 @@ for k,mod in pairs(Rumble.listModules()) do
         end
         printf("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
         printf("<tr><th colspan='2'>%s</th></tr>", mod.title);
-        printf("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", mod.description);
+        printf("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", (mod.description:len() >0 and mod.description) or "<span style='color: #930;'><i>Disabled?</i></span>");
         if (mod.author ~= "Unknown") then printf("<tr><td>Author:</td><td class='plain_text'>%s</td></tr>", mod.author); end
         printf("<tr><td>File:</td><td class='plain_text'>%s</td></tr>", file);
         printf("</table>");

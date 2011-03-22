@@ -418,7 +418,7 @@ int comm_createService(masterHandle *master, const char *svcName, void * (*init)
     svcp->svc = svc;
     svc->master = master;
     memset(svcp->svcName, 0, 1024);
-    strcpy(svcp->svcName, svcName);
+    strncpy(svcp->svcName, svcName, 1023);
     svc->threads = dvector_init();
     svc->handles = dvector_init();
     svc->commands = cvector_init();
