@@ -6,6 +6,7 @@
 
 #ifndef RUMBLE_H
 #   define RUMBLE_H
+#   define RUMBLE_INITIAL_THREADS  25
 
 /* C<99 compatibility defs */
 #   if (__STDC_VERSION__ < 199901L)
@@ -24,7 +25,7 @@
 #   endif
 #   ifdef __x86_64
 #      undef R_ARCH
-#      define R_ARCH 64
+#      define R_ARCH  64
 #   endif
 #   ifdef __linux__
 #      undef R_LINUX
@@ -71,7 +72,7 @@
 
 /*
  * Disable the useless Microsoft warnings about unsafe operators and not-yet
- * defined functions (this is C, not C++, moron
+ * defined functions (this is C, not C++, mor
  */
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
@@ -407,34 +408,6 @@ typedef struct
 } hookHandle;
 typedef struct
 {
-    void            *master;
-    socketHandle    socket;
-    dvector         *threads;
-    cvector         *init_hooks;
-    cvector         *cue_hooks;
-    cvector         *exit_hooks;
-    cvector         *commands;
-    cvector         *capabilities;
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    dvector         *handles;
-    int             lua_handle;
-    void * (*init) (void *);
-    int enabled;
-    struct
-    {
-        size_t  sent;
-        size_t  received;
-        size_t  sessions;
-    } traffic;
-} rumbleService;
-typedef struct
-{
-    char            svcName[1024];
-    rumbleService   *svc;
-} rumbleServicePointer;
-typedef struct
-{
     struct __core
     {
         dvector     *conf;
@@ -470,6 +443,40 @@ typedef struct
         pthread_mutex_t mutex;
     } lua;
 } masterHandle;
+typedef struct
+{
+    masterHandle    *master;
+    socketHandle    socket;
+    cvector         *threads;
+    cvector         *init_hooks;
+    cvector         *cue_hooks;
+    cvector         *exit_hooks;
+    cvector         *commands;
+    cvector         *capabilities;
+    pthread_mutex_t mutex;
+    pthread_cond_t  cond;
+    dvector         *handles;
+    int             lua_handle;
+    void * (*init) (void *);
+    int enabled;
+    struct
+    {
+        size_t  sent;
+        size_t  received;
+        size_t  sessions;
+    } traffic;
+} rumbleService;
+typedef struct
+{
+    pthread_t       thread;
+    int             status;
+    rumbleService   *svc;
+} rumbleThread;
+typedef struct
+{
+    char            svcName[1024];
+    rumbleService   *svc;
+} rumbleServicePointer;
 typedef struct
 {
     const char  *key;

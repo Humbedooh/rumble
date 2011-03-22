@@ -193,9 +193,10 @@ void *rumble_worker_process(void *m) {
     if (!sess) merror();
     sess->_master = (masterHandle *) svc->master;
     tmp = (char *) calloc(1, 256);
-    sleep(3);
 
     /*
+     * sleep(3);
+     * ;
      * for (rc = 0;
      * rc < 1;
      * rc++) { c.socket = comm_open(master, "localhost", 25);
@@ -418,10 +419,11 @@ void *rumble_worker_process(void *m) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void *rumble_worker_init(void *m) {
+void *rumble_worker_init(void *T) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService   *svc = (rumbleService *) m;
+    rumbleThread    *thread = (rumbleThread *) T;
+    rumbleService   *svc = (rumbleService *) thread->svc;
     masterHandle    *master = (masterHandle *) svc->master;
     int             x;
     char            tmp[1024];
@@ -432,18 +434,14 @@ void *rumble_worker_init(void *m) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sqlite3_prepare_v2((sqlite3 *) master->_core.db, statement, -1, &state, NULL);
-    pthread_cond_init(&svc->cond, NULL);
     ignmx = rrdict(master->_core.conf, "ignoremx");
     badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
     for (x = 0; x < 25; x++) {
-
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-        dvector_add(svc->threads, t);
-        pthread_create(t, NULL, rumble_worker_process, m);
+        thread = (rumbleThread *) malloc(sizeof(rumbleThread));
+        cvector_add(svc->threads, thread);
+        thread->status = 1;
+        pthread_create(&thread->thread, NULL, rumble_worker_process, svc);
     }
 
     while (1) {
@@ -496,6 +494,8 @@ void *rumble_worker_init(void *m) {
                 zErrMsg = 0;
                 l = sqlite3_exec((sqlite3 *) master->_core.db, sql, 0, 0, &zErrMsg);
                 free(sql);
+                printf("Sending item!\n");
+                fflush(stdout);
                 pthread_mutex_lock(&svc->mutex);
                 current = item;
                 pthread_cond_signal(&svc->cond);

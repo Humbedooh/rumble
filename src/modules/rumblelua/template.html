@@ -43,11 +43,9 @@ if (session.credentials and session.credentials.admin) then
             ]];
             end
         else
-        	status = "Disabled";
+        	status = "<em>Disabled</em>";
             icon = "red";
-        	controls = [[
-            <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
-            ]];
+        	
         end
         controls = controls.. [[
             <a href="/info:]]..svc..[["><img src="icons/action_info.png" align="absmiddle" title="Server information"/></a>

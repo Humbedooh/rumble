@@ -11,11 +11,12 @@
     Main loop
  =======================================================================================================================
  */
-void *rumble_smtp_init(void *m) {
+void *rumble_smtp_init(void *T) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService   *svc = (rumbleService *) m;
-    masterHandle    *master = (masterHandle *) svc->master;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleThread    *thread = (rumbleThread *) T;
+    rumbleService   *svc = thread->svc;
+    masterHandle    *master = svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
@@ -28,13 +29,10 @@ void *rumble_smtp_init(void *m) {
     int             x = 0;
     time_t          now;
     sessionHandle   *s;
-    void            *pp,
-                    *tp;
-    pthread_t       p = pthread_self();
     d_iterator      iter;
     c_iterator      citer;
     svcCommandHook  *hook;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_read(master->domains.rrw);
     session.dict = dvector_init();
@@ -43,22 +41,16 @@ void *rumble_smtp_init(void *m) {
     session.client->tls = 0;
     session.client->recv = 0;
     session.client->send = 0;
-    session._master = m;
+    session._master = svc->master;
+    session._svc = svc;
     session._tflags = RUMBLE_THREAD_SMTP;   /* Identify the thread/session as SMTP */
     myName = rrdict(master->_core.conf, "servername");
     myName = myName ? myName : "??";
     rumble_rw_stop_read(master->domains.rrw);
-#if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
-#   ifdef PTW32_CDECL
-    pp = (void *) p.p;
-#   else
-    pp = p;
-#   endif
-    printf("<smtp::threads> Initialized thread %#x\n", pp);
-#endif
     while (1) {
         comm_accept(svc->socket, session.client);
         pthread_mutex_lock(&svc->mutex);
+        thread->status = 1;
         dvector_add(svc->handles, (void *) sessptr);
         svc->traffic.sessions++;
         pthread_mutex_unlock(&svc->mutex);
@@ -151,29 +143,18 @@ void *rumble_smtp_init(void *m) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        if (session._tflags & RUMBLE_THREAD_DIE) {
+        if ((session._tflags & RUMBLE_THREAD_DIE) || thread->status == -1) {
 
-            /*~~~~~~~~~~~~*/
-            pthread_t   *el;
-            /*~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~*/
+            rumbleThread    *t;
+            /*~~~~~~~~~~~~~~~*/
 
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
             printf("<smtp::threads>I (%#x) was told to die :(\n", (uintptr_t) pthread_self());
 #endif
-#ifdef PTW32_CDECL
-            pp = (void *) p.p;
-#else
-            pp = p;
-#endif
-            foreach((pthread_t *), el, svc->threads, iter)
-            {
-#ifdef PTW32_CDECL
-                tp = el->p;
-#else
-                tp = el;
-#endif
-                if (tp == pp) {
-                    dvector_delete(&iter);
+            cforeach((rumbleThread *), t, svc->threads, citer) {
+                if (t == thread) {
+                    cvector_delete(&citer);
                     break;
                 }
             }
@@ -586,7 +567,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
 
     memset(method, 0, 31);
     memset(digest, 0, 1025);
-    if (sscanf(parameters, "%30s %1024s", method, digest) != 2) return(501);
+    if (sscanf(parameters, "%30s %1024s", method, digest) != 2) return (501);
     rumble_string_lower(method);
     pass = "";
     addr = 0;

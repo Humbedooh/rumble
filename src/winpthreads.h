@@ -1577,7 +1577,7 @@ static int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *a, int s) {
     Windows has rudimentary signals support
  =======================================================================================================================
  */
-#   define pthread_kill(T, S)          0
+#   define pthread_kill(T, S)          TerminateThread(T->h, S)
 #   define pthread_sigmask(H, S1, S2)  0
 
 /*

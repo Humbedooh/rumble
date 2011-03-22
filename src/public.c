@@ -88,7 +88,7 @@ address *rumble_parse_mail_address(const char *addr) {
     usr->tag = (char *) calloc(1, 128);
     usr->_flags = (char *) calloc(1, 128);
     tmp = (char *) calloc(1, 256);
-	if (!tmp) merror();
+    if (!tmp) merror();
     if (strchr(addr, '<')) {
         addr = strchr(addr, '<');
 
@@ -109,7 +109,7 @@ address *rumble_parse_mail_address(const char *addr) {
             if (sscanf(tmp, "%128[^=]=%128c", usr->tag, usr->user) < 2) {
 
                 /* Or maybe a VERP? */
-                strncpy(usr->user, tmp, 128); /* Nope, just a username. */
+                strncpy(usr->user, tmp, 128);   /* Nope, just a username. */
                 memset(usr->tag, 0, 128);
             }
         }

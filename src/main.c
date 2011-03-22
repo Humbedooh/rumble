@@ -4,7 +4,6 @@
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
-#define RUMBLE_INITIAL_THREADS  25
 extern masterHandle *rumble_database_master_handle;
 extern masterHandle *public_master_handle;
 extern masterHandle *comm_master_handle;
@@ -238,7 +237,7 @@ int main(int argc, char **argv) {
         }
 
         strncpy(r_path, argv[0], strlen(argv[0]) - strlen(m));
-        chdir(r_path);
+        if (chdir(r_path) == -1) { };
 #else
         while (m != NULL) {
             n = strchr(m + 1, '\\');

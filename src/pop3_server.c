@@ -14,11 +14,12 @@
     Main loop
  =======================================================================================================================
  */
-void *rumble_pop3_init(void *m) {
+void *rumble_pop3_init(void *T) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService   *svc = (rumbleService *) m;
-    masterHandle    *master = (masterHandle *) svc->master;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleThread    *thread = (rumbleThread *) T;
+    rumbleService   *svc = thread->svc;
+    masterHandle    *master = svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
     sessionHandle   *sessptr = &session;
@@ -32,19 +33,16 @@ void *rumble_pop3_init(void *m) {
     time_t          now;
     sessionHandle   *s;
     accountSession  *pops;
-    void            *pp,
-                    *tp;
-    pthread_t       p = pthread_self();
     d_iterator      iter;
     c_iterator      citer;
     svcCommandHook  *hook;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
     session.recipients = dvector_init();
     session._svcHandle = (accountSession *) malloc(sizeof(accountSession));
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
-    session._master = m;
+    session._master = svc->master;
     session._svc = svc;
     pops = (accountSession *) session._svcHandle;
     pops->account = 0;
@@ -53,14 +51,6 @@ void *rumble_pop3_init(void *m) {
     myName = rrdict(master->_core.conf, "servername");
     myName = myName ? myName : "??";
     tmp = (char *) malloc(100);
-#if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
-#   ifdef PTW32_CDECL
-    pp = (void *) p.p;
-#   else
-    pp = p;
-#   endif
-    printf("<pop3::threads> Initialized thread %#x\n", pp);
-#endif
     while (1) {
         comm_accept(svc->socket, session.client);
         pthread_mutex_lock(&svc->mutex);
@@ -148,29 +138,18 @@ void *rumble_pop3_init(void *m) {
         }
 
         /* Check if we were told to go kill ourself :( */
-        if (session._tflags & RUMBLE_THREAD_DIE) {
+        if ((session._tflags & RUMBLE_THREAD_DIE) || thread->status == -1) {
 
-            /*~~~~~~~~~~~~*/
-            pthread_t   *el;
-            /*~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~*/
+            rumbleThread    *t;
+            /*~~~~~~~~~~~~~~~*/
 
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_THREADS
             printf("<pop3::threads>I (%#x) was told to die :(\n", (uintptr_t) pthread_self());
 #endif
-#ifdef PTW32_CDECL
-            pp = (void *) p.p;
-#else
-            pp = p;
-#endif
-            foreach((pthread_t *), el, svc->threads, iter)
-            {
-#ifdef PTW32_CDECL
-                tp = el->p;
-#else
-                tp = el;
-#endif
-                if (tp == pp) {
-                    dvector_delete(&iter);
+            cforeach((rumbleThread *), t, svc->threads, citer) {
+                if (t == thread) {
+                    cvector_delete(&citer);
                     break;
                 }
             }

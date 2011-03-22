@@ -122,7 +122,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         while (!feof(config)) {
             memset(buffer, 0, 512);
             memset(line, 0, 512);
-            fgets(buffer, 511, config);
+            if (!fgets(buffer, 511, config)) break;
             if (sscanf(buffer, "%*[ \t]%511[^\r\n]", line) == 0) sscanf(buffer, "%511[^\r\n]", line);
             p++;
             if (!ferror(config)) {

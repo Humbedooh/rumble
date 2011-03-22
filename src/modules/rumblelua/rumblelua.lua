@@ -132,6 +132,7 @@ end
 
 
 function acceptHTTP(session)
+	local rnd = math.random(os.time());
     local servername = Rumble.readConfig("servername");
     session.info = Rumble.serverInfo();
     local d = debug.getinfo(1);
@@ -221,13 +222,14 @@ function acceptHTTP(session)
 				session:send("Location: /\r\n\r\n");
 				return;
 			end
+			
 			session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or "meh"; end);
 			session.pos = "<!-- -->"
 			session.atend = nil;
 			_G.my = {};
+			_G.rnd = rnd;
 			session.script = session.script:gsub("<%?(.-)%?>", 
 				function(x) 
-					
 					_G.session = session;
 					local output = "";
 					local _printf = printf;
@@ -288,6 +290,7 @@ function acceptHTTP(session)
 	http.headers = nil;
 	http = nil;
 	_LUA_TMP = "";
+	print(rnd .. "done!");
 	collectgarbage();
 end
 
@@ -303,7 +306,7 @@ end
 --[[ Initialize the service ]]--
 
 do
-    if (Rumble.createService(acceptHTTP, portNum, 10) == true) then
+    if (Rumble.createService(acceptHTTP, portNum, 20) == true) then
 		print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", "OK"));
 	end
     

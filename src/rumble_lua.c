@@ -880,7 +880,8 @@ void *rumble_lua_handle_service(void *s) {
 
         pthread_mutex_unlock(&svc->mutex);
     }
-    return 0;
+
+    return (0);
 }
 
 /*
@@ -907,7 +908,7 @@ static int rumble_lua_serverinfo(lua_State *L) {
 #   ifdef RUMBLE_MSC
     GetCurrentDirectoryA(256, tmp);
 #   else
-    getcwd(tmp, 256);
+    if (!getcwd(tmp, 256)) strcpy(tmp, "./");
 #   endif
     y = strlen(tmp);
     for (x = 0; x < y; x++)
@@ -1082,7 +1083,6 @@ static int rumble_lua_fileexists(lua_State *L) {
 
     /*~~~~~~~~~~~~*/
     const char  *el;
-
     /*~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
@@ -1091,7 +1091,7 @@ static int rumble_lua_fileexists(lua_State *L) {
 #   ifdef RUMBLE_MSC
     if (access(el, 0) == 0) lua_pushboolean(L, 1);
 #   else
-    if (faccessat(0, el, R_OK, AT_EACCESS) == 0) lua_pushboolean(L,1);
+    if (faccessat(0, el, R_OK, AT_EACCESS) == 0) lua_pushboolean(L, 1);
 #   endif
     else lua_pushboolean(L, 0);
     return (1);
@@ -1153,6 +1153,57 @@ static int rumble_lua_debug(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
+static int rumble_lua_suspendservice(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~*/
+    const char  *svcName;
+    /*~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    svcName = lua_tostring(L, 1);
+    comm_suspendService(svcName);
+    lua_settop(L, 0);
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_resumeservice(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~*/
+    const char  *svcName;
+    /*~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    svcName = lua_tostring(L, 1);
+    comm_resumeService(svcName);
+    lua_settop(L, 0);
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_killservice(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~*/
+    const char  *svcName;
+    /*~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    svcName = lua_tostring(L, 1);
+    comm_killService(svcName);
+    lua_settop(L, 0);
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_createservice(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -1199,7 +1250,7 @@ static int rumble_lua_createservice(lua_State *L) {
         svc->socket = sock;
         svc->cue_hooks = cvector_init();
         svc->init_hooks = cvector_init();
-        svc->threads = dvector_init();
+        svc->threads = cvector_init();
         svc->handles = dvector_init();
         svc->commands = cvector_init();
         svc->capabilities = cvector_init();
@@ -1209,12 +1260,12 @@ static int rumble_lua_createservice(lua_State *L) {
         pthread_mutex_init(&svc->mutex, 0);
         for (n = 0; n < threads; n++) {
 
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            rumbleThread    *thread = (rumbleThread *) malloc(sizeof(rumbleThread *));
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-            dvector_add(svc->threads, t);
-            pthread_create(t, NULL, rumble_lua_handle_service, svc);
+            cvector_add(svc->threads, thread);
+            pthread_create(&thread->thread, NULL, rumble_lua_handle_service, svc);
         }
 
         lua_pushboolean(L, TRUE);
@@ -1251,6 +1302,10 @@ static const luaL_reg   String_methods[] = { { "SHA256", rumble_lua_sha256 }, { 
 static const luaL_reg   Rumble_methods[] =
 {
     { "createService", rumble_lua_createservice },
+    { "suspendService", rumble_lua_suspendservice },
+    { "resumeService", rumble_lua_resumeservice },
+    { "stopService", rumble_lua_killservice },
+    { "startService", rumble_lua_killservice },
     { "readConfig", rumble_lua_config },
     { "setHook", rumble_lua_sethook },
     { "serverInfo", rumble_lua_serverinfo },

@@ -1,0 +1,23 @@
+<h3>Coming soon! :&gt;
+</h3>
+<?
+if ( session.section ) then
+	local svc = session.section;
+	local svcinfo = Rumble.serviceInfo(svc);
+	if (svcinfo) then
+		if (http.form.pause) then
+			Rumble.suspendService(session.section);
+			printf(session.section:upper() .. " suspended!");
+		elseif (http.form.start) then
+			if (svcinfo.enabled == 2) then
+				Rumble.resumeService(svc);
+				printf(session.section:upper() .. " resumed!");
+			end
+		end
+	else
+		printf("No such service: " .. svc:upper());	
+	end
+end
+?>
+
+</pre>

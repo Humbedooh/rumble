@@ -289,5 +289,11 @@ void rumble_service_add_command(rumbleService *svc, const char *command, svcComm
  =======================================================================================================================
  */
 void rumble_service_add_capability(rumbleService *svc, const char *capa) {
-    cvector_add(svc->capabilities, capa);
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char    *cpy = (char *) calloc(1, strlen(capa) + 1);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    strncpy(cpy, capa, strlen(capa));
+    cvector_add(svc->capabilities, cpy);
 }

@@ -193,17 +193,22 @@ socketHandle comm_open(masterHandle *m, const char *host, unsigned short port) {
  */
 ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
 
-    /*~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~*/
     va_list vl;
     char    *buffer;
     int     len;
-    /*~~~~~~~~~~~~*/
+    char    moo[1024];
+    /*~~~~~~~~~~~~~~*/
 
     va_start(vl, d);
-#ifdef _CRTIMP  /* Windows CRT library has a nifty function for this */
+#ifdef _CRTIMP      /* Windows CRT library has a nifty function for this */
     len = _vscprintf(d, vl) + 10;
 #else
-    len = vsnprintf(NULL, 0, d, vl) + 10;
+#   if R_ARCH > 32  /* Some odd 64 bit libc bug? */
+    len = snprintf(moo, 1000, d, vl) + 1;
+#   else
+    len = vsnprintf(NULL, 0, d, vl) + 1;
+#   endif
 #endif
     buffer = (char *) calloc(1, len);
     if (!buffer) merror();
@@ -396,14 +401,118 @@ rumbleService *comm_serviceHandle(const char *svcName) {
  =======================================================================================================================
  =======================================================================================================================
  */
+int comm_suspendService(const char *svcName) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = 0;
+    c_iterator      iter;
+    rumbleThread    *thread;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+
+    svc = comm_serviceHandle(svcName);
+    if (svc) {
+        pthread_mutex_lock(&svc->mutex);
+        cforeach((rumbleThread *), thread, svc->threads, iter) {
+            if (thread->status == 0)
+            {
+#ifdef RUMBLE_MSC
+                pthread_cancel(thread->thread);
+                pthread_kill(thread->thread, 0);
+#else
+                pthread_kill(thread->thread, 0);
+#endif
+                cvector_delete(&iter);
+                free(thread);
+            } else {
+                thread->status = -1;
+            }
+        }
+
+        svc->enabled = 2;   /* 2 = suspended */
+    }
+
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+int comm_killService(const char *svcName) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = 0;
+    c_iterator      iter;
+    rumbleThread    *thread;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+
+    svc = comm_serviceHandle(svcName);
+    if (svc) {
+        pthread_mutex_lock(&svc->mutex);
+        cforeach((rumbleThread *), thread, svc->threads, iter)
+        {
+#ifdef RUMBLE_MSC
+            pthread_cancel(thread->thread);
+            pthread_kill(thread->thread, 0);
+#else
+            pthread_kill(thread->thread, 0);
+#endif
+            cvector_delete(&iter);
+            free(thread);
+        }
+
+        svc->enabled = 0;   /* 2 = suspended */
+        pthread_mutex_unlock(&svc->mutex);
+    }
+
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+int comm_resumeService(const char *svcName) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = 0;
+    int             x = 0,
+                    y = 0;
+    rumbleThread    *thread;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+
+    svc = comm_serviceHandle(svcName);
+    if (svc) {
+        pthread_mutex_lock(&svc->mutex);
+        y = RUMBLE_INITIAL_THREADS - svc->threads->size;
+        y = y > (RUMBLE_INITIAL_THREADS || y < 0) ? RUMBLE_INITIAL_THREADS : y;
+        for (x = 0; x < y; x++) {
+            thread = (rumbleThread *) malloc(sizeof(rumbleThread));
+            thread->status = 0;
+            thread->svc = svc;
+            cvector_add(svc->threads, thread);
+            pthread_create(&thread->thread, 0, svc->init, (void *) thread);
+        }
+
+        svc->enabled = 1;   /* 1 = enabled */
+        pthread_mutex_unlock(&svc->mutex);
+    }
+
+    return (0);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 int comm_createService(masterHandle *master, const char *svcName, void * (*init) (void *), const char *port, int threadCount) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService           *svc;
     rumbleServicePointer    *svcp;
     int                     n;
-    pthread_t               *t;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleThread            *thread;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     svc = (rumbleService *) malloc(sizeof(rumbleService));
     if (port) {
@@ -419,22 +528,24 @@ int comm_createService(masterHandle *master, const char *svcName, void * (*init)
     svc->master = master;
     memset(svcp->svcName, 0, 1024);
     strncpy(svcp->svcName, svcName, 1023);
-    svc->threads = dvector_init();
+    svc->threads = cvector_init();
     svc->handles = dvector_init();
     svc->commands = cvector_init();
     svc->capabilities = cvector_init();
     svc->init = init;
     pthread_mutex_init(&svc->mutex, 0);
-    pthread_cond_init(&svc->cond, 0);
+    pthread_cond_init(&svc->cond, NULL);
     svc->enabled = 1;
     svc->traffic.received = 0;
     svc->traffic.sent = 0;
     svc->traffic.sessions = 0;
     cvector_add(master->services, svcp);
     for (n = 0; n < threadCount; n++) {
-        t = (pthread_t *) malloc(sizeof(pthread_t));
-        dvector_add(svc->threads, t);
-        pthread_create(t, 0, svc->init, (void *) svc);
+        thread = (rumbleThread *) malloc(sizeof(rumbleThread));
+        thread->status = 0;
+        thread->svc = svc;
+        cvector_add(svc->threads, thread);
+        pthread_create(&thread->thread, 0, svc->init, (void *) thread);
     }
 
     return (1);

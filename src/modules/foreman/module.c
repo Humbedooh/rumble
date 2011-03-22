@@ -33,6 +33,7 @@ ssize_t accept_hook(sessionHandle *session) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService   *svc = NULL;
+    rumbleThread    *thread;
     uint32_t        workers,
                     busy,
                     idle,
@@ -59,13 +60,11 @@ ssize_t accept_hook(sessionHandle *session) {
         if ((idle <= 1 || workers < FOREMAN_FALLBACK) && workers < FOREMAN_MAX_THREADS) {
             New = (workers + FOREMAN_THREAD_BUFFER) >= FOREMAN_FALLBACK ? FOREMAN_THREAD_BUFFER : FOREMAN_FALLBACK - workers;
             for (x = 0; x < New; x++) {
-
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                dvector_add(svc->threads, t);
-                pthread_create(t, NULL, svc->init, session->_master);
+                thread = (rumbleThread *) malloc(sizeof(rumbleThread));
+                thread->status = 0;
+                thread->svc = svc;
+                cvector_add(svc->threads, thread);
+                pthread_create(&thread->thread, 0, svc->init, (void *) thread);
             }
         }
 
