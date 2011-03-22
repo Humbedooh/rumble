@@ -53,15 +53,43 @@ else
 	echo "[33mgeneric[0m"
 fi
 
+echo "----------------------------------------"
+echo "Checking library headers"
+echo "----------------------------------------"
+for lib in sqlite3 gnutls openssl pthread crypto lua; do
+	files=0
+	msg="Checking for lib$lib-dev..."
+	#echo -n $msg
+	printf "%-32s" "$msg"
+	for l in `whereis /$lib.h | grep "\.h"`; do  files=`expr $files + 1`; done
+	if [ $files -lt 2 ]; then
+		files=0
+		for l in `locate --limit=2 /$lib.h`; do  files=`expr $files + 1`; done
+	fi
+	if [ $files -lt 1 ]; then
+		echo "[31m[BAD][0m"
+		echo "Couldn't find lib$lib-dev, please install it before compiling.";
+		exit
+	fi
+	echo "[32m[OK][0m"
+done
+
 echo
 echo "----------------------------------------"
 echo "Setting up build environment"
 echo "----------------------------------------"
 
-echo "Copying some headers I found..."
+echo "Copying required header files..."
+heads=0
 for luah in lua.h lualib.h lauxlib.h; do
 	original=`locate --limit=1 /$luah`
-	cp "$original" src/
+	if [ $original ]; then
+		cp "$original" src/
+echo cp "$original" src/
+	else
+		echo "Couldn't find lua.h, please install the liblua5.1-dev package."
+		exit
+	fi
 done
 
 echo "Making build directory..."

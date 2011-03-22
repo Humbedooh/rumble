@@ -22,6 +22,10 @@
 #      undef R_CYGWIN
 #      define R_CYGWIN    1
 #   endif
+#   ifdef __x86_64
+#      undef R_ARCH
+#      define R_ARCH 64
+#   endif
 #   ifdef __linux__
 #      undef R_LINUX
 #      define R_LINUX 1
