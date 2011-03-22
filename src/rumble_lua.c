@@ -7,7 +7,7 @@
 #include "rumble_version.h"
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
-extern FILE             *sysLog;
+extern FILE         *sysLog;
 #   define FOO "Rumble"
 #   ifndef __STDC__
 #      define __STDC__    1
@@ -109,11 +109,9 @@ static int rumble_lua_sethook(lua_State *L) {
      */
 
     svc = comm_serviceHandle(svcName);
-
     if (!strcmp(svcName, "smtp")) hook->flags |= RUMBLE_HOOK_SMTP;
     if (!strcmp(svcName, "pop3")) hook->flags |= RUMBLE_HOOK_POP3;
     if (!strcmp(svcName, "imap4")) hook->flags |= RUMBLE_HOOK_IMAP;
-
     if (!svc) {
         luaL_error(L, "\"%s\" isn't a known service - choices are: smtp, imap4, pop3.", svcName);
         return (0);
@@ -468,23 +466,27 @@ static int rumble_lua_getaccounts(lua_State *L) {
     return (1);
 }
 
-
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_updatedomain(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
-    const char      *domain, *newname, *newpath, *newtype;
-    void* state;
-    rumble_domain* dmn;
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *domain,
+                    *newname,
+                    *newpath,
+                    *newtype;
+    void            *state;
+    rumble_domain   *dmn;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     luaL_checktype(L, 2, LUA_TSTRING);
-    
     domain = lua_tostring(L, 1);
     newname = lua_tostring(L, 2);
     newpath = luaL_optstring(L, 3, "");
     newtype = luaL_optstring(L, 4, "");
-    
     dmn = rumble_domain_copy(domain);
     if (dmn) {
         state = rumble_database_prepare(0, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname, newpath, dmn->id);
@@ -497,7 +499,8 @@ static int rumble_lua_updatedomain(lua_State *L) {
         free(dmn->name);
         if (dmn->path) free(dmn->path);
     }
-    lua_settop(L, 0);    
+
+    lua_settop(L, 0);
     return (0);
 }
 
@@ -787,15 +790,15 @@ void *rumble_lua_handle_service(void *s) {
         session._tflags += 0x00100000;  /* job count ( 0 through 4095) */
         session.sender = 0;
         session._svc = s;
-		//_CrtDumpMemoryLeaks
-		
+
+        /* CrtDumpMemoryLeaks */
+
         /*$2
          ---------------------------------------------------------------------------------------------------------------
-         Fetch an available Lua state
+            Fetch an available Lua state
          ---------------------------------------------------------------------------------------------------------------
          */
-        
-        
+
         L = rumble_acquire_state();
         lua_settop(L, 0);
         lua_rawgeti(L, LUA_REGISTRYINDEX, svc->lua_handle);
@@ -847,7 +850,7 @@ void *rumble_lua_handle_service(void *s) {
 
         /*
          * lua_close((L));
-         * *pthread_mutex_unlock(&svc->mutex);
+         * pthread_mutex_unlock(&svc->mutex);
          */
 
         /*$2
@@ -1159,22 +1162,21 @@ static int rumble_lua_debug(lua_State *L) {
  */
 static int rumble_lua_createservice(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService   *svc;
     const char      *port;
     int             threads,
                     n;
     socketHandle    sock;
-    int isFirstCaller = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    int             isFirstCaller = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TFUNCTION);
     luaL_checktype(L, 2, LUA_TNUMBER);
     luaL_checktype(L, 3, LUA_TNUMBER);
     port = lua_tostring(L, 2);
     threads = luaL_optinteger(L, 3, 10);
-    
-    lua_rawgeti(L, LUA_REGISTRYINDEX,1);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, 1);
     isFirstCaller = (lua_tointeger(L, -1) == 0) ? 1 : 0;
 
     /*$2
@@ -1182,6 +1184,7 @@ static int rumble_lua_createservice(lua_State *L) {
         Try to create a service at the given port before creating the service object
      -------------------------------------------------------------------------------------------------------------------
      */
+
     if (isFirstCaller) {
         sock = comm_init(rumble_database_master_handle, port);
         if (!sock) {
@@ -1189,15 +1192,13 @@ static int rumble_lua_createservice(lua_State *L) {
             return (1);
         }
     }
+
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         If all went well, make the struct and set up stuff.
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    
-    
-    
     if (isFirstCaller) {
         lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
         svc = (rumbleService *) malloc(sizeof(rumbleService));
@@ -1214,6 +1215,7 @@ static int rumble_lua_createservice(lua_State *L) {
         svc->traffic.sessions = 0;
         pthread_mutex_init(&svc->mutex, 0);
         for (n = 0; n < threads; n++) {
+
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
             pthread_t   *t = (pthread_t *) malloc(sizeof(pthread_t));
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -1221,28 +1223,35 @@ static int rumble_lua_createservice(lua_State *L) {
             dvector_add(svc->threads, t);
             pthread_create(t, NULL, rumble_lua_handle_service, svc);
         }
+
         lua_pushboolean(L, TRUE);
-    }
-    else {
+    } else {
         lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
-        luaL_ref(L, LUA_REGISTRYINDEX);   /* Pop the ref and store it in the registry */
+        luaL_ref(L, LUA_REGISTRYINDEX); /* Pop the ref and store it in the registry */
         lua_settop(L, 0);
         lua_pushnil(L);
     }
-    
+
     return (1);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_reloadmodules(lua_State *L) {
     rumble_modules_load(rumble_database_master_handle);
-    return 0;
+    return (0);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_reloadconfig(lua_State *L) {
-    rumble_config_load(rumble_database_master_handle,0);
-    return 0;
+    rumble_config_load(rumble_database_master_handle, 0);
+    return (0);
 }
-
 
 static const luaL_reg   File_methods[] = { { "stat", rumble_lua_fileinfo }, { "exists", rumble_lua_fileexists }, { 0, 0 } };
 static const luaL_reg   String_methods[] = { { "SHA256", rumble_lua_sha256 }, { 0, 0 } };
@@ -1255,8 +1264,8 @@ static const luaL_reg   Rumble_methods[] =
     { "serviceInfo", rumble_lua_serviceinfo },
     { "listModules", rumble_lua_listmodules },
     { "dprint", rumble_lua_debug },
-    { "reloadModules", rumble_lua_reloadmodules},
-    { "reloadConfiguration", rumble_lua_reloadconfig},
+    { "reloadModules", rumble_lua_reloadmodules },
+    { "reloadConfiguration", rumble_lua_reloadconfig },
     { 0, 0 }
 };
 static const luaL_reg   Mailman_methods[] =
@@ -1270,7 +1279,7 @@ static const luaL_reg   Mailman_methods[] =
     { "addressExists", rumble_lua_addressexists },
     { "createDomain", rumble_lua_createdomain },
     { "deleteDomain", rumble_lua_deletedomain },
-    { "updateDomain", rumble_lua_updatedomain},
+    { "updateDomain", rumble_lua_updatedomain },
     { 0, 0 }
 };
 static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };

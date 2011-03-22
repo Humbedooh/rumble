@@ -6,14 +6,12 @@
 #include "rumble.h"
 #include <stdarg.h>
 #include <fcntl.h>
-dvector* realargs = 0;
+dvector *realargs = 0;
 typedef struct
 {
     const char  *key;
     const char  *val;
 } _cft;
-
-
 static _cft rumble_conf_tags[] =
 {
     { "windows", R_WINDOWS ? "1" : "" },

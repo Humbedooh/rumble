@@ -2,12 +2,20 @@ add=""
 echo "----------------------------------------"
 echo "Initializing build process"
 echo "----------------------------------------"
-echo -n "Checking architecture..."
+printf "%-32s"  "Checking architecture..."
 if [ `arch` == "x86_64" ]; then
-	echo "64 bits"
+	echo "[33m64 bit[0m"
 	add="-fPIC"
 else
-	echo "32 bits"
+	echo "[33m32 bit[0m"
+fi
+printf "%-32s" "Checking for gcc..."
+gccver=`gcc -dumpversion`
+if [ $? -ne 0 ]; then
+	echo "gcc wasn't found, please install it!"
+	exit
+else
+	echo "[33m$gccver[0m"
 fi
 echo "----------------------------------------"
 echo "Checking library availability"
@@ -22,26 +30,27 @@ for lib in sqlite3 gnutls gcrypt ssl pthread crypto lua resolv; do
 		for l in `locate --limit=2 lib$lib`; do  files=`expr $files + 1`; done
 	fi
 	if [ $files -lt 2 ]; then
-		echo "Couldn't find lib$lib!";
+		echo "[31m[BAD][0m"
+		echo "Couldn't find lib$lib, please install it before compiling.";
 		exit
 	fi
-	echo "[OK]"
+	echo "[32m[OK][0m"
 done
 
-echo -n "Checking lua library name..."
+printf "%-32s" "Checking lua library version..."
 vone=0
 vtwo=0
 llua=""
 for l in `locate liblua5.1`; do vone=`expr $vone + 1`; done
 for l in `locate liblua5.2`; do vtwo=`expr $vtwo + 1`; done
 if [ $vtwo -gt 1 ]; then
-	echo "found liblua5.2.a"
+	echo "[33m5.2[0m"
 	llua="5.2"
 elif [ $vone -gt 1 ]; then
-	echo "found liblua5.1.a"
+	echo "[33m5.1[0m"
 	llua="5.1"
 else
-	echo "found liblua.a"
+	echo "[33mgeneric[0m"
 fi
 
 echo
@@ -69,7 +78,7 @@ do
 	f=${f/.c/}
 	f=${f/src\//}
 	l="$l build/$f.o"
-	echo   "$f.c"
+	echo   "[36m$f.c[0m"
 	gcc    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv 
 done
 
@@ -100,7 +109,7 @@ do
 	l=""
 	d=${d/src\/modules\//}
 	if [ "$d" != "rumblelua" ]; then
-		echo "Building: $d...";
+		echo "Building: [36m$d[0m";
 		mkdir -p "build/modules/$d"
 		for f in src/modules/$d/*.c
 		do
@@ -127,4 +136,4 @@ mkdir build/db
 echo "Cleaning up..."
 rm -r build/*.o*
 
-echo "All done!!"
+echo "[32mAll done![0m"

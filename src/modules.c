@@ -18,7 +18,7 @@
 #endif
 typedef int (*rumbleModInit) (void *master, rumble_module_info *modinfo);
 typedef uint32_t (*rumbleVerCheck) (void);
-extern FILE             *sysLog;
+extern FILE *sysLog;
 
 /*
  =======================================================================================================================
@@ -26,7 +26,7 @@ extern FILE             *sysLog;
  */
 void rumble_modules_load(masterHandle *master) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
     dvector_element     *line;
     uint32_t            ver;
@@ -39,24 +39,24 @@ void rumble_modules_load(masterHandle *master) {
     rumbleModInit       init;
     rumbleVerCheck      mcheck;
     rumble_module_info  *modinfo;
-    rumbleService* svc;
+    rumbleService       *svc;
     char                *error = 0;
-    const char* services[] = { "mailman", "smtp", "pop3", "imap4",0};
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    
+    const char          *services[] = { "mailman", "smtp", "pop3", "imap4", 0 };
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     master->_core.feed_hooks = cvector_init();
     master->_core.parser_hooks = cvector_init();
     statusLog("Preparing to load modules");
-    
     for (x = 0; services[x]; x++) {
         svc = comm_serviceHandle(services[x]);
         if (svc) {
-            statusLog("Flushing hook structs for %s",services[x]);
+            statusLog("Flushing hook structs for %s", services[x]);
             svc->cue_hooks = cvector_init();
             svc->init_hooks = cvector_init();
             svc->exit_hooks = cvector_init();
         }
     }
+
     statusLog("Loading modules");
     for (line = master->_core.conf->first; line != NULL; line = line->next) {
         el = (rumbleKeyValuePair *) line->object;

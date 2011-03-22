@@ -43,7 +43,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     FILE    *config;
     char    *cfgfile = (char *) calloc(1, 1024);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    
+
     modinfo->title = "Whitelisting module";
     modinfo->description = "Standard whitelisting module for rumble.";
     rumble_whiteList = cvector_init();

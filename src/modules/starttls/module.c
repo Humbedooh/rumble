@@ -103,15 +103,15 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     masterHandle                        *m = (masterHandle *) master;
     gnutls_certificate_credentials_t    *pcred;
-    rumbleService* svc;
+    rumbleService                       *svc;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     printf("Initializing GNUTLS (this may take a while)...  ");
     fflush(stdout);
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";
-    gcry_control (GCRYCTL_DISABLE_SECMEM, 0);
+    gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-    
     if (gnutls_global_init()) {
         fprintf(stderr, "<TLS> Failed!\r\n");
         return (EXIT_FAILURE);
@@ -129,8 +129,8 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     generate_rsa_params();
     gnutls_certificate_set_dh_params(*pcred, dh_params);
     gnutls_certificate_set_rsa_export_params(*pcred, rsa_params);
-
     printf("[OK]\r\n");
+
     /*$3
      ===================================================================================================================
         Service hooks
@@ -143,24 +143,24 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    svc = comm_serviceHandleExtern((masterHandle*) master,"smtp");
-    if (svc) {
-        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
-        rumble_service_add_capability(svc, "STARTTLS");
-    }
-    
-    svc = comm_serviceHandleExtern((masterHandle*) master,"pop3");
-    if (svc) {
-        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
-        rumble_service_add_capability(svc, "STARTTLS");
-    }
-    svc = comm_serviceHandleExtern((masterHandle*) master,"imap4");
+    svc = comm_serviceHandleExtern((masterHandle *) master, "smtp");
     if (svc) {
         rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
         rumble_service_add_capability(svc, "STARTTLS");
     }
 
-    
+    svc = comm_serviceHandleExtern((masterHandle *) master, "pop3");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
+
+    svc = comm_serviceHandleExtern((masterHandle *) master, "imap4");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
+
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Hook onto services closing connections

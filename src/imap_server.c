@@ -16,8 +16,8 @@
  */
 void *rumble_imap_init(void *m) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService* svc = (rumbleService*)m;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = (rumbleService *) m;
     masterHandle    *master = svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
@@ -39,7 +39,7 @@ void *rumble_imap_init(void *m) {
     d_iterator      iter;
     svcCommandHook  *hook;
     c_iterator      citer;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
     session.recipients = dvector_init();
@@ -263,7 +263,7 @@ ssize_t rumble_server_imap_capability(masterHandle *master, sessionHandle *sessi
     /*~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(capa, "* CAPABILITY");
-    cforeach((char *), el, ((rumbleService*)session->_svc)->capabilities, iter) {
+    cforeach((char *), el, ((rumbleService *) session->_svc)->capabilities, iter) {
         sprintf(&capa[strlen(capa)], " %s", el);
     }
 

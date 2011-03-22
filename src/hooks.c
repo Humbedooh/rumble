@@ -23,22 +23,21 @@ rumblemodule rumble_module_check(void) {
  =======================================================================================================================
  */
 void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *)) {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    hookHandle  *hook = (hookHandle *) malloc(sizeof(hookHandle));
-    rumbleService* svc;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    hookHandle      *hook = (hookHandle *) malloc(sizeof(hookHandle));
+    rumbleService   *svc;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     if (!hook) merror();
     rumble_module_check();
     hook->lua_callback = 0;
     hook->func = func;
     hook->flags = flags;
     hook->module = ((masterHandle *) handle)->_core.currentSO;
-    
     hook->modinfo = (rumble_module_info *) ((masterHandle *) handle)->_core.modules->last;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS)
     printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
-    
 #endif
     statusLog("Adding hook of type %#x from %s", hook->flags, hook->module);
     switch (flags & RUMBLE_HOOK_STATE_MASK)
@@ -46,30 +45,69 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     case RUMBLE_HOOK_ACCEPT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  svc = comm_serviceHandleExtern((masterHandle*) handle, "smtp"); if (svc)cvector_add(svc->init_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  svc = comm_serviceHandleExtern((masterHandle*) handle, "pop3"); if (svc) cvector_add(svc->init_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  svc = comm_serviceHandleExtern((masterHandle*) handle, "imap4"); if (svc) cvector_add(svc->init_hooks, hook); break;
-        default:                break;
+        case RUMBLE_HOOK_SMTP:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "smtp");
+            if (svc) cvector_add(svc->init_hooks, hook);
+            break;
+
+        case RUMBLE_HOOK_POP3:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "pop3");
+            if (svc) cvector_add(svc->init_hooks, hook);
+            break;
+
+        case RUMBLE_HOOK_IMAP:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "imap4");
+            if (svc) cvector_add(svc->init_hooks, hook);
+            break;
+
+        default:
+            break;
         }
         break;
 
     case RUMBLE_HOOK_COMMAND:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  svc = comm_serviceHandleExtern((masterHandle*) handle, "smtp"); if (svc) cvector_add(svc->cue_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  svc = comm_serviceHandleExtern((masterHandle*) handle, "pop3"); if (svc) cvector_add(svc->cue_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  svc = comm_serviceHandleExtern((masterHandle*) handle, "imap4"); if (svc) cvector_add(svc->cue_hooks, hook); break;
-        default:                break;
+        case RUMBLE_HOOK_SMTP:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "smtp");
+            if (svc) cvector_add(svc->cue_hooks, hook);
+            break;
+
+        case RUMBLE_HOOK_POP3:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "pop3");
+            if (svc) cvector_add(svc->cue_hooks, hook);
+            break;
+
+        case RUMBLE_HOOK_IMAP:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "imap4");
+            if (svc) cvector_add(svc->cue_hooks, hook);
+            break;
+
+        default:
+            break;
         }
         break;
 
     case RUMBLE_HOOK_EXIT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  svc = comm_serviceHandleExtern((masterHandle*) handle, "smtp"); if (svc) cvector_add(svc->exit_hooks, hook); break;
-        case RUMBLE_HOOK_POP3:  svc = comm_serviceHandleExtern((masterHandle*) handle, "pop3"); if (svc) cvector_add(svc->exit_hooks, hook); break;
-        case RUMBLE_HOOK_IMAP:  svc = comm_serviceHandleExtern((masterHandle*) handle, "imap4"); if (svc) cvector_add(svc->exit_hooks, hook); break;
-        default:                break;
+        case RUMBLE_HOOK_SMTP:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "smtp");
+            if (svc) cvector_add(svc->exit_hooks, hook);
+            break;
+
+        case RUMBLE_HOOK_POP3:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "pop3");
+            if (svc) cvector_add(svc->exit_hooks, hook);
+            break;
+
+        case RUMBLE_HOOK_IMAP:
+            svc = comm_serviceHandleExtern((masterHandle *) handle, "imap4");
+            if (svc) cvector_add(svc->exit_hooks, hook);
+            break;
+
+        default:
+            break;
         }
         break;
 
@@ -83,7 +121,6 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     default:
         break;
     }
-
 }
 
 typedef ssize_t (*hookFunc) (sessionHandle *);
@@ -125,7 +162,11 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #endif
             if (mFunc) rc = (mFunc) (session);
             else if (hook->lua_callback) {
-                lua_State* L = rumble_acquire_state();
+
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                lua_State   *L = rumble_acquire_state();
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
                 rc = lua_callback(L, (void *) hook, session);
                 rumble_release_state(L);
             }
@@ -156,16 +197,30 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
  =======================================================================================================================
  */
 ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *session, uint32_t flags) {
-    rumbleService* svc;
+
+    /*~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc;
+    /*~~~~~~~~~~~~~~~~~*/
+
     switch (flags & RUMBLE_HOOK_STATE_MASK)
     {
     case RUMBLE_HOOK_ACCEPT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  svc = comm_serviceHandle("smtp"); return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
-        case RUMBLE_HOOK_POP3:  svc = comm_serviceHandle("pop3"); return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
-        case RUMBLE_HOOK_IMAP:  svc = comm_serviceHandle("imap4"); return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
-        default:                break;
+        case RUMBLE_HOOK_SMTP:
+            svc = comm_serviceHandle("smtp");
+            return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
+
+        case RUMBLE_HOOK_POP3:
+            svc = comm_serviceHandle("pop3");
+            return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
+
+        case RUMBLE_HOOK_IMAP:
+            svc = comm_serviceHandle("imap4");
+            return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
+
+        default:
+            break;
         }
         break;
 
@@ -182,10 +237,20 @@ ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *sessio
     case RUMBLE_HOOK_EXIT:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
-        case RUMBLE_HOOK_SMTP:  svc = comm_serviceHandle("smtp"); return (rumble_server_execute_hooks(session, svc->exit_hooks, flags));
-        case RUMBLE_HOOK_POP3:  svc = comm_serviceHandle("pop3"); return (rumble_server_execute_hooks(session, svc->exit_hooks, flags));
-        case RUMBLE_HOOK_IMAP:  svc = comm_serviceHandle("imap4"); return (rumble_server_execute_hooks(session, svc->exit_hooks, flags));
-        default:                break;
+        case RUMBLE_HOOK_SMTP:
+            svc = comm_serviceHandle("smtp");
+            return (rumble_server_execute_hooks(session, svc->exit_hooks, flags));
+
+        case RUMBLE_HOOK_POP3:
+            svc = comm_serviceHandle("pop3");
+            return (rumble_server_execute_hooks(session, svc->exit_hooks, flags));
+
+        case RUMBLE_HOOK_IMAP:
+            svc = comm_serviceHandle("imap4");
+            return (rumble_server_execute_hooks(session, svc->exit_hooks, flags));
+
+        default:
+            break;
         }
         break;
 

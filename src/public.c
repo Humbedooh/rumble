@@ -1,7 +1,8 @@
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
-FILE    *sysLog = 0;
-masterHandle *public_master_handle = 0;
+FILE            *sysLog = 0;
+masterHandle    *public_master_handle = 0;
+
 /*
  =======================================================================================================================
     This file contains public functions for rumble (usable by both server and modules
@@ -416,14 +417,19 @@ void statusLog(const char *msg, ...) {
     }
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+lua_State *rumble_acquire_state(void) {
 
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int             x;
+    int             found = 0;
+    masterHandle    *master = public_master_handle;
+    lua_State       *L;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-lua_State* rumble_acquire_state() {
-    int x;
-    int found = 0;
-    masterHandle* master = public_master_handle;
-    lua_State* L;
-    
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         if (!master->lua.states[x].working) {
@@ -433,17 +439,26 @@ lua_State* rumble_acquire_state() {
             break;
         }
     }
+
     pthread_mutex_unlock(&master->lua.mutex);
-    if (found) return L;
+    if (found) return (L);
     else {
         sleep(1);
-        return rumble_acquire_state();
+        return (rumble_acquire_state());
     }
-}  
+}
 
-void rumble_release_state(lua_State* X) {
-    int x;
-    masterHandle* master = public_master_handle;
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_release_state(lua_State *X) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int             x;
+    masterHandle    *master = public_master_handle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         if (master->lua.states[x].state == X) {
@@ -451,5 +466,6 @@ void rumble_release_state(lua_State* X) {
             break;
         }
     }
+
     pthread_mutex_unlock(&master->lua.mutex);
-} 
+}

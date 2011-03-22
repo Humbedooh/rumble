@@ -16,8 +16,8 @@
  */
 void *rumble_pop3_init(void *m) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService* svc = (rumbleService*)m;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = (rumbleService *) m;
     masterHandle    *master = (masterHandle *) svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
@@ -38,7 +38,7 @@ void *rumble_pop3_init(void *m) {
     d_iterator      iter;
     c_iterator      citer;
     svcCommandHook  *hook;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
     session.recipients = dvector_init();
@@ -198,7 +198,7 @@ ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, co
     /*~~~~~~~~~~~~~*/
 
     rcsend(session, "+OK Here's what I got:\r\n");
-    cforeach((char *), el, ((rumbleService*)session->_svc)->capabilities, iter) {
+    cforeach((char *), el, ((rumbleService *) session->_svc)->capabilities, iter) {
         rcprintf(session, "%s\r\n", el);
     }
 

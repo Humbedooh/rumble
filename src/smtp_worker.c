@@ -176,7 +176,7 @@ rumble_sendmail_response *rumble_send_email(
 void *rumble_worker_process(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService* svc = (rumbleService*)m;
+    rumbleService   *svc = (rumbleService *) m;
     mqueue          *item;
     char            *tmp;
     rumble_mailbox  *user;
@@ -191,7 +191,7 @@ void *rumble_worker_process(void *m) {
 
     sess->client = &c;
     if (!sess) merror();
-    sess->_master = (masterHandle*) svc->master;
+    sess->_master = (masterHandle *) svc->master;
     tmp = (char *) calloc(1, 256);
     sleep(3);
 
@@ -421,7 +421,7 @@ void *rumble_worker_process(void *m) {
 void *rumble_worker_init(void *m) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService* svc = (rumbleService*) m;
+    rumbleService   *svc = (rumbleService *) m;
     masterHandle    *master = (masterHandle *) svc->master;
     int             x;
     char            tmp[1024];

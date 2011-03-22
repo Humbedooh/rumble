@@ -45,8 +45,7 @@ ssize_t accept_hook(sessionHandle *session) {
     if (workload > FOREMAN_MAX_JOBS) session->_tflags |= RUMBLE_THREAD_DIE;
 
     /* Find out what service we're dealing with here. */
-    svc = (rumbleService*) session->_svc;
-
+    svc = (rumbleService *) session->_svc;
     if (svc) {
 
         /*

@@ -13,8 +13,8 @@
  */
 void *rumble_smtp_init(void *m) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService* svc = (rumbleService*)m;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = (rumbleService *) m;
     masterHandle    *master = (masterHandle *) svc->master;
     /* Initialize a session handle and wait for incoming connections. */
     sessionHandle   session;
@@ -34,7 +34,7 @@ void *rumble_smtp_init(void *m) {
     d_iterator      iter;
     c_iterator      citer;
     svcCommandHook  *hook;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_read(master->domains.rrw);
     session.dict = dvector_init();
@@ -399,7 +399,7 @@ ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, co
     free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_EHLO;
     rumble_comm_send(session, "250-Extended commands follow\r\n");
-    cforeach((char *), el, ((rumbleService*)session->_svc)->capabilities, iter) {
+    cforeach((char *), el, ((rumbleService *) session->_svc)->capabilities, iter) {
         rcprintf(session, "250-%s\r\n", el);
     }
 

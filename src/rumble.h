@@ -67,7 +67,7 @@
 
 /*
  * Disable the useless Microsoft warnings about unsafe operators and not-yet
- * defined functions (this is C, not C++, morons
+ * defined functions (this is C, not C++, moron
  */
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
@@ -401,10 +401,9 @@ typedef struct
     rumble_module_info  *modinfo;
     int                 lua_callback;
 } hookHandle;
-
 typedef struct
 {
-    void*  master;
+    void            *master;
     socketHandle    socket;
     dvector         *threads;
     cvector         *init_hooks;
@@ -425,9 +424,10 @@ typedef struct
         size_t  sessions;
     } traffic;
 } rumbleService;
-typedef struct {
-    char svcName[1024];
-    rumbleService* svc;
+typedef struct
+{
+    char            svcName[1024];
+    rumbleService   *svc;
 } rumbleServicePointer;
 typedef struct
 {
@@ -444,7 +444,7 @@ typedef struct
         void        *tls_credentials;
         time_t      uptime;
     } _core;
-    cvector* services;
+    cvector *services;
     struct
     {
         rumble_readerwriter *rrw;
@@ -585,8 +585,8 @@ void            rumble_service_add_capability(rumbleService *svc, const char *co
  =======================================================================================================================
  */
 
-void rumble_release_state(lua_State* X);
-lua_State* rumble_acquire_state();
+void                        rumble_release_state(lua_State *X);
+lua_State                   *rumble_acquire_state(void);
 size_t                      rumble_file_exists(const char *filename);
 void                        rumble_test(void);
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */

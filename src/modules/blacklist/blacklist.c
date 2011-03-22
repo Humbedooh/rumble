@@ -80,7 +80,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
     struct sockaddr_storage ss;
     int                     sslen = sizeof(ss);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	
+
     /*
      * Check if the client has been given permission to skip this check by any other
      * modules.
@@ -95,7 +95,6 @@ ssize_t rumble_blacklist(sessionHandle *session) {
     /* Windows method */
     WSAStringToAddressA(session->client->addr, session->client->client_info.ss_family, NULL, (struct sockaddr *) &ss, &sslen);
     IP = ((struct sockaddr_in6 *) &ss)->sin6_addr;
-	
 #endif
     client = gethostbyaddr((char *) &IP, (session->client->client_info.ss_family == AF_INET) ? 4 : 16,
                            session->client->client_info.ss_family);
@@ -134,6 +133,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
                         fclose(fp);
                     }
                 }
+
                 return (RUMBLE_RETURN_FAILURE);
             }
 
@@ -199,7 +199,7 @@ ssize_t rumble_blacklist(sessionHandle *session) {
         }
     }
 
-	/* Return with EXIT_SUCCESS and let the server continue. */
+    /* Return with EXIT_SUCCESS and let the server continue. */
     return (RUMBLE_RETURN_OKAY);
 }
 

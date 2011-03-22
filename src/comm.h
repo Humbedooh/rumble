@@ -7,18 +7,18 @@
 #   ifndef SOCKET_ERROR
 #      define SOCKET_ERROR    - 1
 #   endif
-#ifndef TCP_NODELAY
-#define TCP_NODELAY 0x200
-#endif
+#   ifndef TCP_NODELAY
+#      define TCP_NODELAY 0x200
+#   endif
 void            *get_in_addr(struct sockaddr *sa);
 socketHandle    comm_init(masterHandle *m, const char *port);
 void            comm_accept(socketHandle sock, clientHandle *client);
 dvector         *comm_mxLookup(const char *domain);
 socketHandle    comm_open(masterHandle *m, const char *host, unsigned short port);
-int comm_createService(masterHandle *m, const char* svcName, void * (*init) (void *), const char* port, int threadCount);
-rumbleService* comm_serviceHandleExtern(masterHandle *m, const char* svcName);
-rumbleService* comm_serviceHandle( const char* svcName);
-int comm_suspendService(const char* svcName);
-int comm_killService(const char* svcName);
-int comm_resumeService(const char* svcName);
+int             comm_createService(masterHandle *m, const char *svcName, void * (*init) (void *), const char *port, int threadCount);
+rumbleService   *comm_serviceHandleExtern(masterHandle *m, const char *svcName);
+rumbleService   *comm_serviceHandle(const char *svcName);
+int             comm_suspendService(const char *svcName);
+int             comm_killService(const char *svcName);
+int             comm_resumeService(const char *svcName);
 #endif /* COMM_H */
