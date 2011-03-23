@@ -36,6 +36,12 @@ if (session.credentials and session.credentials.admin) then
             <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server (forcibly)"/></a>
             <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
             ]];
+            elseif (svcinfo.enabled == 0) then
+            	status = "Stopped";
+                icon = "red"
+            	controls = [[
+            <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
+            ]];
             else
             controls = [[
             <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server (forcibly)"/></a>

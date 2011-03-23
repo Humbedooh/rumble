@@ -24,7 +24,7 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 <?
     for k,v in pairs({"smtp", "imap4", "pop3"}) do
         local svc = Rumble.serviceInfo(v);
-        if (svc) then
+        if (svc.enabled == 1) then
 			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/greenbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>Running<br/>Traffic: %s bytes</td>", v:upper(), math.comma(svc.received + svc.sent));
 		else
 			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/redbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>Disabled</td>", v:upper());
