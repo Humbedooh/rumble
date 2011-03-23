@@ -465,6 +465,11 @@ typedef struct
         size_t  received;
         size_t  sessions;
     } traffic;
+    struct {
+        const char* port;
+        const char* name;
+        int threadCount;
+    } settings;
 } rumbleService;
 typedef struct
 {

@@ -122,6 +122,7 @@ int rumbleStart(void) {
     masterHandle    *master;
     int             rc,
                     x;
+    rumbleService* svc;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
@@ -153,12 +154,14 @@ int rumbleStart(void) {
     rumble_database_update_domains();
     printf("%-48s", "Launching core service...");
     statusLog("Launching core service");
-    rc = comm_createService(master, "mailman", rumble_worker_init, 0, 1);
+    svc = comm_registerService(master, "mailman", rumble_worker_init, 0, 1);
+    rc = comm_startService(svc);
     printf("[OK]\n");
+    svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
     if (rumble_config_int(master, "enablesmtp")) {
         printf("%-48s", "Launching SMTP service...");
-        statusLog("Launching SMTP service");
-        rc = comm_createService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
+        statusLog("Launching SMTP service");    
+        rc = comm_startService(svc);
         if (!rc) {
             printf("[BAD]\r\n");
             fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
@@ -168,10 +171,11 @@ int rumbleStart(void) {
         printf("[OK]\n");
     }
 
+    svc = comm_registerService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"), RUMBLE_INITIAL_THREADS);
     if (rumble_config_int(master, "enablepop3")) {
         printf("%-48s", "Launching POP3 service...");
         statusLog("Launching POP3 service...");
-        rc = comm_createService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"), RUMBLE_INITIAL_THREADS);
+        rc = comm_startService(svc);
         if (!rc) {
             printf("[BAD]\r\n");
             fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
@@ -181,10 +185,11 @@ int rumbleStart(void) {
         printf("[OK]\n");
     }
 
+    svc = comm_registerService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
     if (rumble_config_int(master, "enableimap4")) {
         printf("%-48s", "Launching IMAP4 service...");
         statusLog("Launching IMAP4 service...");
-        rc = comm_createService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
+        rc = comm_startService(svc);
         if (!rc) {
             printf("[BAD]\r\n");
             fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");

@@ -138,7 +138,7 @@ void *rumble_pop3_init(void *T) {
         }
 
         /* Check if we were told to go kill ourself :( */
-        if ((session._tflags & RUMBLE_THREAD_DIE) || thread->status == -1 || svc->enabled != 0) {
+        if ((session._tflags & RUMBLE_THREAD_DIE) || svc->enabled != 1 || thread->status == -1 ) {
 
             /*~~~~~~~~~~~~~~~*/
             rumbleThread    *t;

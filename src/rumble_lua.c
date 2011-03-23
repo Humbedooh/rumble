@@ -1155,13 +1155,15 @@ static int rumble_lua_debug(lua_State *L) {
  */
 static int rumble_lua_suspendservice(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~*/
+    //*~~~~~~~~~~~~~~~~~*/
     const char  *svcName;
+    rumbleService* svc;
     /*~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     svcName = lua_tostring(L, 1);
-    comm_suspendService(svcName);
+    svc = comm_serviceHandle(svcName);
+    if (svc) comm_suspendService(svc);
     lua_settop(L, 0);
     return (0);
 }
@@ -1171,14 +1173,15 @@ static int rumble_lua_suspendservice(lua_State *L) {
  =======================================================================================================================
  */
 static int rumble_lua_resumeservice(lua_State *L) {
-
-    /*~~~~~~~~~~~~~~~~~*/
+/*~~~~~~~~~~~~~~~~~*/
     const char  *svcName;
+    rumbleService* svc;
     /*~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     svcName = lua_tostring(L, 1);
-    comm_resumeService(svcName);
+    svc = comm_serviceHandle(svcName);
+    if (svc) comm_resumeService(svc);
     lua_settop(L, 0);
     return (0);
 }
@@ -1191,11 +1194,33 @@ static int rumble_lua_killservice(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~*/
     const char  *svcName;
+    rumbleService* svc;
     /*~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     svcName = lua_tostring(L, 1);
-    comm_killService(svcName);
+    svc = comm_serviceHandle(svcName);
+    if (svc) comm_killService(svc);
+    lua_settop(L, 0);
+    return (0);
+}
+
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_startservice(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~*/
+    const char  *svcName;
+    rumbleService* svc;
+    /*~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    svcName = lua_tostring(L, 1);
+    svc = comm_serviceHandle(svcName);
+    if (svc) comm_startService(svc);
     lua_settop(L, 0);
     return (0);
 }
@@ -1305,7 +1330,7 @@ static const luaL_reg   Rumble_methods[] =
     { "suspendService", rumble_lua_suspendservice },
     { "resumeService", rumble_lua_resumeservice },
     { "stopService", rumble_lua_killservice },
-    { "startService", rumble_lua_killservice },
+    { "startService", rumble_lua_startservice },
     { "readConfig", rumble_lua_config },
     { "setHook", rumble_lua_sethook },
     { "serverInfo", rumble_lua_serverinfo },
