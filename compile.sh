@@ -31,7 +31,7 @@ for lib in sqlite3 gnutls gcrypt ssl pthread crypto lua resolv; do
 	printf "%-32s" "$msg"
 	for l in `whereis lib$lib`; do  files=`expr $files + 1`; done
 	if [ $files -lt 2 ]; then
-		for l in `locate - 2 lib$lib`; do  files=`expr $files + 1`; done
+		for l in `locate -l 2 lib$lib`; do  files=`expr $files + 1`; done
 	fi
 	if [ $files -lt 2 ]; then
 		echo "[31m[BAD][0m"
@@ -95,8 +95,8 @@ echo cp "$original" src/
 		exit
 	fi
 done
-
-if [ `expr "$os" = "Cygwin"` ]; then
+iscyg=`expr "$os" = "Cygwin"`
+if [ $iscyg -ne 0 ]; then
 	echo "Downloading Cygwin-specific components..."
 	wget -O src/ns_parse.c http://rumbleserver.sourceforge.net/ns_parse.c
 fi
