@@ -111,7 +111,7 @@ void *rumble_smtp_init(void *T) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
+        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_SMTP);
         close(session.client->socket);
 
         /*$2

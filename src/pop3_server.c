@@ -117,7 +117,7 @@ void *rumble_pop3_init(void *T) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
+        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_POP3);
         close(session.client->socket);
 
         /* Start cleaning up after the session */
