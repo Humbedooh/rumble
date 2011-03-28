@@ -9,6 +9,10 @@ if [ `arch` == "x86_64" ]; then
 else
 	echo "[33m32 bit[0m"
 fi
+printf "%-32s"  "Checking platform..."
+os=`uname -o`
+echo "[33m$os[0m"
+
 printf "%-32s" "Checking for gcc..."
 gccver=`gcc -dumpversion`
 if [ $? -ne 0 ]; then
@@ -27,7 +31,7 @@ for lib in sqlite3 gnutls gcrypt ssl pthread crypto lua resolv; do
 	printf "%-32s" "$msg"
 	for l in `whereis lib$lib`; do  files=`expr $files + 1`; done
 	if [ $files -lt 2 ]; then
-		for l in `locate --limit=2 lib$lib`; do  files=`expr $files + 1`; done
+		for l in `locate - 2 lib$lib`; do  files=`expr $files + 1`; done
 	fi
 	if [ $files -lt 2 ]; then
 		echo "[31m[BAD][0m"
@@ -64,7 +68,7 @@ for lib in sqlite3 gnutls openssl pthread crypto lua; do
 	for l in `whereis /$lib.h | grep "\.h"`; do  files=`expr $files + 1`; done
 	if [ $files -lt 2 ]; then
 		files=0
-		for l in `locate --limit=2 /$lib.h`; do  files=`expr $files + 1`; done
+		for l in `locate -l 2 /$lib.h`; do  files=`expr $files + 1`; done
 	fi
 	if [ $files -lt 1 ]; then
 		echo "[31m[BAD][0m"
@@ -82,8 +86,8 @@ echo "----------------------------------------"
 echo "Copying required header files..."
 heads=0
 for luah in lua.h lualib.h lauxlib.h; do
-	original=`locate --limit=1 /$luah`
-	if [ $original ]; then
+	original=`locate -l 1 /$luah`
+	if [ "$original" ]; then
 		cp "$original" src/
 echo cp "$original" src/
 	else
@@ -91,6 +95,13 @@ echo cp "$original" src/
 		exit
 	fi
 done
+
+if [ `expr "$os" = "Cygwin"` ]; then
+	echo "Downloading Cygwin-specific components..."
+	wget -O src/ns_parse.c http://rumbleserver.sourceforge.net/ns_parse.c
+fi
+
+
 
 echo "Making build directory..."
 mkdir -p build
@@ -165,3 +176,4 @@ echo "Cleaning up..."
 rm -r build/*.o*
 
 echo "[32mAll done![0m"
+echo "Everything you need has been placed in the build/ folder."
