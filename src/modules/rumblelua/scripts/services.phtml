@@ -1,29 +1,37 @@
-<h3>Coming soon! :&gt;
-</h3>
+<h2>Service information: <?=string.upper(session.section or "")?></h2>
 <?
-if ( session.section ) then
+if ( session.section and session.credentials.admin ) then
 	local svc = session.section;
-	local svcinfo = Rumble.serviceInfo(svc);
-	if (svcinfo) then
+	my.svcinfo = Rumble.serviceInfo(svc);
+	local svctrl = nil;
+
+	if (my.svcinfo) then
 		if (http.form.pause) then
 			Rumble.suspendService(session.section);
-			printf(session.section:upper() .. " suspended!");
+			svctrl = session.section:upper() .. " suspended!";
 		elseif (http.form.start) then
-			if (svcinfo.enabled == 2) then
+			if (my.svcinfo.enabled == 2) then
 				Rumble.resumeService(svc);
-				printf(session.section:upper() .. " resumed!");
-			elseif (svcinfo.enabled == 0) then
+				svctrl = session.section:upper() .. " resumed!";
+			elseif (my.svcinfo.enabled == 0) then
 				Rumble.startService(svc);
-				printf(session.section:upper() .. " started!");			
+				svctrl = session.section:upper() .. " started!";
+			else
+				svctrl = session.section:upper() .. " is already running!";
 			end
 		elseif (http.form.stop) then
 			Rumble.stopService(svc);
-			printf(session.section:upper() .. " stopped!");
+			svctrl = session.section:upper() .. " stopped!";
 		end
 	else
-		printf("No such service: " .. svc:upper());	
+		svctrl = "No such service: " .. svc:upper();	
+	end
+	if (svctrl) then
+		printf("<div class='notification'>Service notification:<br/>" .. svctrl .. "</div>");
 	end
 end
 ?>
 
-</pre>
+Traffic: <?
+printf(my.svcinfo.sent + my.svcinfo.received)
+?>

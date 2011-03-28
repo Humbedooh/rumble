@@ -18,10 +18,10 @@
       <li><a href="/settings"><img src="icons/sidebar_settings.png" alt="settings" width="22" height="22" align="absmiddle" />&nbsp;Server settings</a></li>
       <li><a href="/modules"><img src="icons/sidebar_modules.png" alt="modules" width="22" height="22" align="absmiddle" />&nbsp;Set up modules</a></li>
     </ul>
-    <p> <br />
+    <p>
+    
 <?
 if (session.credentials and session.credentials.admin) then
-	printf("<table class='elementsSmall'><tr><th>Services:</th></tr>");
     for k, svc in pairs({"smtp", "pop3", "imap4"}) do
         local svcinfo = Rumble.serviceInfo(svc);
         
@@ -54,21 +54,22 @@ if (session.credentials and session.credentials.admin) then
         	
         end
         controls = controls.. [[
-            <a href="/info:]]..svc..[["><img src="icons/action_info.png" align="absmiddle" title="Server information"/></a>
+            <a href="/services:]]..svc..[["><img src="icons/action_info.png" align="absmiddle" title="Service information"/></a>
             ]];
         printf(
         [[
-        <tr><td>
-        <img src="/icons/%sbutton.png" align="absmiddle" width="24" height="24"/>&nbsp;<b>%s</b>: %s<br/><br/>
-<strong>        Actions: </strong>
-        %s <br /><br />
+        <div class="servicepanel">
+        <div style="width:180px; float: left; height: 30px;">
+        <img src="/icons/%sbutton.png" align="absmiddle" width="24" height="24"/>&nbsp;<b>%s</b>: %s
+        </div>
+        <div style="width:180px; text-align:right; float: right; height: 30px;">
+        %s
+        </div>
 
-        </td>
-        </tr>
+</div>
         ]], icon, svc:upper(), status, controls);
 
     end
-    printf("</table>");
 end
 ?>
 </p>

@@ -291,3 +291,12 @@ height:0;
 	
 	
 }
+.servicepanel {
+	background-image: url(icons/sidebar_servicepanel.png);
+	float: left;
+	height: 50px;
+	width: 170px;
+	margin-top: 15px;
+	padding: 5px;
+	margin-left:2px;
+}
