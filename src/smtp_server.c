@@ -143,7 +143,7 @@ void *rumble_smtp_init(void *T) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        if ((session._tflags & RUMBLE_THREAD_DIE) || svc->enabled != 1 || thread->status == -1 ) {
+        if ((session._tflags & RUMBLE_THREAD_DIE) || svc->enabled != 1 || thread->status == -1) {
 
             /*~~~~~~~~~~~~~~~*/
             rumbleThread    *t;
@@ -194,7 +194,8 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
     if (session->sender) {
 
         /* Fire events scheduled for pre-processing run */
-        rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
+        rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                           RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL, parameters);
         if (rc != RUMBLE_RETURN_OKAY) {
 
             /* Something went wrong, let's clean up and return. */
@@ -240,7 +241,8 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
         }
 
         /* Fire post-processing hooks. */
-        rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_MAIL);
+        rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                           RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_MAIL, parameters);
         if (rc != RUMBLE_RETURN_OKAY) return (rc);
         session->flags |= RUMBLE_SMTP_HAS_MAIL;
         return (250);
@@ -271,7 +273,8 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         dvector_add(session->recipients, recipient);
 
         /* Fire events scheduled for pre-processing run */
-        rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT);
+        rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                           RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RCPT, parameters);
         if (rc != RUMBLE_RETURN_OKAY) {
             dvector_pop(session->recipients);           /* pop the last element from the vector */
             rumble_free_address(recipient);             /* flush the memory */
@@ -290,7 +293,8 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
              * Check if user has space in mailbox for this msg! ;
              * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
              */
-            rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
+            rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                               RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT, parameters);
             if (rc != RUMBLE_RETURN_OKAY) {
                 dvector_pop(session->recipients);       /* pop the last element from the vector */
                 rumble_free_address(recipient);         /* flush the memory */
@@ -306,8 +310,9 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
             if (session->flags & RUMBLE_SMTP_CAN_RELAY) {
 
                 /* Fire events scheduled for pre-processing run */
-                rc = rumble_server_schedule_hooks(master, session,
-                                                  RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT);
+                rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                                   RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
+                                                   parameters);
                 if (rc != RUMBLE_RETURN_OKAY) {
                     dvector_pop(session->recipients);   /* pop the last element from the vector */
                     rumble_free_address(recipient);     /* flush the memory */
@@ -344,6 +349,9 @@ ssize_t rumble_server_smtp_helo(masterHandle *master, sessionHandle *session, co
     char    *tmp = (char *) malloc(128);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_HELO, parameters);
+    if (rc != RUMBLE_RETURN_OKAY) return (rc);
     rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
     if (rc < 3) {
         free(tmp);
@@ -370,6 +378,9 @@ ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, co
     c_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_HELO, parameters);
+    if (rc != RUMBLE_RETURN_OKAY) return (rc);
     rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
     if (rc < 3) {
         free(tmp);
@@ -405,10 +416,14 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
     FILE        *fp;
     address     *el;
     d_iterator  iter;
+    ssize_t     rc;
     /*~~~~~~~~~~~~~~~~~~*/
 
     /* First, check for the right sequence of commands. */
     if (!(session->flags & RUMBLE_SMTP_HAS_RCPT)) return (503);
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_DATA, parameters);
+    if (rc != RUMBLE_RETURN_OKAY) return (rc);
 
     /* Make a unique filename and try to open the storage folder for writing. */
     fid = rumble_create_filename();
@@ -487,7 +502,8 @@ ssize_t rumble_server_smtp_rset(masterHandle *master, sessionHandle *session, co
     /*~~~~~~~*/
 
     /* Fire events scheduled for pre-processing run */
-    rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET, parameters);
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
 
     /* Reset the session handle */
@@ -495,7 +511,8 @@ ssize_t rumble_server_smtp_rset(masterHandle *master, sessionHandle *session, co
     rumble_clean_session(session);
 
     /* Fire post-processing hooks. */
-    rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_RSET);
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_HELO, parameters);
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
     return (250);
 }
@@ -515,7 +532,8 @@ ssize_t rumble_server_smtp_vrfy(masterHandle *master, sessionHandle *session, co
     if (sscanf(parameters, "%128[^@\"]@%128[^\"]", user, domain)) {
 
         /* Fire events scheduled for pre-processing run */
-        rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_VRFY);
+        rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                           RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_VRFY, parameters);
         if (rc != RUMBLE_RETURN_OKAY) return (rc);
 
         /* Check if account exists */
@@ -536,14 +554,16 @@ ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, co
     /*~~~~~~~*/
 
     /* Fire events scheduled for pre-processing run */
-    rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_NOOP);
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_NOOP, parameters);
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
 
     /*
      * Do...nothing ;
      * Fire post-processing hooks.
      */
-    rc = rumble_server_schedule_hooks(master, session, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_NOOP);
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_NOOP, parameters);
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
     return (250);
 }
@@ -563,8 +583,12 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
                     *line;
     rumble_mailbox  *OK;
     address         *addr;
+    ssize_t         rc;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_AUTH, parameters);
+    if (rc != RUMBLE_RETURN_OKAY) return (rc);
     memset(method, 0, 31);
     memset(digest, 0, 1025);
     if (sscanf(parameters, "%30s %1024s", method, digest) != 2) return (501);

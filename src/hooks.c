@@ -22,7 +22,7 @@ rumblemodule rumble_module_check(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *)) {
+void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *, const char *)) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     hookHandle      *hook = (hookHandle *) malloc(sizeof(hookHandle));
@@ -123,7 +123,7 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
     }
 }
 
-typedef ssize_t (*hookFunc) (sessionHandle *);
+typedef ssize_t (*hookFunc) (sessionHandle *, const char *cmd);
 
 /*
  =======================================================================================================================
@@ -166,6 +166,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
                 lua_State   *L = rumble_acquire_state();
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
                 printf("Running Lua hook %d\n", hook->lua_callback);
                 rc = lua_callback(L, (void *) hook, session);
                 rumble_release_state(L);
@@ -266,6 +267,82 @@ ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *sessio
         break;
     }
 
+    return (RUMBLE_RETURN_OKAY);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uint32_t flags, const char *line) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    ssize_t     rc = RUMBLE_RETURN_OKAY;
+    hookFunc    mFunc = NULL;
+    hookHandle  *hook;
+    c_iterator  iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+#if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+    if (dvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
+#endif
+    cforeach((hookHandle *), hook, hooks, iter) {
+        if (!hook) continue;
+        if (hook->flags == flags) {
+            if (hook->flags & RUMBLE_HOOK_FEED) {
+
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                /* ignore wrong feeds */
+                mqueue  *item = (mqueue *) session;
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+                if (!item->account->arg || strcmp(hook->module, item->account->arg)) {
+                    continue;
+                }
+            }
+
+            mFunc = hook->func;
+            if (mFunc) rc = (mFunc) (session);
+            else if (hook->lua_callback) {
+
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                lua_State   *L = rumble_acquire_state();
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+                rc = lua_callback(L, (void *) hook, session);
+                rumble_release_state(L);
+            }
+
+            if (rc == RUMBLE_RETURN_FAILURE) return (RUMBLE_RETURN_FAILURE);
+            if (rc == RUMBLE_RETURN_IGNORE) return (RUMBLE_RETURN_IGNORE);
+        }
+    }
+
+    return (rc);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+ssize_t rumble_service_schedule_hooks(rumbleService *svc, sessionHandle *session, uint32_t flags, const char *line) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc;
+    cvector         *hook = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+    switch (flags & RUMBLE_HOOK_STATE_MASK)
+    {
+    case RUMBLE_HOOK_ACCEPT:    hook = svc->init_hooks; break;
+    case RUMBLE_HOOK_COMMAND:   hook = svc->cue_hooks; break;
+    case RUMBLE_HOOK_EXIT:      hook = svc->exit_hooks; break;
+    case RUMBLE_HOOK_FEED:      hook = svc->master->_core.feed_hooks; break;
+    case RUMBLE_HOOK_PARSER:    hook = svc->master->_core.parser_hooks; break;
+    default:                    break;
+    }
+
+    rumble_service_execute_hooks(hook, session, flags, line);
     return (RUMBLE_RETURN_OKAY);
 }
 

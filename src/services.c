@@ -1,6 +1,11 @@
+/*$I0
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
+
 #include "rumble.h"
 #include "comm.h"
-extern masterHandle    *comm_master_handle;
+extern masterHandle *comm_master_handle;
 
 /*
  =======================================================================================================================
@@ -46,12 +51,12 @@ rumbleService *comm_serviceHandle(const char *svcName) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int comm_suspendService(rumbleService   *svc) {
+int comm_suspendService(rumbleService *svc) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
     c_iterator      iter;
     rumbleThread    *thread;
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (svc) {
         pthread_mutex_lock(&svc->mutex);
@@ -82,12 +87,12 @@ int comm_suspendService(rumbleService   *svc) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int comm_killService( rumbleService   *svc) {
+int comm_killService(rumbleService *svc) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
     c_iterator      iter;
     rumbleThread    *thread;
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (svc) {
         pthread_mutex_lock(&svc->mutex);
@@ -118,16 +123,16 @@ int comm_killService( rumbleService   *svc) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int comm_resumeService( rumbleService   *svc) {
+int comm_resumeService(rumbleService *svc) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
     int             x = 0,
                     y = 0;
     rumbleThread    *thread;
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (svc) {
-        if (svc->enabled != 2) return 0;
+        if (svc->enabled != 2) return (0);
         pthread_mutex_lock(&svc->mutex);
         y = RUMBLE_INITIAL_THREADS - svc->threads->size;
         y = y > (RUMBLE_INITIAL_THREADS || y < 0) ? RUMBLE_INITIAL_THREADS : y;
@@ -146,12 +151,17 @@ int comm_resumeService( rumbleService   *svc) {
     return (0);
 }
 
-rumbleService* comm_registerService(masterHandle *master, const char *svcName, void * (*init) (void *), const char *port, int threadCount) {
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+rumbleService *comm_registerService(masterHandle *master, const char *svcName, void * (*init) (void *), const char *port, int threadCount) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService           *svc;
     rumbleServicePointer    *svcp;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     svcp = (rumbleServicePointer *) malloc(sizeof(rumbleServicePointer));
     svc = (rumbleService *) malloc(sizeof(rumbleService));
     svcp->svc = svc;
@@ -173,18 +183,21 @@ rumbleService* comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.name = svcp->svcName;
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;
     cvector_add(master->services, svcp);
-    return svc;
+    return (svc);
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-int comm_startService(rumbleService* svc) {
-    rumbleThread * thread;
-    int n;
-    if (!svc) return 0;
-    
+int comm_startService(rumbleService *svc) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    rumbleThread    *thread;
+    int             n;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    if (!svc) return (0);
     if (svc->settings.port) {
         svc->socket = comm_init(svc->master, svc->settings.port);
         if (!svc->socket) {
@@ -199,6 +212,7 @@ int comm_startService(rumbleService* svc) {
         cvector_add(svc->threads, thread);
         pthread_create(&thread->thread, 0, svc->init, (void *) thread);
     }
+
     svc->enabled = 1;
     return (1);
 }

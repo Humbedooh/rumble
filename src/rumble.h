@@ -72,7 +72,7 @@
 
 /*
  * Disable the useless Microsoft warnings about unsafe operators and not-yet
- * defined functions (this is C, not C++, mor
+ * defined functions (this is C, not C++, mo
  */
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
@@ -401,7 +401,7 @@ typedef struct
 typedef struct
 {
     uint32_t    flags;
-    ssize_t (*func) (sessionHandle *);
+    ssize_t (*func) (sessionHandle *, const char *cmd);
     const char          *module;
     rumble_module_info  *modinfo;
     int                 lua_callback;
@@ -465,10 +465,11 @@ typedef struct
         size_t  received;
         size_t  sessions;
     } traffic;
-    struct {
-        const char* port;
-        const char* name;
-        int threadCount;
+    struct
+    {
+        const char  *port;
+        const char  *name;
+        int         threadCount;
     } settings;
 } rumbleService;
 typedef struct
@@ -590,7 +591,7 @@ extern "C"
  =======================================================================================================================
  */
 
-void            rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *));
+void            rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *, const char *));
 rumblemodule    rumble_module_check(void);
 void            rumble_service_add_command(rumbleService *svc, const char *command, svcCommand func);
 void            rumble_service_add_capability(rumbleService *svc, const char *command);

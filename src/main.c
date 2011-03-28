@@ -122,7 +122,7 @@ int rumbleStart(void) {
     masterHandle    *master;
     int             rc,
                     x;
-    rumbleService* svc;
+    rumbleService   *svc;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
@@ -160,7 +160,7 @@ int rumbleStart(void) {
     svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
     if (rumble_config_int(master, "enablesmtp")) {
         printf("%-48s", "Launching SMTP service...");
-        statusLog("Launching SMTP service");    
+        statusLog("Launching SMTP service");
         rc = comm_startService(svc);
         if (!rc) {
             printf("[BAD]\r\n");

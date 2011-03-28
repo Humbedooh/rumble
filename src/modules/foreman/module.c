@@ -7,7 +7,7 @@
 #define FOREMAN_MAX_THREADS     750 /* Max number of threads each service is allowed to run at once. */
 #define FOREMAN_FALLBACK        10  /* Fall back to a minimum of 10 workers per service when idling */
 #define FOREMAN_THREAD_BUFFER   5   /* Create 5 new workers whenever there's a shortage */
-ssize_t accept_hook(sessionHandle *session);    /* Prototype */
+ssize_t accept_hook(sessionHandle *session, const char *junk);  /* Prototype */
 
 /*
  =======================================================================================================================
@@ -29,7 +29,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t accept_hook(sessionHandle *session) {
+ssize_t accept_hook(sessionHandle *session, const char *junk) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService   *svc = NULL;
@@ -48,7 +48,8 @@ ssize_t accept_hook(sessionHandle *session) {
     /* Find out what service we're dealing with here. */
     svc = (rumbleService *) session->_svc;
     if (svc) {
-        if (svc->enabled != 1) return RUMBLE_RETURN_IGNORE; /* Return immediately if svc isn't running */
+        if (svc->enabled != 1) return (RUMBLE_RETURN_IGNORE);           /* Return immediately if svc isn't running */
+
         /*
          * Check if there's a shortage of workers. If there is, make some more, if not,
          * just return

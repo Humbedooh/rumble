@@ -15,11 +15,11 @@ socketHandle    comm_init(masterHandle *m, const char *port);
 void            comm_accept(socketHandle sock, clientHandle *client);
 dvector         *comm_mxLookup(const char *domain);
 socketHandle    comm_open(masterHandle *m, const char *host, unsigned short port);
-rumbleService*  comm_registerService(masterHandle *m, const char *svcName, void * (*init) (void *), const char *port, int threadCount);
-int             comm_startService(rumbleService* svc);
+rumbleService   *comm_registerService(masterHandle *m, const char *svcName, void * (*init) (void *), const char *port, int threadCount);
+int             comm_startService(rumbleService *svc);
 rumbleService   *comm_serviceHandleExtern(masterHandle *m, const char *svcName);
 rumbleService   *comm_serviceHandle(const char *svcName);
-int             comm_suspendService(rumbleService* svc);
-int             comm_killService(rumbleService* svc);
-int             comm_resumeService(rumbleService* svc);
+int             comm_suspendService(rumbleService *svc);
+int             comm_killService(rumbleService *svc);
+int             comm_resumeService(rumbleService *svc);
 #endif /* COMM_H */
