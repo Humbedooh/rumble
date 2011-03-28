@@ -68,7 +68,7 @@ void *rumble_smtp_init(void *T) {
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP);
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_smtp_reply_code(220), myName);   /* Hello! */
-        else printf("hrmmm %d\n", rc);
+        else printf("Session blocked by module\n");
 
         /* Parse incoming commands */
         while (rc != RUMBLE_RETURN_FAILURE) {

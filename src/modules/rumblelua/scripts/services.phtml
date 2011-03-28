@@ -32,6 +32,13 @@ if ( session.section and session.credentials.admin ) then
 end
 ?>
 
-Traffic: <?
-printf(my.svcinfo.sent + my.svcinfo.received)
+<h3>Traffic:</h3> <?
+local sent, recv, total = math.comma(my.svcinfo.sent), math.comma(my.svcinfo.received),math.comma(my.svcinfo.sent + my.svcinfo.received);
+printf([[
+<table border="0" cellspacing="5">
+<tr><td><b>Sent:</b></td><td align="right"> %s bytes</td></tr>
+<tr><td><b>Received:</b></td><td align="right"> %s bytes</td></tr>
+<tr ><td><b>Total:</b></td><td align="right"style="border-top: 1px solid #000; border-bottom: 1px solid #000;"> %s bytes</td></tr>
+</table>
+]], sent, recv, total);
 ?>

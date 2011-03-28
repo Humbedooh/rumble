@@ -166,7 +166,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
                 lua_State   *L = rumble_acquire_state();
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+                printf("Running Lua hook %d\n", hook->lua_callback);
                 rc = lua_callback(L, (void *) hook, session);
                 rumble_release_state(L);
             }
@@ -208,15 +208,15 @@ ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *sessio
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
         case RUMBLE_HOOK_SMTP:
-            svc = comm_serviceHandle("smtp");
+            svc = comm_serviceHandleExtern(handle, "smtp");
             return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
 
         case RUMBLE_HOOK_POP3:
-            svc = comm_serviceHandle("pop3");
+            svc = comm_serviceHandleExtern(handle, "pop3");
             return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
 
         case RUMBLE_HOOK_IMAP:
-            svc = comm_serviceHandle("imap4");
+            svc = comm_serviceHandleExtern(handle, "imap4");
             return (rumble_server_execute_hooks(session, svc->init_hooks, flags));
 
         default:

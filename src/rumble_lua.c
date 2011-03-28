@@ -85,6 +85,7 @@ static int rumble_lua_sethook(lua_State *L) {
                     svcCommand[32];
     rumbleService   *svc = 0;
     cvector         *svchooks = 0;
+    int isFirstCaller = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     hook->flags = 0;
@@ -101,7 +102,15 @@ static int rumble_lua_sethook(lua_State *L) {
     rumble_string_lower(svcName);
     rumble_string_lower(svcLocation);
     rumble_string_lower(svcCommand);
+    
+    lua_rawgeti(L, LUA_REGISTRYINDEX, 1);
+    isFirstCaller = (lua_tointeger(L, -1) == 0) ? 1 : 0;
 
+    if (!isFirstCaller) {
+        lua_settop(L,0);
+        lua_pushboolean(L, 0);
+        return (1);
+    }
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Check which service to hook onto
@@ -166,9 +175,11 @@ static int rumble_lua_sethook(lua_State *L) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
+    hook->module = "Lua script";
     cvector_add(svchooks, hook);
     lua_settop(L, 0);
-    return (0);
+    lua_pushboolean(L, 1);
+    return (1);
 }
 
 /*
@@ -1378,12 +1389,13 @@ int Foo_register(lua_State *L) {
  =======================================================================================================================
  */
 signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
-
+    
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     lua_State       *L = lua_newthread(state);
-    int             err_func;
     sessionHandle   *sess = (sessionHandle *) session;
     rumbleService   *svc = 0;
+    int rc = RUMBLE_RETURN_OKAY;
+    int type = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     lua_atpanic(L, rumble_lua_panic);
@@ -1419,8 +1431,7 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
     lua_pushliteral(L, "address");
     lua_pushlstring(L, sess->client->addr, strlen(sess->client->addr));
     lua_rawset(L, -3);
-    lua_getglobal(L, "dprint");
-    err_func = lua_gettop(L);
+    
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -1428,8 +1439,20 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    lua_pcall(L, 1, 0, err_func);
+    if (lua_pcall(L, 1, 1, 0)) {
+        fprintf(stderr, "Lua error: %s!!\n", lua_tostring(L, -1));
+    }
+    type = lua_type(L,-1);
+    if ( type == LUA_TBOOLEAN ) rc = lua_toboolean(L,-1) ? RUMBLE_RETURN_OKAY : RUMBLE_RETURN_FAILURE;
+    if ( type == LUA_TNUMBER ) rc = luaL_optint(L, -1, RUMBLE_RETURN_OKAY);
+    if ( type == LUA_TSTRING ) {
+        const char* str = luaL_optstring(L, -1, "okay");
+        if (!strcmp(str, "okay")) rc = RUMBLE_RETURN_OKAY;
+        if (!strcmp(str, "failure")) rc = RUMBLE_RETURN_FAILURE;
+        if (!strcmp(str, "ignore")) rc = RUMBLE_RETURN_IGNORE;
+    }
     lua_settop(L, 0);
+    
 
     /*$1
      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1445,6 +1468,6 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
      * ;
      * lua_close(L);
      */
-    return (RUMBLE_RETURN_OKAY);
+    return (rc);
 }
 #endif
