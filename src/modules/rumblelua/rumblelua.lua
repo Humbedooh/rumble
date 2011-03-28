@@ -2,55 +2,57 @@ local portNum = 2580; -- Port number for the web interface
 
 local fileCache = {};
 
--- function for retrieving files
+-- getFile(): Retrieves and caches files.
 function getFile(filename)
-	local found = false;
-	local ret = "";
-	for k, entry in pairs(fileCache) do
-		if ( entry.filename == filename ) then
-			local fstat = file.stat(filename);
-			if (fstat) then
-				found = true;
-				if ( entry.modified ~= fstat.modified ) then
-					local f = io.open(filename, "rb");
-					if ( f ) then 
-						entry.contents = f:read("*a");
-						f:close();
-					end
-				end
-				ret = entry.contents;
-			else
-				ret = "";
-			end
-			break;
-		end
-	end
-	if (not found) then
-		local entry = { filename = filename };
-		local fstat = file.stat(filename);
-		if (fstat) then
-			entry.modified = fstat.modified;
-		end
-		entry.contents = "";
-		local f = io.open(filename, "rb");
-		if (f) then
-			entry.contents = f:read("*a");
-			f:close();
-		end
-		ret = entry.contents;
-		table.insert(fileCache, entry);
-	end
+    local found = false;
+    local ret = "";
+    for k, entry in pairs(fileCache) do
+        if ( entry.filename == filename ) then
+            local fstat = file.stat(filename);
+            if (fstat) then
+                found = true;
+                if ( entry.modified ~= fstat.modified ) then
+                    local f = io.open(filename, "rb");
+                    if ( f ) then 
+                        entry.contents = f:read("*a");
+                        f:close();
+                    end
+                end
+                ret = entry.contents;
+            else
+                ret = "";
+            end
+            break;
+        end
+    end
+    if (not found) then
+        local entry = { filename = filename };
+        local fstat = file.stat(filename);
+        if (fstat) then
+            entry.modified = fstat.modified;
+        end
+        entry.contents = "";
+        local f = io.open(filename, "rb");
+        if (f) then
+            entry.contents = f:read("*a");
+            f:close();
+        end
+        ret = entry.contents;
+        table.insert(fileCache, entry);
+    end
 
     return ret;
 end
 
+-- math.comma(): Turns 12345678 into 12,345,678 and so on.
 function math.comma(number)
- local left,num,right = string.match(number,'^([^%d]*%d)(%d+)(.-)$');
-local prettyNum = (left and left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse()) or number);
-return prettyNum;
+    local left,num,right = string.match(number,'^([^%d]*%d)(%d+)(.-)$');
+    local prettyNum = (left and left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse()) or number);
+    return prettyNum;
 end
 
--- character table string
+
+-- character table string for base 64 stuff
 local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
 -- base64 encoding
@@ -83,6 +85,7 @@ function dec(data)
     end))
 end
 
+
 --[[ parseHTTP: Parses a HTTP request into URL, headers and form data ]] --
 function parseHTTP(session) 
     local ret = { URL = "", headers = {}, form = {}};
@@ -110,43 +113,43 @@ function parseHTTP(session)
     
     --[[  Parse form data  ]]-- 
     for k, v in string.gmatch(formdata, "([^&=]+)=([^&]+)") do
-		v = v:gsub("+", " "):gsub("%%(%w%w)", function(s) return string.char(tonumber(s,16)) end);
-		if (not ret.form[k]) then
-			ret.form[k] = v;
-		else
-			if ( type(ret.form[k]) == "string") then
-				local tmp = ret.form[k];
-				ret.form[k] = {tmp};
-			end
-			table.insert(ret.form[k], v);
-		end
+        v = v:gsub("+", " "):gsub("%%(%w%w)", function(s) return string.char(tonumber(s,16)) end);
+        if (not ret.form[k]) then
+            ret.form[k] = v;
+        else
+            if ( type(ret.form[k]) == "string") then
+                local tmp = ret.form[k];
+                ret.form[k] = {tmp};
+            end
+            table.insert(ret.form[k], v);
+        end
     end
     
     return ret;
 end
 
-function append(...)
+function append(...) -- This is the printf() function for the <? code ?> snippets inside the PHTML files.
     sess.contents = sess.contents .. string.format(...);
 end
 
 
-
+-- acceptHTTP: The big service handling function.
 function acceptHTTP(session)
-	local rnd = math.random(os.time());
+    local rnd = math.random(os.time());
     local servername = Rumble.readConfig("servername");
     session.info = Rumble.serverInfo();
     local d = debug.getinfo(1);
     session.path = session.info.path .. "/" .. d.short_src:match("^(.-)%w+%.lua$");
     local auth = {};
     local firstVisit = true;
-	
-	--session:lock();
+    
+    --session:lock();
     session.output = getFile(session.path .. "/template.html");
     local config = getFile(session.path .. "/auth.cfg");
-	--session:unlock();
-	
+    --session:unlock();
+    
     for user,pass,rights in config:gmatch("([^:\r\n]+):([^:\r\n]+):([^:\r\n]+)") do
-		firstVisit = false;
+        firstVisit = false;
         local domains = {};
         local admin = false;
         if ( rights == "*" ) then admin = true;
@@ -160,7 +163,7 @@ function acceptHTTP(session)
     sess = session;
     session.credentials = nil;
     session.http = http;
-	session.auth = auth;
+    session.auth = auth;
     
     --[[ First, check authorization ]]--
     if (http.headers.Authorization) then
@@ -171,126 +174,126 @@ function acceptHTTP(session)
             local pass_hash = (pass or ""):SHA256();
             for _user, cred in pairs(auth) do
                 if (_user == user and pass_hash == cred.password) then 
-					session.credentials = cred; 
-					session.credentials.user = _user; 
-					break; 
-				end
+                    session.credentials = cred; 
+                    session.credentials.user = _user; 
+                    break; 
+                end
             end
         end
     end
-	if (firstVisit and http.URL == "") then
-		session:send("HTTP/1.1 302 Moved\r\n");
-		session:send("Location: /welcome\r\n\r\n");
-		return;
-	elseif (not firstVisit) then
-		if (not session.credentials) then
-			session:send("HTTP/1.1 401 Authorization Required\r\nWWW-Authenticate: Basic realm=\"RumbleLua\"\r\nContent-Type: text/html\r\n\r\nAuthorization required!\n");
-			return;
-		end
-	end
+    if (firstVisit and http.URL == "") then
+        session:send("HTTP/1.1 302 Moved\r\n");
+        session:send("Location: /welcome\r\n\r\n");
+        return;
+    elseif (not firstVisit) then
+        if (not session.credentials) then
+            session:send("HTTP/1.1 401 Authorization Required\r\nWWW-Authenticate: Basic realm=\"RumbleLua\"\r\nContent-Type: text/html\r\n\r\nAuthorization required!\n");
+            return;
+        end
+    end
     
-	
+    
     --[[ Then, check if a specific file was requested rather than an action ]]--
     if ( not http.URL:match("auth%.cfg")) then
-		--session:lock();
-		if (http.URL:len() == 0) then http.URL = "index"; end
-		local exists = file.exists(session.path .. http.URL);
-		--session:unlock();
+        --session:lock();
+        if (http.URL:len() == 0) then http.URL = "index"; end
+        local exists = file.exists(session.path .. http.URL);
+        --session:unlock();
         if (exists) then
-			session:send("HTTP/1.1 200 OK\r\n");
-			session:send("Connection: close\r\n");
+            session:send("HTTP/1.1 200 OK\r\n");
+            session:send("Connection: close\r\n");
             output = getFile(session.path .. http.URL);
-			
-			if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
-			elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
-			elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
-			else session:send("Content-Type: binary/octet-stream\r\n");
-			end
-			session:send("\r\n");
-			if (output) then session:send(output:len(), output); end
-			output = nil;
-			return;
-		else 
-			local section,subSection = http.URL:lower():match("^([^:]+):?(.-)$");
-			session.section = subSection;
-			local scriptFile = session.path .. "/scripts/" .. section .. ".phtml";
-			if ( http.URL == "" ) then scriptFile = session.path .. "/scripts/index.phtml"; end
-			if (file.exists(scriptFile) and not (firstVisit and http.URL ~= "welcome")) then
-				session.script = getFile(scriptFile);
-			else
-				session:send("HTTP/1.1 302 Moved\r\n");
-				session:send("Location: /\r\n\r\n");
-				return;
-			end
-			
-			session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or "meh"; end);
-			session.pos = "<!-- -->"
-			session.atend = nil;
-			_G.my = {};
-			_G.rnd = rnd;
-			session.script = session.script:gsub("<%?(.-)%?>", 
-				function(x) 
-					_G.session = session;
-					local output = "";
-					local _printf = printf;
-					local xit = _G.exit;
-					_G.stop = function() session.stop = true; session.atend = session.script:find("<?"..x.."?>",1,true) + output:len();end
-					_G.exit = function() session.killed = true; return; end
-					_G.printf = function(...) output = output .. string.format(...); end;
-					if (not session.stop) then 
-						loadstring(x)();
-					end
-					_G.printf = _printf;
-					_G.exit = xit;
-					
-					session.pos = string.format("<!-- %#08X -->", math.random(1,999999));
-					return output;
-				end);
-			if (session.atend) then session.script = session.script:sub(1,session.atend); end	
-			session.contents = session.script:gsub("%[%%contents%%%]", session.script);
-		end
-		
+            
+            if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
+            elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
+            elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
+            else session:send("Content-Type: binary/octet-stream\r\n");
+            end
+            session:send("\r\n");
+            if (output) then session:send(output:len(), output); end
+            output = nil;
+            return;
+        else 
+            local section,subSection = http.URL:lower():match("^([^:]+):?(.-)$");
+            session.section = subSection;
+            local scriptFile = session.path .. "/scripts/" .. section .. ".phtml";
+            if ( http.URL == "" ) then scriptFile = session.path .. "/scripts/index.phtml"; end
+            if (file.exists(scriptFile) and not (firstVisit and http.URL ~= "welcome")) then
+                session.script = getFile(scriptFile);
+            else
+                session:send("HTTP/1.1 302 Moved\r\n");
+                session:send("Location: /\r\n\r\n");
+                return;
+            end
+            
+            session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or "meh"; end);
+            session.pos = "<!-- -->"
+            session.atend = nil;
+            _G.my = {};
+            _G.rnd = rnd;
+            session.script = session.script:gsub("<%?(.-)%?>", 
+                function(x) 
+                    _G.session = session;
+                    local output = "";
+                    local _printf = printf;
+                    local xit = _G.exit;
+                    _G.stop = function() session.stop = true; session.atend = session.script:find("<?"..x.."?>",1,true) + output:len();end
+                    _G.exit = function() session.killed = true; return; end
+                    _G.printf = function(...) output = output .. string.format(...); end;
+                    if (not session.stop) then 
+                        loadstring(x)();
+                    end
+                    _G.printf = _printf;
+                    _G.exit = xit;
+                    
+                    session.pos = string.format("<!-- %#08X -->", math.random(1,999999));
+                    return output;
+                end);
+            if (session.atend) then session.script = session.script:sub(1,session.atend); end    
+            session.contents = session.script:gsub("%[%%contents%%%]", session.script);
+        end
+        
      end
     
-    --[[ Otherwise, start the action! ]]--
-	if (not session.killed) then
-		session:send("HTTP/1.1 200 OK\r\n");
-		session:send("Connection: close\r\n");
-		session:send("Content-Type: text/html\r\n");
-		session:send("\r\n");
-		session.output = session.output:gsub("%[%%header%%%]", ("RumbleLua on %s"):format(servername));
-		session.output = session.output:gsub("%[%%title%%%]", "Main page");
-		session.output = session.output:gsub("%[%%version%%%]", session.info.version);
-		session.output = session.output:gsub("%[%%footer%%%]", ("Powered by Rumble Mail Server v/%s - %s"):format(session.info.version, os.date()));
-		session.output = session.output:gsub("%[%%contents%%%]", session.contents);
-		_G.my = {};
-		session.output = session.output:gsub("<%?(.-)%?>", 
-			function(x) 
-				_G.session = session;
-				local output = "";
-				local _printf = printf;
-				local xit = _G.exit;
-				_G.stop = function() session.stop = true; session.atend = session.output:find("<?"..x.."?>",1,true) + output:len();end
-				_G.exit = function() session.killed = true; return; end
-				_G.printf = function(...) output = output .. string.format(...); end;
-				if (not session.stop) then 
-					loadstring(x)();
-				end
-				_G.printf = _printf;
-				_G.exit = xit;
-				return output;
-			end);
-		if (session.atend) then session.script = session.output:sub(1,session.atend); end	
-		session:send(session.output);
-	end
-	session.credentials = nil;
-	auth = nil;
-	session = {};
-	output = "";
-	http.headers = nil;
-	http = nil;
-	_LUA_TMP = "";
-	collectgarbage();
+    --[[ Add the remaining stuff and send the page ]]--
+    if (not session.killed) then
+        session:send("HTTP/1.1 200 OK\r\n");
+        session:send("Connection: close\r\n");
+        session:send("Content-Type: text/html\r\n");
+        session:send("\r\n");
+        session.output = session.output:gsub("%[%%header%%%]", ("RumbleLua on %s"):format(servername));
+        session.output = session.output:gsub("%[%%title%%%]", "Main page");
+        session.output = session.output:gsub("%[%%version%%%]", session.info.version);
+        session.output = session.output:gsub("%[%%footer%%%]", ("Powered by Rumble Mail Server v/%s - %s"):format(session.info.version, os.date()));
+        session.output = session.output:gsub("%[%%contents%%%]", session.contents);
+        _G.my = {};
+        session.output = session.output:gsub("<%?(.-)%?>", 
+            function(x) 
+                _G.session = session;
+                local output = "";
+                local _printf = printf;
+                local xit = _G.exit;
+                _G.stop = function() session.stop = true; session.atend = session.output:find("<?"..x.."?>",1,true) + output:len();end
+                _G.exit = function() session.killed = true; return; end
+                _G.printf = function(...) output = output .. string.format(...); end;
+                if (not session.stop) then 
+                    loadstring(x)();
+                end
+                _G.printf = _printf;
+                _G.exit = xit;
+                return output;
+            end);
+        if (session.atend) then session.script = session.output:sub(1,session.atend); end    
+        session:send(session.output);
+    end
+    session.credentials = nil;
+    auth = nil;
+    session = {};
+    output = "";
+    http.headers = nil;
+    http = nil;
+    _LUA_TMP = "";
+    collectgarbage();
 end
 
 _LUA_TMP = "";
@@ -306,8 +309,8 @@ end
 
 do
     if (Rumble.createService(acceptHTTP, portNum, 20) == true) then
-		print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", "OK"));
-	end
+        print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", "OK"));
+    end
     
 end
 
