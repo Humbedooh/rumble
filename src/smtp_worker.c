@@ -182,7 +182,7 @@ void *rumble_worker_process(void *m) {
     rumble_mailbox  *user;
     void            *state;
     ssize_t         rc;
-    masterHandle    *master = (masterHandle *) m;
+    masterHandle    *master = svc->master;
     sessionHandle   *sess = (sessionHandle *) malloc(sizeof(sessionHandle)),
                     *s;
     clientHandle    c;

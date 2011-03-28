@@ -80,7 +80,6 @@ size_t rumble_copy_mail(masterHandle *m, const char *fid, const char *usr, const
                 *ofp;
     size_t      fsize = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     if (!filename || !ofilename) merror();
     nfid = rumble_create_filename();
     sprintf(filename, "%s/%s", path, nfid);
