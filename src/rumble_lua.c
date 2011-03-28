@@ -144,6 +144,11 @@ static int rumble_lua_sethook(lua_State *L) {
     if (!strcmp(svcLocation, "command")) {
         svchooks = svc->cue_hooks;
         hook->flags |= RUMBLE_HOOK_COMMAND;
+        if (!strcmp(svcCommand, "helo")) hook->flags |= RUMBLE_CUE_SMTP_HELO;
+        if (!strcmp(svcCommand, "ehlo")) hook->flags |= RUMBLE_CUE_SMTP_HELO;
+        if (!strcmp(svcCommand, "mail")) hook->flags |= RUMBLE_CUE_SMTP_MAIL;
+        if (!strcmp(svcCommand, "rcpt")) hook->flags |= RUMBLE_CUE_SMTP_RCPT;
+        if (!strcmp(svcCommand, "data")) hook->flags |= RUMBLE_CUE_SMTP_DATA;
     }
 
     if (!svchooks) {

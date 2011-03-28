@@ -160,7 +160,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
             printf("<debug :: hooks> Executing hook %p from %s\n", (void *) hookFunc, hook->module);
 #endif
-            if (mFunc) rc = (mFunc) (session);
+            if (mFunc) rc = (mFunc) (session,0);
             else if (hook->lua_callback) {
 
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -283,9 +283,9 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
     c_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-#if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
-    if (dvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
-#endif
+//#if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+    if (hooks->size) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
+//#endif
     cforeach((hookHandle *), hook, hooks, iter) {
         if (!hook) continue;
         if (hook->flags == flags) {
@@ -302,7 +302,7 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
             }
 
             mFunc = hook->func;
-            if (mFunc) rc = (mFunc) (session);
+            if (mFunc) rc = (mFunc) (session, line);
             else if (hook->lua_callback) {
 
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -328,7 +328,6 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
 ssize_t rumble_service_schedule_hooks(rumbleService *svc, sessionHandle *session, uint32_t flags, const char *line) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~*/
-    rumbleService   *svc;
     cvector         *hook = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
