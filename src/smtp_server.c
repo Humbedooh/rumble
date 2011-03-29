@@ -591,7 +591,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
     memset(method, 0, 31);
     memset(digest, 0, 1025);
-    if (sscanf(parameters, "%30s %1024s", method, digest) != 2) return (501);
+    if (sscanf(parameters, "%30s %1024s", method, digest) < 1) return (501);
     rumble_string_lower(method);
     pass = "";
     addr = 0;
@@ -599,7 +599,6 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
 
     /* LOGIN method */
     if (!strcmp(method, "login")) {
-
         /* Username */
         rcsend(session, "334 VXNlcm5hbWU6\r\n");
         line = rcread(session);

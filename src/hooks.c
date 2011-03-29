@@ -167,7 +167,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
                 lua_State   *L = rumble_acquire_state();
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-                printf("Running Lua hook %d\n", hook->lua_callback);
+/*                printf("Running Lua hook %d\n", hook->lua_callback);*/
                 rc = lua_callback(L, (void *) hook, session);
                 rumble_release_state(L);
             }
@@ -283,9 +283,9 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
     c_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-//#if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
+#if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
     if (hooks->size) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
-//#endif
+#endif
     cforeach((hookHandle *), hook, hooks, iter) {
         if (!hook) continue;
         if (hook->flags == flags) {

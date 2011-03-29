@@ -376,7 +376,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
     if (fp) {
         rcsend(session, "+OK\r\n");
         while (!feof(fp)) {
-            fgets(buffer, 2048, fp);
+            if (!fgets(buffer, 2048, fp)) break;
             rcsend(session, buffer);
         }
 
@@ -429,7 +429,7 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
             rcsend(session, "+OK\r\n");
             while (!feof(fp) && lines) {
                 lines--;
-                fgets(buffer, 2048, fp);
+                if (!fgets(buffer, 2048, fp)) break;
                 rcsend(session, buffer);
             }
 

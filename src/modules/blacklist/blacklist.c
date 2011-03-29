@@ -15,7 +15,7 @@ const char      *blacklist_logfile = 0;
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_blacklist_domains(sessionHandle *session) {
+ssize_t rumble_blacklist_domains(sessionHandle *session, const char* junk) {
 
     /*~~~~~~~~~~~~~~~~*/
     dvector_element *el;
@@ -69,7 +69,7 @@ ssize_t rumble_blacklist_domains(sessionHandle *session) {
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_blacklist(sessionHandle *session) {
+ssize_t rumble_blacklist(sessionHandle *session, const char* junk) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     /* Resolve client address name */

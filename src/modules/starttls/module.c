@@ -81,7 +81,7 @@ ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const cha
     Generic STOPTLS handler (or called when a TLS connection is closed)
  =======================================================================================================================
  */
-ssize_t rumble_tls_stop(sessionHandle *session) {
+ssize_t rumble_tls_stop(sessionHandle *session, const char* junk) {
     if (session->client->tls) {
         gnutls_bye((gnutls_session_t) session->client->tls, GNUTLS_SHUT_RDWR);
         gnutls_deinit((gnutls_session_t) session->client->tls);
@@ -110,8 +110,10 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     fflush(stdout);
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";
-    gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+    /*gnutls_global_mutex_set (pthread_mutex_init, pthread_mutex_destroy(), pthread_mutex_lock, pthread_mutex_unlock);*/
+    gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
+    
     if (gnutls_global_init()) {
         fprintf(stderr, "<TLS> Failed!\r\n");
         return (EXIT_FAILURE);

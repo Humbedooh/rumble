@@ -60,10 +60,12 @@ void *rumble_imap_init(void *T) {
         comm_accept(svc->socket, session.client);
         pthread_mutex_lock(&svc->mutex);
         dvector_add(svc->handles, (void *) sessptr);
+        svc->traffic.sessions++;
         pthread_mutex_unlock(&svc->mutex);
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
+        
         now = time(0);
         pops->bag = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
