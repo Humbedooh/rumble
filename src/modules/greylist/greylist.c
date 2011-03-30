@@ -17,7 +17,7 @@ typedef struct
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_greylist(sessionHandle *session, const char* junk) {
+ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
     address         *recipient;

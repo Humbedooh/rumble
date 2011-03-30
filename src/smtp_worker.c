@@ -180,7 +180,6 @@ void *rumble_worker_process(void *m) {
     mqueue          *item;
     char            *tmp;
     rumble_mailbox  *user;
-    void            *state;
     ssize_t         rc;
     masterHandle    *master = svc->master;
     sessionHandle   *sess = (sessionHandle *) malloc(sizeof(sessionHandle)),
@@ -278,10 +277,8 @@ void *rumble_worker_process(void *m) {
 
                         free(ofilename);
                         free(nfilename);
-                        state = rumble_database_prepare(master->_core.db, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)",
-                                                        item->account->uid, item->fid, fsize);
-                        rumble_database_run(state);
-                        rumble_database_cleanup(state);
+                        rumble_database_do(0, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)", item->account->uid,
+                                           item->fid, fsize);
 
                         /* done here! */
                     }
@@ -307,11 +304,9 @@ void *rumble_worker_process(void *m) {
                                     sprintf(loops, "%u", item->loops);
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
-                                        state = rumble_database_prepare(master->_core.db,
-                                                                        "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
-                                                                        loops, item->fid, item->sender->raw, email, item->flags);
-                                        rumble_database_run(state);
-                                        rumble_database_cleanup(state);
+                                        rumble_database_do(0,
+                                                           "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
+                                                           loops, item->fid, item->sender->raw, email, item->flags);
                                     }
                                 }
 
@@ -387,11 +382,9 @@ void *rumble_worker_process(void *m) {
 
                 /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
                 sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
-                state = rumble_database_prepare(master->_core.db,
-                                                "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)",
-                                            item->loops, item->fid, tmp, item->recipient->raw, item->flags);
-                rumble_database_run(state);
-                rumble_database_cleanup(state);
+                rumble_database_do(0,
+                                   "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)",
+                               item->loops, item->fid, tmp, item->recipient->raw, item->flags);
                 memset(tmp, 0, 256);
             } else {
                 printf("Mail delivered.\r\n");

@@ -477,14 +477,8 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
 
     fclose(fp);
     foreach((address *), el, session->recipients, iter) {
-
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        void    *state = rumble_database_prepare(master->_core.db, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)",
-                                                 fid, session->sender->raw, el->raw, session->sender->_flags);
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-        rumble_database_run(state);
-        rumble_database_cleanup(state);
+        rumble_database_do(master->_core.db, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
+                           session->sender->raw, el->raw, session->sender->_flags);
     }
 
     free(fid);
@@ -599,6 +593,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
 
     /* LOGIN method */
     if (!strcmp(method, "login")) {
+
         /* Username */
         rcsend(session, "334 VXNlcm5hbWU6\r\n");
         line = rcread(session);

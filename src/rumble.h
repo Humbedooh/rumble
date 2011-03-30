@@ -5,6 +5,7 @@
  */
 
 #ifndef RUMBLE_H
+#   define _HUGE   - 1
 #   define RUMBLE_H
 #   define RUMBLE_INITIAL_THREADS  25
 
@@ -72,7 +73,7 @@
 
 /*
  * Disable the useless Microsoft warnings about unsafe operators and not-yet
- * defined functions (this is C, not C++, mo
+ * defined functions (this is C, not C++, m
  */
 #      pragma warning(disable : 5)
 #      pragma warning(disable : 996)
@@ -602,6 +603,7 @@ void            rumble_service_add_capability(rumbleService *svc, const char *co
  =======================================================================================================================
  */
 
+char                        *strclone(const void *o);
 void                        rumble_release_state(lua_State *X);
 lua_State                   *rumble_acquire_state(void);
 size_t                      rumble_file_exists(const char *filename);

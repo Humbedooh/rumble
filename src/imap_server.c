@@ -65,7 +65,6 @@ void *rumble_imap_init(void *T) {
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
-        
         now = time(0);
         pops->bag = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
@@ -476,7 +475,6 @@ ssize_t rumble_server_imap_create(masterHandle *master, sessionHandle *session, 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_args                     *args;
     char                            *newName;
-    void                            *state;
     rumble_mailman_shared_folder    *folder,
                                     *newFolder;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
@@ -501,9 +499,7 @@ ssize_t rumble_server_imap_create(masterHandle *master, sessionHandle *session, 
         else {
 
             /* Add the folder to the SQL DB */
-            state = rumble_database_prepare(master->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
-            rumble_database_run(state);
-            rumble_database_cleanup(state);
+            rumble_database_do(master->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
 
             /* Update the local folder list */
             rumble_mailman_update_folders(imap->bag);
@@ -536,7 +532,6 @@ ssize_t rumble_server_imap_rename(masterHandle *master, sessionHandle *session, 
     rumble_args                     *args;
     char                            *oldName,
                                     *newName;
-    void                            *state;
     rumble_mailman_shared_folder    *folder,
                                     *oldFolder,
                                     *newFolder;
@@ -562,9 +557,7 @@ ssize_t rumble_server_imap_rename(masterHandle *master, sessionHandle *session, 
         else if (!oldFolder)
             rcprintf(session, "%s NO RENAME failed: No such folder <%s>\r\n", extra_data, oldName);
         else {
-            state = rumble_database_prepare(master->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id);
-            rumble_database_run(state);
-            rumble_database_cleanup(state);
+            rumble_database_do(master->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id);
             free(oldFolder->name);
             oldFolder->name = (char *) calloc(1, strlen(newName) + 1);
             strncpy(oldFolder->name, newName, strlen(newName));
@@ -588,7 +581,6 @@ ssize_t rumble_server_imap_subscribe(masterHandle *master, sessionHandle *sessio
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_args                     *args;
     char                            *folderName;
-    void                            *state;
     rumble_mailman_shared_folder    *pair,
                                     *folder;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
@@ -608,9 +600,7 @@ ssize_t rumble_server_imap_subscribe(masterHandle *master, sessionHandle *sessio
 
         if (!folder) rcprintf(session, "%s NO SUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
         else {
-            state = rumble_database_prepare(master->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id);
-            rumble_database_run(state);
-            rumble_database_cleanup(state);
+            rumble_database_do(master->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id);
             folder->subscribed = 1;
             rcprintf(session, "%s OK SUBSCRIBE completed\r\n", extra_data);
         }
@@ -632,7 +622,6 @@ ssize_t rumble_server_imap_unsubscribe(masterHandle *master, sessionHandle *sess
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_args                     *args;
     char                            *folderName;
-    void                            *state;
     rumble_mailman_shared_folder    *pair,
                                     *folder;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
@@ -652,9 +641,7 @@ ssize_t rumble_server_imap_unsubscribe(masterHandle *master, sessionHandle *sess
 
         if (!folder) rcprintf(session, "%s NO UNSUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
         else {
-            state = rumble_database_prepare(master->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id);
-            rumble_database_run(state);
-            rumble_database_cleanup(state);
+            rumble_database_do(master->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id);
             folder->subscribed = 0;
             rcprintf(session, "%s OK UNSUBSCRIBE completed\r\n", extra_data);
         }

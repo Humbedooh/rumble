@@ -222,6 +222,7 @@ int main(int argc, char **argv) {
     char    r_path[512];
     /*~~~~~~~~~~~~~~~~*/
 
+    fflush(stdout);
     s_args = dvector_init();
     memset(r_path, 0, 512);
     if (argc) {

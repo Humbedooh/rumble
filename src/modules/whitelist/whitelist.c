@@ -10,7 +10,7 @@ cvector *rumble_whiteList;
  =======================================================================================================================
  =======================================================================================================================
  */
-ssize_t rumble_whitelist(sessionHandle *session, const char* junk) {
+ssize_t rumble_whitelist(sessionHandle *session, const char *junk) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     /* Make our own copy of the IP with an added dot at the end. */
