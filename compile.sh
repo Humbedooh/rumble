@@ -21,6 +21,22 @@ if [ $? -ne 0 ]; then
 else
 	echo "[33m$gccver[0m"
 fi
+
+# SQL database support 
+cmysql=0
+while true
+do
+	WISH=0
+	read -r -n1 -p "Do you wish to compile with mysql support? [[32mY[0m]es/[N]o:" WISH
+	echo ""
+	
+	case $WISH in
+		y|Y|"") cmysql=1; break ;;
+		n|N) break ;;
+		*) 
+	esac
+done
+
 echo "----------------------------------------"
 echo "Checking library availability"
 echo "----------------------------------------"
