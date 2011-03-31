@@ -32,7 +32,7 @@ FILE *rumble_letters_open(rumble_mailbox *mbox, rumble_letter *letter) {
     rumble_mailman_letter_spawn: Spawns a letter from the passed DB pointer
  =======================================================================================================================
  */
-rumble_letter *rumble_mailman_letter_spawn(dbResult *dbr) {
+rumble_letter *rumble_mailman_letter_spawn(radbResult *dbr) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter   *letter;
@@ -59,7 +59,7 @@ rumble_letter *rumble_mailman_letter_spawn(dbResult *dbr) {
 
     /* Folder */
     letter->folder = *((uint64_t *) dbr->column[5].data);
-    rumble_database_free_result(dbr);
+    radb_free(dbr);
     return (letter);
 }
 
@@ -73,8 +73,8 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int                             l;
-    dbObject                        *dbo;
-    dbResult                        *dbr;
+    radbObject                        *dbo;
+    radbResult                        *dbr;
     rumble_mailman_shared_bag       *bag;
     rumble_letter                   *letter;
     rumble_mailman_shared_folder    *folder;
@@ -99,8 +99,8 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     folder->bag = bag;
     strcpy(folder->name, "INBOX");
     dvector_add(bag->folders, folder);
-    dbo = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", uid);
-    while ((dbr = rumble_database_step(dbo))) {
+    dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", uid);
+    while ((dbr = radb_step(dbo))) {
         folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
         folder->bag = bag;
 
@@ -118,10 +118,10 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
         dvector_add(bag->folders, folder);
     }
 
-    rumble_database_cleanup(dbo);
-    dbo = rumble_database_prepare(rumble_database_master_handle->_core.db,
+    radb_cleanup(dbo);
+    dbo = radb_prepare(rumble_database_master_handle->_core.db,
                                   "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u", uid);
-    while ((dbr = rumble_database_step(dbo))) {
+    while ((dbr = radb_step(dbo))) {
         letter = rumble_mailman_letter_spawn(dbr);
         letter->uid = uid;
         l = 0;
@@ -141,7 +141,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
         }
     }
 
-    rumble_database_cleanup(dbo);
+    radb_cleanup(dbo);
     return (bag);
 }
 
@@ -175,15 +175,15 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
     rumble_mailman_shared_folder    *folder;
     int                             folder_id,
                                     found;
-    dbObject                        *dbo;
-    dbResult                        *dbr;
+    radbObject                        *dbo;
+    radbResult                        *dbr;
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_rw_start_write(bag->rrw);    /* Lock bag for writing */
-    dbo = rumble_database_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u",
+    dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u",
                                   bag->uid);
-    while ((dbr = rumble_database_step(dbo))) {
+    while ((dbr = radb_step(dbo))) {
 
         /* Get the folder ID */
         folder_id = *((int *) dbr->column[0].data);
@@ -211,10 +211,10 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
             dvector_add(bag->folders, folder);
         }
 
-        rdbfree(dbr);
+        radb_free(dbr);
     }
 
-    rumble_database_cleanup(dbo);
+    radb_cleanup(dbo);
     rumble_rw_stop_write(bag->rrw);     /* Unlock bag again. */
 }
 
@@ -228,8 +228,8 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
     /*~~~~~~~~~~~~~~~~~~~~*/
     int             r,
                     exists;
-    dbObject        *dbo;
-    dbResult        *dbr;
+    radbObject        *dbo;
+    radbResult        *dbr;
     rumble_letter   *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
@@ -239,11 +239,11 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
     if (!folder) return (0);
     r = 0;
     printf("<Mailman> Updating <%s> from ID > %llu\n", folder->name, folder->lastMessage);
-    dbo = rumble_database_prepare(rumble_database_master_handle->_core.db,
+    dbo = radb_prepare(rumble_database_master_handle->_core.db,
                                   "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %l", folder->id,
                                   folder->lastMessage);
     rumble_rw_start_write(folder->bag->rrw);    /* Lock the bag for writing */
-    while ((dbr = rumble_database_step(dbo))) {
+    while ((dbr = radb_step(dbo))) {
         r++;
         exists = 1;
         letter = rumble_mailman_letter_spawn(dbr);
@@ -251,14 +251,14 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         dvector_add(folder->letters, letter);
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
         printf("Adding letter %llu to <%s>\n", letter->id, folder->name);
-        rdbfree(dbr);
+        radb_free(dbr);
     }
 
     printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
     rumble_rw_stop_write(folder->bag->rrw);     /* Unlock the bag */
 
     /* Clean up DB */
-    rumble_database_cleanup(dbo);
+    radb_cleanup(dbo);
     return (r);
 }
 
@@ -271,7 +271,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
 
     /*~~~~~~~~~~~~~~~~~~~~~*/
     int             r;
-    dbObject        *dbo;
+    radbObject        *dbo;
     const char      *path;
     rumble_letter   *letter;
     char            tmp[256];
@@ -295,9 +295,9 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
 #endif
             sprintf(tmp, "%s/%s.msg", path, letter->fid);
             unlink(tmp);
-            dbo = rumble_database_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %l", letter->id);
-            rumble_database_step(dbo);
-            rumble_database_cleanup(dbo);
+            dbo = radb_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %l", letter->id);
+            radb_step(dbo);
+            radb_cleanup(dbo);
             printf("DELETE FROM mbox WHERE id = %llu\n", letter->id);
             r++;
             free(letter->fid);
@@ -312,10 +312,10 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             printf("Updating letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 #endif
             if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
-            dbo = rumble_database_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %l",
+            dbo = radb_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %l",
                                           letter->flags, letter->id);
-            rumble_database_step(dbo);
-            rumble_database_cleanup(dbo);
+            radb_step(dbo);
+            radb_cleanup(dbo);
             r++;
         }
     }
@@ -458,7 +458,7 @@ size_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter
 
         fclose(in);
         fclose(out);
-        rumble_database_do(rumble_database_master_handle->_core.db,
+        radb_do(rumble_database_master_handle->_core.db,
                            "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)", account->uid, filename,
                            folder->id, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
         free(filename);

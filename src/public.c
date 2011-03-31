@@ -476,7 +476,6 @@ void rumble_release_state(lua_State *X) {
  =======================================================================================================================
  */
 char *strclone(const void *o) {
-    printf("cloning %p...\r\n", o);
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     size_t  l = strlen((const char *) o);

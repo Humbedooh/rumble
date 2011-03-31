@@ -477,7 +477,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
 
     fclose(fp);
     foreach((address *), el, session->recipients, iter) {
-        rumble_database_do(master->_core.db, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
+        radb_run(master->_core.db, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
                            session->sender->raw, el->raw, session->sender->_flags);
     }
 

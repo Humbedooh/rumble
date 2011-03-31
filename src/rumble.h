@@ -143,8 +143,9 @@
 #   define RUMBLE_DEBUG_THREADS    0x02000000
 #   define RUMBLE_DEBUG_STORAGE    0x04000000
 #   define RUMBLE_DEBUG_COMM       0x00010000
+#   define RUMBLE_DEBUG_DATABASE   0x08000000
 #   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
-#   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM)   /* debug output flags */
+#   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM | RUMBLE_DEBUG_DATABASE)   /* debug output flags */
 
 /*$3
  =======================================================================================================================
