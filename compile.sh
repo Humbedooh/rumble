@@ -24,6 +24,7 @@ fi
 
 # SQL database support 
 cmysql=0
+libmysql=""
 while true
 do
 	WISH=0
@@ -117,6 +118,15 @@ if [ $iscyg -ne 0 ]; then
 	wget -O src/ns_parse.c http://rumbleserver.sourceforge.net/ns_parse.c
 fi
 
+if [ $cmysql -ne 0]; then
+	echo "Copying RADB for MySQL+SQLite"
+	cp src/radb/* src/
+	libmysql="-lmysqlclient_r"
+else
+	echo "Copying RADB for SQLite only"
+    cp src/radb/radb.c src/
+	cat src/radb/radb.h | grep -v mysql.h > src/radb.h
+fi
 
 
 echo "Making build directory..."
@@ -134,7 +144,7 @@ do
 	f=${f/src\//}
 	l="$l build/$f.o"
 	echo   "[36m$f.c[0m"
-	gcc    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv 
+	gcc    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.o src/$f.c  -lsqlite3 -lgnutls -lgcrypt -lssl -lpthread -lcrypto -llua$llua -lresolv $libmysql
 done
 
 echo

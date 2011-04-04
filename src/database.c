@@ -113,7 +113,7 @@ void rumble_database_load_mysql(masterHandle *master, FILE *runlog) {
     }
 
     rdbo = radb_prepare(master->_core.db, "DESCRIBE `queue`;");
-    rdbr = radb_step(rdbo);
+    rdbr = radb_step(rdbo); 
     if (!rdbr) {
         printf("[OK]\r\n");
         printf("%-48s", "Setting up tables...");
@@ -188,10 +188,15 @@ void rumble_free_account(rumble_mailbox *user) {
 uint32_t rumble_account_exists(sessionHandle *session, const char *user, const char *domain) {
 
     /*~~~*/
-    int rc;
+    int rc=0;
     /*~~~*/
 
-    rc = radb_run(0, "SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1", domain, user);
+    if (rumble_database_master_handle->_core.db->dbType == RADB_SQLITE3) {
+        rc = radb_run(0, "SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1", domain, user);
+    }
+    else if (rumble_database_master_handle->_core.db->dbType == RADB_MYSQL) {
+        rc = radb_run(0, "SELECT 1 FROM accounts WHERE domain = %s AND %s LIKE user ORDER BY LENGTH(user) DESC LIMIT 1", domain, user);
+    }
     return (rc == RUMBLE_DB_RESULT) ? 1 : 0;
 }
 
@@ -216,7 +221,7 @@ uint32_t rumble_account_exists_raw(const char *user, const char *domain) {
 rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *domain) {
 
     /*~~~~~~~~~~~~~~~~~*/
-    radbObject      *dbo;
+    radbObject      *dbo = 0;
     radbResult      *dbr;
     char            *tmp;
     rumble_mailbox  *acc;
@@ -226,9 +231,16 @@ rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *
         dbo = radb_prepare(rumble_database_master_handle->_core.db,
                            "SELECT id, domain, user, password, type, arg FROM accounts WHERE id = %u LIMIT 1", uid);
     } else {
-        dbo = radb_prepare(rumble_database_master_handle->_core.db,
+        if (rumble_database_master_handle->_core.db->dbType == RADB_SQLITE3) {
+                dbo = radb_prepare(rumble_database_master_handle->_core.db,
                            "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",
                        domain ? domain : "", user ? user : "");
+        }
+        else if (rumble_database_master_handle->_core.db->dbType == RADB_MYSQL) {
+            dbo = radb_prepare(rumble_database_master_handle->_core.db,
+                           "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s LIKE user ORDER BY LENGTH(user) DESC LIMIT 1",
+                       domain ? domain : "", user ? user : "");
+        }
     }
 
     dbr = radb_step(dbo);
@@ -264,7 +276,6 @@ rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *
 
         /* Account args */
         acc->arg = strclone(dbr->column[5].data.string);
-        radb_free(dbr);
     }
 
     radb_cleanup(dbo);
@@ -429,7 +440,6 @@ cvector *rumble_database_accounts_list(const char *domain) {
             acc->arg = strclone(dbr->column[4].data.string);
             acc->domain = 0;
             cvector_add(cvec, acc);
-            radb_free(dbr);
         }
 
         radb_cleanup(dbo);
@@ -488,7 +498,6 @@ void rumble_database_update_domains(void) {
     dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, domain, storagepath FROM domains WHERE 1");
     while ((dbr = radb_step(dbo))) {
         domain = (rumble_domain *) malloc(sizeof(rumble_domain));
-        printf("Got a hit with %d cols!\r\n", dbr->items);
 
         /* Domain ID */
         domain->id = dbr->column[0].data.int32;
@@ -500,9 +509,8 @@ void rumble_database_update_domains(void) {
         /* Optional domain specific storage path */
         domain->path = strclone(dbr->column[2].data.string);
         dvector_add(rumble_database_master_handle->domains.list, domain);
-        radb_free(dbr);
     }
 
     rumble_rw_stop_write(rumble_database_master_handle->domains.rrw);
-    radb_cleanup(dbo);
+    radb_cleanup(dbo); 
 }

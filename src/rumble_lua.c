@@ -635,7 +635,7 @@ static int rumble_lua_saveaccount(lua_State *L) {
             lua_pushboolean(L, 1);
         } else if (!x) {
             radb_do(rumble_database_master_handle->_core.db, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)",
-                    user, domain, mtype, password, arguments);
+                    user, domain, mtype, password, "moo");
             lua_pushboolean(L, 1);
         } else lua_pushboolean(L, 0);
     } else {
