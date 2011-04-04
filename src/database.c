@@ -484,8 +484,6 @@ void rumble_database_update_domains(void) {
     d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
-    printf("loading domain list\r\n");
-
     /* Clean up the old list */
     rumble_rw_start_write(rumble_database_master_handle->domains.rrw);
     foreach((rumble_domain *), domain, rumble_database_master_handle->domains.list, iter) {
@@ -504,7 +502,7 @@ void rumble_database_update_domains(void) {
 
         /* Domain name */
         domain->name = strclone(dbr->column[1].data.string);
-        printf("Found: %s\r\b", domain->name);
+        
 
         /* Optional domain specific storage path */
         domain->path = strclone(dbr->column[2].data.string);

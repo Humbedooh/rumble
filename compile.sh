@@ -125,7 +125,7 @@ if [ $cmysql -ne 0]; then
 else
 	echo "Copying RADB for SQLite only"
     cp src/radb/radb.c src/
-	cat src/radb/radb.h | grep -v mysql.h > src/radb.h
+	cat src/radb/radb.h | grep -v mysql.h > src/radb/radb.h
 fi
 
 

@@ -12,7 +12,7 @@
 #   define RUMBLE_MYSQL            2
 #   define RUMBLE_POSTGRESQL       3
 #   define RUMBLE_DATABASE_MODEL   RUMBLE_SQLITE3
-#   include "radb/radb.h"
+
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------

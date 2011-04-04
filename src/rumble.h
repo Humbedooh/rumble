@@ -56,7 +56,6 @@
 #   include <string.h>
 #   include <time.h>
 #   include "cvector.h"
-#   include "radb/radb.h"
 
 /*$3
  =======================================================================================================================
@@ -127,6 +126,12 @@
 #      include <lauxlib.h>
 #      include "rumble_lua.h"
 #   endif
+
+/*$3 RADB */
+#ifdef R_WINDOWS
+#include <windows.h> 
+#endif
+#   include "radb/radb.h"
 
 /*$5
  #######################################################################################################################

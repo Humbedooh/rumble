@@ -423,21 +423,16 @@ void *rumble_worker_init(void *T) {
     rumbleService   *svc = (rumbleService *) thread->svc;
     masterHandle    *master = (masterHandle *) svc->master;
     int             x;
-    char            tmp[1024];
     const char      *ignmx;
-    const char      *statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= strftime('%s','now') LIMIT 1";
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= strftime('%%s','now') LIMIT 1";
+    radbObject* dbo;
+	radbResult* result;
+
 
     if (master->_core.db->dbType == RADB_MYSQL) {
         statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= NOW() LIMIT 1";
     }
 
-    /*~~~~~~~~~~~~~~~~~~~*/
-    int             rc;
-    sqlite3_stmt    *state;
-    /*~~~~~~~~~~~~~~~~~~~*/
-
-    sqlite3_prepare_v2((sqlite3 *) master->_core.db, statement, -1, &state, NULL);
     ignmx = rrdict(master->_core.conf, "ignoremx");
     badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
@@ -448,12 +443,13 @@ void *rumble_worker_init(void *T) {
         pthread_create(&thread->thread, NULL, rumble_worker_process, svc);
     }
 
+  dbo = radb_prepare(master->_core.db, statement);
+  if (!dbo) printf("Something went wrong with this: %s\n", statement);
     while (1) {
-        rc = sqlite3_step(state);
-        if (rc == SQLITE_ROW) {
+        result = radb_step(dbo);
+        if (result) {
 
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            int         l;
             uint32_t    mid;
             char        *sql,
                         *zErrMsg;
@@ -464,41 +460,32 @@ void *rumble_worker_init(void *T) {
                 item->mType = 0;
 
                 /* delivery time */
-                item->date = sqlite3_column_int(state, 0);
+                item->date = result->column[0].data.uint32;
 
                 /* loops */
-                item->loops = sqlite3_column_int(state, 1);
+                item->loops = result->column[1].data.uint32;
 
                 /* fid */
-                l = sqlite3_column_bytes(state, 2);
-                item->fid = (char *) calloc(1, l + 1);
-                memcpy((char *) item->fid, sqlite3_column_text(state, 2), l);
+                item->fid = strclone(result->column[2].data.string);
 
                 /* sender */
-                memset(tmp, 0, 1024);
-                l = sqlite3_column_bytes(state, 3);
-                memcpy((char *) tmp, sqlite3_column_text(state, 3), l);
-                item->sender = rumble_parse_mail_address(tmp);
+                item->sender = rumble_parse_mail_address(result->column[3].data.string);
 
                 /* recipient */
-                memset(tmp, 0, 1024);
-                l = sqlite3_column_bytes(state, 4);
-                memcpy((char *) tmp, sqlite3_column_text(state, 4), l);
-                item->recipient = rumble_parse_mail_address(tmp);
+                
+                item->recipient = rumble_parse_mail_address(result->column[4].data.string);
 
                 /* flags */
-                l = sqlite3_column_bytes(state, 5);
-                item->flags = (char *) calloc(1, l + 1);
-                memcpy((char *) item->flags, sqlite3_column_text(state, 5), l);
-                mid = sqlite3_column_int(state, 6);
-                sqlite3_reset(state);
+                item->flags = strclone(result->column[5].data.string);
+                
+                mid = result->column[1].data.uint32;
+                
                 sql = (char *) calloc(1, 128);
                 if (!sql) return (0);
                 sprintf(sql, "DELETE FROM queue WHERE id=%u", mid);
                 zErrMsg = 0;
-                l = sqlite3_exec((sqlite3 *) master->_core.db, sql, 0, 0, &zErrMsg);
+                radb_do(master->_core.db, sql);
                 free(sql);
-                printf("Sending item!\n");
                 fflush(stdout);
                 pthread_mutex_lock(&svc->mutex);
                 current = item;
@@ -506,8 +493,9 @@ void *rumble_worker_init(void *T) {
                 pthread_mutex_unlock(&svc->mutex);
             }
         } else {
-            sqlite3_reset(state);
+            radb_cleanup(dbo);
             sleep(5);   /* sleep for 5 seconds if there's nothing to do right now. */
+            dbo = radb_prepare(master->_core.db, statement);
         }
     }
 }
