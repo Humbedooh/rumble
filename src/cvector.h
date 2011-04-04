@@ -1,13 +1,15 @@
+/*$T cvector.h GC 1.140 04/04/11 15:49:30 */
+
 /* File: cvector.h Author: Humbedooh Created on January 3, 2011, 9:25 PM */
 #ifndef CVECTOR_H
-#   define CVECTOR_H
-#   define CVECTOR_FIRST   0
-#   define CVECTOR_LAST    1
-#   ifdef __cplusplus
+#define CVECTOR_H
+#define CVECTOR_FIRST	0
+#define CVECTOR_LAST	1
+#ifdef __cplusplus
 extern "C"
 {
-#   endif
-#   include <stdlib.h>
+#endif
+#include <stdlib.h>
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
@@ -20,14 +22,14 @@ extern "C"
 
 typedef struct _cvector
 {
-    const void      **objects;
-    unsigned int    size;
-    unsigned int    allocated;
+	const void		**objects;
+	unsigned int	size;
+	unsigned int	allocated;
 } cvector;
 typedef struct _c_iterator
 {
-    cvector         *parent;
-    unsigned int    position;
+	cvector			*parent;
+	unsigned int	position;
 } c_iterator;
 
 /*$2
@@ -40,30 +42,30 @@ typedef struct _c_iterator
 
 struct _dvector_element
 {
-    struct _dvector_element *next;
-    struct _dvector_element *prev;
-    void                    *object;
+	struct _dvector_element *next;
+	struct _dvector_element *prev;
+	void					*object;
 };
 typedef struct _dvector_element dvector_element;
 typedef struct _dvector
 {
-    dvector_element *first;
-    dvector_element *last;
-    unsigned int    size;
+	dvector_element *first;
+	dvector_element *last;
+	unsigned int	size;
 } dvector;
 typedef struct _d_iterator
 {
-    dvector_element *current;
-    dvector         *parent;
-    unsigned char   start;
+	dvector_element *current;
+	dvector			*parent;
+	unsigned char	start;
 } d_iterator;
-void        cvector_add(cvector *parent, const void *object);
-void        cvector_delete(c_iterator *iter);
-const void  *cvector_foreach(cvector *parent, c_iterator *iter);
-void        cvector_flush(cvector *parent);
-void        cvector_destroy(cvector *parent);
-const void  *cvector_pop(cvector *parent);
-cvector     *cvector_init(void);
+void		cvector_add(cvector *parent, const void *object);
+void		cvector_delete(c_iterator *iter);
+const void	*cvector_foreach(cvector *parent, c_iterator *iter);
+void		cvector_flush(cvector *parent);
+void		cvector_destroy(cvector *parent);
+const void	*cvector_pop(cvector *parent);
+cvector		*cvector_init(void);
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
@@ -71,12 +73,12 @@ cvector     *cvector_init(void);
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-void    dvector_add(dvector *parent, void *object);
-void    dvector_delete(d_iterator *iter);
-void    *dvector_foreach(dvector *parent, d_iterator *iter);
-void    dvector_flush(dvector *parent);
-void    dvector_destroy(dvector *parent);
-void    *dvector_pop(dvector *parent);
+void	dvector_add(dvector *parent, void *object);
+void	dvector_delete(d_iterator *iter);
+void	*dvector_foreach(dvector *parent, d_iterator *iter);
+void	dvector_flush(dvector *parent);
+void	dvector_destroy(dvector *parent);
+void	*dvector_pop(dvector *parent);
 dvector *dvector_init(void);
 
 /*$2
@@ -89,18 +91,18 @@ dvector *dvector_init(void);
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-#   define cforeach(type, element, list, iterator) \
-    iterator.parent = list; \
-    for \
-    ( \
-        element = type list->objects[(iterator.position = 0)]; \
-        iterator.position < list->size; \
-        element = type list->objects[++iterator.position] \
-    )
-#   define dforeach(type, element, list, iterator) \
-    iterator.start = 1; \
-while ((element = type dvector_foreach(list, &iterator)))
-#   ifdef __cplusplus
+#define cforeach(type, element, list, iterator) \
+	iterator.parent = list; \
+	for \
+	( \
+		element = type list->objects[(iterator.position = 0)]; \
+		iterator.position < list->size; \
+		element = type list->objects[++iterator.position] \
+	)
+#define dforeach(type, element, list, iterator) \
+	iterator.start = 1; \
+while((element = type dvector_foreach(list, &iterator)))
+#ifdef __cplusplus
 }
-#   endif
+#endif
 #endif /* CVECTOR_H */

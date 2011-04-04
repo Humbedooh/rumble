@@ -1,3 +1,5 @@
+/*$T rumble.h GC 1.140 04/04/11 15:49:30 */
+
 /*$0
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     This file is part of the Rumble Mail Server package.
@@ -5,45 +7,45 @@
  */
 
 #ifndef RUMBLE_H
-#   define _HUGE   - 1
-#   define RUMBLE_H
-#   define RUMBLE_INITIAL_THREADS  25
+#define _HUGE	- 1
+#define RUMBLE_H
+#define RUMBLE_INITIAL_THREADS	25
 
 /* C<99 compatibility defs */
-#   if (__STDC_VERSION__ < 199901L)
-#      define inline  static
+#if (__STDC_VERSION__ < 199901L)
+#define inline	static
 
 /* pragma message("Non-C99 compliant compiler used, boooooo!") */
-#   endif
-#   define R_WINDOWS   0
-#   define R_POSIX     0
-#   define R_LINUX     0
-#   define R_ARCH      32
-#   define R_CYGWIN    0
-#   ifdef __CYGWIN__
-#      undef R_CYGWIN
-#      define R_CYGWIN    1
-#   endif
-#   ifdef __x86_64
-#      undef R_ARCH
-#      define R_ARCH  64
-#   endif
-#   ifdef __linux__
-#      undef R_LINUX
-#      define R_LINUX 1
-#   endif
+#endif
+#define R_WINDOWS	0
+#define R_POSIX		0
+#define R_LINUX		0
+#define R_ARCH		32
+#define R_CYGWIN	0
+#ifdef __CYGWIN__
+#undef R_CYGWIN
+#define R_CYGWIN	1
+#endif
+#ifdef __x86_64
+#undef R_ARCH
+#define R_ARCH	64
+#endif
+#ifdef __linux__
+#undef R_LINUX
+#define R_LINUX 1
+#endif
 
 /* Checks for Microsoft compiler */
-#   if ((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__))
-#      define RUMBLE_MSC
-#   endif
-#   ifndef RUMBLE_MSC
-#      ifndef __stdcall
-#         define __cdecl
-#         define __stdcall
-#         define __fastcall
-#      endif
-#   endif
+#if ((defined(_WIN32) && !defined(__CYGWIN__)) || defined(__MINGW32__))
+#define RUMBLE_MSC
+#endif
+#ifndef RUMBLE_MSC
+#ifndef __stdcall
+#define __cdecl
+#define __stdcall
+#define __fastcall
+#endif
+#endif
 
 /*$5
  #######################################################################################################################
@@ -51,11 +53,12 @@
  #######################################################################################################################
  */
 
-#   include <stdio.h>
-#   include <stdlib.h>
-#   include <string.h>
-#   include <time.h>
-#   include "cvector.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include "cvector.h"
+#include "radb/radb.h"
 
 /*$3
  =======================================================================================================================
@@ -67,32 +70,32 @@
  * #define FORCE_OLD_PTHREAD comment out this field to use native windows
  * threading (vista or above)
  */
-#   ifdef RUMBLE_MSC
-#      define RUMBLE_WINSOCK
-#      define HAVE_STRUCT_TIMESPEC
+#ifdef RUMBLE_MSC
+#define RUMBLE_WINSOCK
+#define HAVE_STRUCT_TIMESPEC
 
 /*
  * Disable the useless Microsoft warnings about unsafe operators and not-yet
  * defined functions (this is C, not C++, m
  */
-#      pragma warning(disable : 5)
-#      pragma warning(disable : 996)
-#      include <Ws2tcpip.h>
-#      include <WinSock2.h>
-#      include <windns.h>
-#      include <Psapi.h>
-#      undef R_WINDOWS
-#      define R_WINDOWS   1
-#      ifdef _WIN64
-#         undef R_ARCH
-#         define R_ARCH  64
-#      endif
-#      if (WINVER < _WIN32_WINNT_VISTA || defined(FORCE_OLD_PTHREAD))
-#         include <pthread.h>
-#      else
-#         include "winpthreads.h"
-#      endif
-#   else
+#pragma warning(disable : 5)
+#pragma warning(disable : 996)
+#include <Ws2tcpip.h>
+#include <WinSock2.h>
+#include <windns.h>
+#include <Psapi.h>
+#undef R_WINDOWS
+#define R_WINDOWS	1
+#ifdef _WIN64
+#undef R_ARCH
+#define R_ARCH	64
+#endif
+#if (WINVER < _WIN32_WINNT_VISTA || defined(FORCE_OLD_PTHREAD))
+#include <pthread.h>
+#else
+#include "winpthreads.h"
+#endif
+#else
 
 /*$3
  =======================================================================================================================
@@ -100,18 +103,18 @@
  =======================================================================================================================
  */
 
-#      undef R_POSIX
-#      define R_POSIX 1
-#      include <unistd.h>
-#      include <sys/types.h>
-#      include <sys/socket.h>
-#      include <netinet/in.h>
-#      include <netdb.h>
-#      include <arpa/inet.h>
-#      include <resolv.h>
-#      include <inttypes.h>
-#      include <pthread.h>
-#   endif
+#undef R_POSIX
+#define R_POSIX 1
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <resolv.h>
+#include <inttypes.h>
+#include <pthread.h>
+#endif
 
 /*$3
  =======================================================================================================================
@@ -119,13 +122,13 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_LUA
-#   ifdef RUMBLE_LUA
-#      include <lua.h>
-#      include <lualib.h>
-#      include <lauxlib.h>
-#      include "rumble_lua.h"
-#   endif
+#define RUMBLE_LUA
+#ifdef RUMBLE_LUA
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#include "rumble_lua.h"
+#endif
 
 /*$5
  #######################################################################################################################
@@ -139,13 +142,14 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_DEBUG_HOOKS      0x00100000
-#   define RUMBLE_DEBUG_THREADS    0x02000000
-#   define RUMBLE_DEBUG_STORAGE    0x04000000
-#   define RUMBLE_DEBUG_COMM       0x00010000
-#   define RUMBLE_DEBUG_DATABASE   0x08000000
-#   define RUMBLE_DEBUG_MEMORY     0x00001000   /* reroutes malloc and calloc for debugging */
-#   define RUMBLE_DEBUG            (RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM | RUMBLE_DEBUG_DATABASE)   /* debug output flags */
+#define RUMBLE_DEBUG_HOOKS		0x00100000
+#define RUMBLE_DEBUG_THREADS	0x02000000
+#define RUMBLE_DEBUG_STORAGE	0x04000000
+#define RUMBLE_DEBUG_COMM		0x00010000
+#define RUMBLE_DEBUG_DATABASE	0x08000000
+#define RUMBLE_DEBUG_MEMORY		0x00001000	/* reroutes malloc and calloc for debugging */
+#define RUMBLE_DEBUG			(RUMBLE_DEBUG_STORAGE | RUMBLE_DEBUG_COMM | RUMBLE_DEBUG_DATABASE)	/* debug output
+																									 * flags */
 
 /*$3
  =======================================================================================================================
@@ -153,9 +157,9 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_RETURN_OKAY      1    /* Everything went fine, keep going. */
-#   define RUMBLE_RETURN_FAILURE   2    /* Something went really wrong, abort the connection! */
-#   define RUMBLE_RETURN_IGNORE    3    /* Module handled the return code, skip to next command. */
+#define RUMBLE_RETURN_OKAY		1	/* Everything went fine, keep going. */
+#define RUMBLE_RETURN_FAILURE	2	/* Something went really wrong, abort the connection! */
+#define RUMBLE_RETURN_IGNORE	3	/* Module handled the return code, skip to next command. */
 
 /*$3
  =======================================================================================================================
@@ -163,20 +167,20 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_HOOK_ACCEPT      0x00000001
-#   define RUMBLE_HOOK_COMMAND     0x00000002
-#   define RUMBLE_HOOK_EXIT        0x00000004
-#   define RUMBLE_HOOK_FEED        0x00000008
-#   define RUMBLE_HOOK_PARSER      0x00000010
-#   define RUMBLE_HOOK_CLOSE       0x00000020
-#   define RUMBLE_HOOK_STATE_MASK  0x000000FF
-#   define RUMBLE_HOOK_SMTP        0x00000100
-#   define RUMBLE_HOOK_POP3        0x00000200
-#   define RUMBLE_HOOK_IMAP        0x00000400
-#   define RUMBLE_HOOK_SVC_MASK    0x00000F00
-#   define RUMBLE_HOOK_BEFORE      0x00000000
-#   define RUMBLE_HOOK_AFTER       0x00001000
-#   define RUMBLE_HOOK_TIMING_MASK 0x0000F000
+#define RUMBLE_HOOK_ACCEPT		0x00000001
+#define RUMBLE_HOOK_COMMAND		0x00000002
+#define RUMBLE_HOOK_EXIT		0x00000004
+#define RUMBLE_HOOK_FEED		0x00000008
+#define RUMBLE_HOOK_PARSER		0x00000010
+#define RUMBLE_HOOK_CLOSE		0x00000020
+#define RUMBLE_HOOK_STATE_MASK	0x000000FF
+#define RUMBLE_HOOK_SMTP		0x00000100
+#define RUMBLE_HOOK_POP3		0x00000200
+#define RUMBLE_HOOK_IMAP		0x00000400
+#define RUMBLE_HOOK_SVC_MASK	0x00000F00
+#define RUMBLE_HOOK_BEFORE		0x00000000
+#define RUMBLE_HOOK_AFTER		0x00001000
+#define RUMBLE_HOOK_TIMING_MASK 0x0000F000
 
 /*$3
  =======================================================================================================================
@@ -184,22 +188,22 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_CUE_SMTP_HELO    0x00010000
-#   define RUMBLE_CUE_SMTP_RCPT    0x00020000
-#   define RUMBLE_CUE_SMTP_MAIL    0x00040000
-#   define RUMBLE_CUE_SMTP_DATA    0x00080000
-#   define RUMBLE_CUE_SMTP_QUIT    0x00100000
-#   define RUMBLE_CUE_SMTP_RSET    0x00200000
-#   define RUMBLE_CUE_SMTP_NOOP    0x00400000
-#   define RUMBLE_CUE_SMTP_VRFY    0x00800000
-#   define RUMBLE_CUE_SMTP_AUTH    0x01000000
-#   define RUMBLE_CUE_POP3_HELO    0x00010000
-#   define RUMBLE_CUE_POP3_QUIT    0x00020000
-#   define RUMBLE_CUE_POP3_TOP     0x00040000
-#   define RUMBLE_CUE_POP3_RETR    0x00080000
-#   define RUMBLE_CUE_POP3_LIST    0x00100000
-#   define RUMBLE_CUE_POP3_DELE    0x00200000
-#   define RUMBLE_CUE_MASK         0x0FFF0000
+#define RUMBLE_CUE_SMTP_HELO	0x00010000
+#define RUMBLE_CUE_SMTP_RCPT	0x00020000
+#define RUMBLE_CUE_SMTP_MAIL	0x00040000
+#define RUMBLE_CUE_SMTP_DATA	0x00080000
+#define RUMBLE_CUE_SMTP_QUIT	0x00100000
+#define RUMBLE_CUE_SMTP_RSET	0x00200000
+#define RUMBLE_CUE_SMTP_NOOP	0x00400000
+#define RUMBLE_CUE_SMTP_VRFY	0x00800000
+#define RUMBLE_CUE_SMTP_AUTH	0x01000000
+#define RUMBLE_CUE_POP3_HELO	0x00010000
+#define RUMBLE_CUE_POP3_QUIT	0x00020000
+#define RUMBLE_CUE_POP3_TOP		0x00040000
+#define RUMBLE_CUE_POP3_RETR	0x00080000
+#define RUMBLE_CUE_POP3_LIST	0x00100000
+#define RUMBLE_CUE_POP3_DELE	0x00200000
+#define RUMBLE_CUE_MASK			0x0FFF0000
 
 /*$3
  =======================================================================================================================
@@ -207,16 +211,16 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_SMTP_BADRFC      0x00000100   /* Client is known to break RFC and requires leniency. */
-#   define RUMBLE_SMTP_WHITELIST   0x00000200   /* Client has been whitelisted by a module. */
-#   define RUMBLE_SMTP_AUTHED      0x00000400   /* Client is authenticated and considered known. */
-#   define RUMBLE_SMTP_CAN_RELAY   0x00000600   /* Client is allowed to relay emails to other servers. */
-#   define RUMBLE_SMTP_FREEPASS    0x00000700   /* Mask that covers all three exceptions. */
-#   define RUMBLE_SMTP_HAS_HELO    0x00000001   /* Has valid HELO/EHLO */
-#   define RUMBLE_SMTP_HAS_MAIL    0x00000002   /* Has valid MAIL FROM */
-#   define RUMBLE_SMTP_HAS_RCPT    0x00000004   /* Has valid RCPT */
-#   define RUMBLE_SMTP_HAS_EHLO    0x00000009   /* Has extended HELO */
-#   define RUMBLE_SMTP_HAS_BATV    0x00000010   /* Has valid BATV signature */
+#define RUMBLE_SMTP_BADRFC		0x00000100	/* Client is known to break RFC and requires leniency. */
+#define RUMBLE_SMTP_WHITELIST	0x00000200	/* Client has been whitelisted by a module. */
+#define RUMBLE_SMTP_AUTHED		0x00000400	/* Client is authenticated and considered known. */
+#define RUMBLE_SMTP_CAN_RELAY	0x00000600	/* Client is allowed to relay emails to other servers. */
+#define RUMBLE_SMTP_FREEPASS	0x00000700	/* Mask that covers all three exceptions. */
+#define RUMBLE_SMTP_HAS_HELO	0x00000001	/* Has valid HELO/EHLO */
+#define RUMBLE_SMTP_HAS_MAIL	0x00000002	/* Has valid MAIL FROM */
+#define RUMBLE_SMTP_HAS_RCPT	0x00000004	/* Has valid RCPT */
+#define RUMBLE_SMTP_HAS_EHLO	0x00000009	/* Has extended HELO */
+#define RUMBLE_SMTP_HAS_BATV	0x00000010	/* Has valid BATV signature */
 
 /*$3
  =======================================================================================================================
@@ -224,8 +228,8 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_POP3_HAS_USER    0x00000001   /* Has provided a username (but no password) */
-#   define RUMBLE_POP3_HAS_AUTH    0x00000002   /* Has provided both username and password */
+#define RUMBLE_POP3_HAS_USER	0x00000001	/* Has provided a username (but no password) */
+#define RUMBLE_POP3_HAS_AUTH	0x00000002	/* Has provided both username and password */
 
 /*$3
  =======================================================================================================================
@@ -233,12 +237,12 @@
  =======================================================================================================================
  */
 
-#   define rumble_mailman_HAS_SELECT       0x00000001   /* Has selected a mailbox */
-#   define rumble_mailman_HAS_TLS          0x00000002   /* Has established TLS or SSL */
-#   define rumble_mailman_HAS_READWRITE    0x00000010   /* Read/Write session (SELECT) */
-#   define rumble_mailman_HAS_READONLY     0x00000020   /* Read-only session (EXAMINE) */
-#   define rumble_mailman_HAS_UID          0x00000100   /* UID-type request. */
-#   define RUMBLE_ROAD_MASK                0x000000FF   /* Command sequence mask */
+#define rumble_mailman_HAS_SELECT		0x00000001	/* Has selected a mailbox */
+#define rumble_mailman_HAS_TLS			0x00000002	/* Has established TLS or SSL */
+#define rumble_mailman_HAS_READWRITE	0x00000010	/* Read/Write session (SELECT) */
+#define rumble_mailman_HAS_READONLY		0x00000020	/* Read-only session (EXAMINE) */
+#define rumble_mailman_HAS_UID			0x00000100	/* UID-type request. */
+#define RUMBLE_ROAD_MASK				0x000000FF	/* Command sequence mask */
 
 /*$3
  =======================================================================================================================
@@ -246,12 +250,12 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_THREAD_DIE       0x00001000   /* Kill signal for threads */
-#   define RUMBLE_THREAD_MISC      0x00010000   /* Thread handles miscellaneous stuff */
-#   define RUMBLE_THREAD_SMTP      0x00020000   /* Thread handles SMTP */
-#   define RUMBLE_THREAD_POP3      0x00040000   /* Thread handles POP3 */
-#   define RUMBLE_THREAD_IMAP      0x00080000   /* Thread handles IMAP */
-#   define RUMBLE_THREAD_SVCMASK   0x000F0000
+#define RUMBLE_THREAD_DIE		0x00001000	/* Kill signal for threads */
+#define RUMBLE_THREAD_MISC		0x00010000	/* Thread handles miscellaneous stuff */
+#define RUMBLE_THREAD_SMTP		0x00020000	/* Thread handles SMTP */
+#define RUMBLE_THREAD_POP3		0x00040000	/* Thread handles POP3 */
+#define RUMBLE_THREAD_IMAP		0x00080000	/* Thread handles IMAP */
+#define RUMBLE_THREAD_SVCMASK	0x000F0000
 
 /*$3
  =======================================================================================================================
@@ -259,22 +263,22 @@
  =======================================================================================================================
  */
 
-#   define RUMBLE_MTYPE_MBOX   0x00000001   /* Regular mailbox */
-#   define RUMBLE_MTYPE_ALIAS  0x00000002   /* Alias to somewhere else */
-#   define RUMBLE_MTYPE_MOD    0x00000004   /* Mail goes into a module */
-#   define RUMBLE_MTYPE_FEED   0x00000008   /* Mail is fed to an external program or URL */
-#   define RUMBLE_MTYPE_RELAY  0x00000010   /* Mail is being relayed to another server */
+#define RUMBLE_MTYPE_MBOX	0x00000001	/* Regular mailbox */
+#define RUMBLE_MTYPE_ALIAS	0x00000002	/* Alias to somewhere else */
+#define RUMBLE_MTYPE_MOD	0x00000004	/* Mail goes into a module */
+#define RUMBLE_MTYPE_FEED	0x00000008	/* Mail is fed to an external program or URL */
+#define RUMBLE_MTYPE_RELAY	0x00000010	/* Mail is being relayed to another server */
 
 /* Letter flags (for POP3/IMAP4) */
-#   define RUMBLE_LETTER_RECENT    0x00000001
-#   define RUMBLE_LETTER_UNREAD    0x00000010
-#   define RUMBLE_LETTER_READ      0x00000020
-#   define RUMBLE_LETTER_DELETED   0x00000100
-#   define RUMBLE_LETTER_EXPUNGE   0x00000300
-#   define RUMBLE_LETTER_ANSWERED  0x00001000
-#   define RUMBLE_LETTER_FLAGGED   0x00010000
-#   define RUMBLE_LETTER_DRAFT     0x00100000
-#   define RUMBLE_LETTER_UPDATED   0x01000000
+#define RUMBLE_LETTER_RECENT	0x00000001
+#define RUMBLE_LETTER_UNREAD	0x00000010
+#define RUMBLE_LETTER_READ		0x00000020
+#define RUMBLE_LETTER_DELETED	0x00000100
+#define RUMBLE_LETTER_EXPUNGE	0x00000300
+#define RUMBLE_LETTER_ANSWERED	0x00001000
+#define RUMBLE_LETTER_FLAGGED	0x00010000
+#define RUMBLE_LETTER_DRAFT		0x00100000
+#define RUMBLE_LETTER_UPDATED	0x01000000
 
 /*$5
  #######################################################################################################################
@@ -282,26 +286,26 @@
  #######################################################################################################################
  */
 
-#   ifdef RUMBLE_MSC
-#      define rumblemodule    int __declspec(dllexport)
-#      ifndef uint32_t
-typedef unsigned char       uint8_t;
-typedef unsigned short      uint16_t;
-typedef unsigned int        uint32_t;
-typedef unsigned long long  uint64_t;
-typedef signed int          ssize_t;
-typedef long long           int64_t;
-#      endif
-#      ifndef PRIu64
-#         define PRIu64  "llu"
-#      endif
-#      define sleep(a)    Sleep(a * 1000)
-#      ifndef AI_PASSIVE
-#         define AI_PASSIVE  1
-#      endif
-#   else
-#      define rumblemodule    int
-#   endif
+#ifdef RUMBLE_MSC
+#define rumblemodule	int __declspec(dllexport)
+#ifndef uint32_t
+typedef unsigned char		uint8_t;
+typedef unsigned short		uint16_t;
+typedef unsigned int		uint32_t;
+typedef unsigned long long	uint64_t;
+typedef signed int			ssize_t;
+typedef long long			int64_t;
+#endif
+#ifndef PRIu64
+#define PRIu64	"llu"
+#endif
+#define sleep(a)	Sleep(a * 1000)
+#ifndef AI_PASSIVE
+#define AI_PASSIVE	1
+#endif
+#else
+#define rumblemodule	int
+#endif
 
 /*$3
  =======================================================================================================================
@@ -319,13 +323,13 @@ typedef int socketHandle;
  #######################################################################################################################
  */
 
-#   ifdef RUMBLE_MSC
-#      define close(a)    closesocket(a)
-typedef int         socklen_t;
-typedef uint16_t    sa_family_t;
-typedef uint16_t    in_port_t;
-typedef uint32_t    in_addr_t;
-#   endif
+#ifdef RUMBLE_MSC
+#define close(a)	closesocket(a)
+typedef int			socklen_t;
+typedef uint16_t	sa_family_t;
+typedef uint16_t	in_port_t;
+typedef uint32_t	in_addr_t;
+#endif
 
 /*
  -----------------------------------------------------------------------------------------------------------------------
@@ -334,23 +338,23 @@ typedef uint32_t    in_addr_t;
  */
 typedef struct
 {
-    socketHandle            socket;
-    struct sockaddr_storage client_info;
-    char                    addr[46];
-    fd_set                  fd;
-    void                    *tls;
-    dummySocketOp           recv;   /* Dummy operator for GNUTLS */
-    dummySocketOp           send;   /* Dummy operator for GNUTLS */
+	socketHandle			socket;
+	struct sockaddr_storage client_info;
+	char					addr[46];
+	fd_set					fd;
+	void					*tls;
+	dummySocketOp			recv;	/* Dummy operator for GNUTLS */
+	dummySocketOp			send;	/* Dummy operator for GNUTLS */
 } clientHandle;
 typedef struct
 {
-    uint32_t        readers;
-    uint32_t        writers;
-    pthread_cond_t  reading;
-    pthread_cond_t  writing;
-    pthread_mutex_t mutex;
+	uint32_t		readers;
+	uint32_t		writers;
+	pthread_cond_t	reading;
+	pthread_cond_t	writing;
+	pthread_mutex_t mutex;
 } rumble_readerwriter;
-#   define RUMBLE_LSTATES  25
+#define RUMBLE_LSTATES	25
 
 /*
  -----------------------------------------------------------------------------------------------------------------------
@@ -359,227 +363,227 @@ typedef struct
  */
 typedef struct
 {
-    char        *name;          /* Name (or glob) of domain */
-    char        *path;          /* Optional storage path for letters */
-    uint32_t    id;             /* Domain ID */
+	char		*name;			/* Name (or glob) of domain */
+	char		*path;			/* Optional storage path for letters */
+	uint32_t	id;				/* Domain ID */
 } rumble_domain;
 typedef struct
 {
-    uint32_t        uid;
-    char            *user;      /* mailbox name */
-    rumble_domain   *domain;    /* Pointer to domain struct */
-    uint32_t        type;       /* type of mbox (mbox, alias, feed, mod) */
-    char            *arg;       /* If it's of type alias, feed or mod, arg gives the args */
-    char            *hash;      /* password hash */
+	uint32_t		uid;
+	char			*user;		/* mailbox name */
+	rumble_domain	*domain;	/* Pointer to domain struct */
+	uint32_t		type;		/* type of mbox (mbox, alias, feed, mod) */
+	char			*arg;		/* If it's of type alias, feed or mod, arg gives the args */
+	char			*hash;		/* password hash */
 } rumble_mailbox;
 typedef struct
 {
-    char    *user;
-    char    *domain;
-    char    *raw;
-    dvector *flags;
-    char    *_flags;
-    char    *tag;           /* VERP or BATV tags */
+	char	*user;
+	char	*domain;
+	char	*raw;
+	dvector *flags;
+	char	*_flags;
+	char	*tag;				/* VERP or BATV tags */
 } address;
 typedef struct
 {
-    dvector         *recipients;
-    dvector         *dict;
-    address         *sender;
-    clientHandle    *client;
-    uint32_t        flags;
-    uint32_t        _tflags;
-    void            *_master;
-    void            *_svcHandle;
-    void            *_svc;
+	dvector			*recipients;
+	dvector			*dict;
+	address			*sender;
+	clientHandle	*client;
+	uint32_t		flags;
+	uint32_t		_tflags;
+	void			*_master;
+	void			*_svcHandle;
+	void			*_svc;
 } sessionHandle;
 typedef struct
 {
-    const char  *title;
-    const char  *description;
-    const char  *author;
-    const char  *file;
+	const char	*title;
+	const char	*description;
+	const char	*author;
+	const char	*file;
 } rumble_module_info;
 typedef struct
 {
-    uint32_t    flags;
-    ssize_t (*func) (sessionHandle *, const char *cmd);
-    const char          *module;
-    rumble_module_info  *modinfo;
-    int                 lua_callback;
+	uint32_t	flags;
+	ssize_t (*func) (sessionHandle *, const char *cmd);
+	const char			*module;
+	rumble_module_info	*modinfo;
+	int					lua_callback;
 } hookHandle;
 typedef struct
 {
-    struct __core
-    {
-        dvector     *conf;
-        const char  *currentSO;
-        dvector     *modules;
-        cvector     *parser_hooks;
-        cvector     *feed_hooks;
-        void        *db;
-        void        *mail;
-        dvector     *batv;  /* BATV handles for bounce control */
-        void        *tls_credentials;
-        time_t      uptime;
-    } _core;
-    cvector *services;
-    struct
-    {
-        rumble_readerwriter *rrw;
-        dvector             *list;
-    } domains;
-    struct
-    {
-        rumble_readerwriter *rrw;
-        dvector             *list;
-    } mailboxes;
-    const char  *cfgdir;
-    struct
-    {
-        struct
-        {
-            int     working;
-            void    *state;
-        } states[RUMBLE_LSTATES];
-        pthread_mutex_t mutex;
-    } lua;
+	struct __core
+	{
+		dvector		*conf;
+		const char	*currentSO;
+		dvector		*modules;
+		cvector		*parser_hooks;
+		cvector		*feed_hooks;
+		radbMaster	*db;
+		radbMaster	*mail;
+		dvector		*batv;		/* BATV handles for bounce control */
+		void		*tls_credentials;
+		time_t		uptime;
+	} _core;
+	cvector *services;
+	struct
+	{
+		rumble_readerwriter *rrw;
+		dvector				*list;
+	} domains;
+	struct
+	{
+		rumble_readerwriter *rrw;
+		dvector				*list;
+	} mailboxes;
+	const char	*cfgdir;
+	struct
+	{
+		struct
+		{
+			int		working;
+			void	*state;
+		} states[RUMBLE_LSTATES];
+		pthread_mutex_t mutex;
+	} lua;
 } masterHandle;
 typedef struct
 {
-    masterHandle    *master;
-    socketHandle    socket;
-    cvector         *threads;
-    cvector         *init_hooks;
-    cvector         *cue_hooks;
-    cvector         *exit_hooks;
-    cvector         *commands;
-    cvector         *capabilities;
-    pthread_mutex_t mutex;
-    pthread_cond_t  cond;
-    dvector         *handles;
-    int             lua_handle;
-    void * (*init) (void *);
-    int enabled;
-    struct
-    {
-        size_t  sent;
-        size_t  received;
-        size_t  sessions;
-    } traffic;
-    struct
-    {
-        const char  *port;
-        const char  *name;
-        int         threadCount;
-    } settings;
+	masterHandle	*master;
+	socketHandle	socket;
+	cvector			*threads;
+	cvector			*init_hooks;
+	cvector			*cue_hooks;
+	cvector			*exit_hooks;
+	cvector			*commands;
+	cvector			*capabilities;
+	pthread_mutex_t mutex;
+	pthread_cond_t	cond;
+	dvector			*handles;
+	int				lua_handle;
+	void * (*init) (void *);
+	int enabled;
+	struct
+	{
+		size_t	sent;
+		size_t	received;
+		size_t	sessions;
+	} traffic;
+	struct
+	{
+		const char	*port;
+		const char	*name;
+		int			threadCount;
+	} settings;
 } rumbleService;
 typedef struct
 {
-    pthread_t       thread;
-    int             status;
-    rumbleService   *svc;
+	pthread_t		thread;
+	int				status;
+	rumbleService	*svc;
 } rumbleThread;
 typedef struct
 {
-    char            svcName[1024];
-    rumbleService   *svc;
+	char			svcName[1024];
+	rumbleService	*svc;
 } rumbleServicePointer;
 typedef struct
 {
-    const char  *key;
-    const char  *value;
+	const char	*key;
+	const char	*value;
 } rumbleKeyValuePair;
 typedef struct
 {
-    uint32_t    key;
-    char        *value;
+	uint32_t	key;
+	char		*value;
 } rumbleIntValuePair;
 typedef struct
 {
-    const char      *host;
-    unsigned int    preference;
+	const char		*host;
+	unsigned int	preference;
 } mxRecord;
 typedef struct
 {
-    address         *sender;
-    address         *recipient;
-    const char      *fid;
-    const char      *flags;
-    uint32_t        date;
-    rumble_mailbox  *account;
-    uint32_t        loops;
-    char            mType;  /* 0 = regular mail, 1 = bounce */
+	address			*sender;
+	address			*recipient;
+	const char		*fid;
+	const char		*flags;
+	uint32_t		date;
+	rumble_mailbox	*account;
+	uint32_t		loops;
+	char			mType;		/* 0 = regular mail, 1 = bounce */
 } mqueue;
 typedef struct
 {
-    uint32_t    replyCode;
-    char        *replyMessage;
-    char        *replyServer;
-    dvector     *flags;
+	uint32_t	replyCode;
+	char		*replyMessage;
+	char		*replyServer;
+	dvector		*flags;
 } rumble_sendmail_response;
 typedef struct
 {
-    uint64_t    id;         /* Letter ID */
-    uint32_t    uid;        /* User ID */
-    char        *fid;       /* File ID */
-    uint32_t    size;       /* Size of letter */
-    uint32_t    delivered;  /* Time of delivery */
-    int64_t     folder;     /* Folder name (for IMAP4) */
-    uint32_t    flags;      /* Various flags */
-    uint32_t    _flags;     /* Original copy of flags (for update checks) */
+	uint64_t	id;				/* Letter ID */
+	uint32_t	uid;			/* User ID */
+	char		*fid;			/* File ID */
+	uint32_t	size;			/* Size of letter */
+	uint32_t	delivered;		/* Time of delivery */
+	int64_t		folder;			/* Folder name (for IMAP4) */
+	uint32_t	flags;			/* Various flags */
+	uint32_t	_flags;			/* Original copy of flags (for update checks) */
 } rumble_letter;
 typedef struct
 {
-    rumble_mailbox  *account;   /* Pointer to account */
-    dvector         *contents;  /* dvector with letters */
-    rumble_letter   **letters;  /* post-defined array of letters for fast access */
-    uint32_t        size;       /* Number of letters */
+	rumble_mailbox	*account;	/* Pointer to account */
+	dvector			*contents;	/* dvector with letters */
+	rumble_letter	**letters;	/* post-defined array of letters for fast access */
+	uint32_t		size;		/* Number of letters */
 } rumble_mailbag;
 typedef struct
 {
-    uint32_t    id;
-    char        *name;
-    int         subscribed;
+	uint32_t	id;
+	char		*name;
+	int			subscribed;
 } rumble_folder;
 typedef struct
 {
-    dvector             *folders;
-    rumble_readerwriter *rrw;
-    uint32_t            sessions;
-    uint32_t            uid;
+	dvector				*folders;
+	rumble_readerwriter *rrw;
+	uint32_t			sessions;
+	uint32_t			uid;
 } rumble_mailman_shared_bag;
 typedef struct
 {
-    int64_t                     id;
-    time_t                      updated;
-    uint64_t                    lastMessage;
-    char                        *name;
-    int                         subscribed;
-    dvector                     *letters;
-    rumble_mailman_shared_bag   *bag;
+	int64_t						id;
+	time_t						updated;
+	uint64_t					lastMessage;
+	char						*name;
+	int							subscribed;
+	dvector						*letters;
+	rumble_mailman_shared_bag	*bag;
 } rumble_mailman_shared_folder;
 typedef struct
 {
-    char        **argv;
-    uint32_t    argc;
+	char		**argv;
+	uint32_t	argc;
 } rumble_args;
 typedef struct
 {
-    rumble_mailbox              *account;
-    rumble_mailman_shared_bag   *bag;
-    int64_t                     folder;
+	rumble_mailbox				*account;
+	rumble_mailman_shared_bag	*bag;
+	int64_t						folder;
 } accountSession;
 typedef ssize_t (*svcCommand) (masterHandle *, sessionHandle *, const char *, const char *);
 typedef struct
 {
-    const char  *cmd;
-    svcCommand  func;
+	const char	*cmd;
+	svcCommand	func;
 } svcCommandHook;
-#   ifdef __cplusplus
+#ifdef __cplusplus
 extern "C"
 {
-#   endif
+#endif
 
 /*$5
  #######################################################################################################################
@@ -593,10 +597,10 @@ extern "C"
  =======================================================================================================================
  */
 
-void            rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *, const char *));
-rumblemodule    rumble_module_check(void);
-void            rumble_service_add_command(rumbleService *svc, const char *command, svcCommand func);
-void            rumble_service_add_capability(rumbleService *svc, const char *command);
+void			rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (sessionHandle *, const char *));
+rumblemodule	rumble_module_check(void);
+void			rumble_service_add_command(rumbleService *svc, const char *command, svcCommand func);
+void			rumble_service_add_capability(rumbleService *svc, const char *command);
 
 /*$3
  =======================================================================================================================
@@ -604,47 +608,47 @@ void            rumble_service_add_capability(rumbleService *svc, const char *co
  =======================================================================================================================
  */
 
-char                        *strclone(const void *o);
-void                        rumble_release_state(lua_State *X);
-lua_State                   *rumble_acquire_state(void);
-size_t                      rumble_file_exists(const char *filename);
-void                        rumble_test(void);
-char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
-char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
-char                        *rumble_decode_base64(const char *src);
-void                        rumble_string_lower(char *d);           /* Converts <d> into lowercase. */
-void                        rumble_string_upper(char *d);           /* Converts <d> into uppercase. */
-rumble_args                 *rumble_read_words(const char *d);
-void                        rumble_args_free(rumble_args *d);
-char                        *rumble_mtime(void);            /* mail time */
-char                        *rumble_create_filename(void);  /* Generates random 16-letter filenames */
-void                        rumble_scan_words(dvector *dict, const char *wordlist);
-void                        rumble_scan_flags(dvector *dict, const char *flags);
-void                        rumble_flush_dictionary(dvector *dict);
-const char                  *rumble_get_dictionary_value(dvector *dict, const char *flag);
-void                        rumble_add_dictionary_value(dvector *dict, const char *key, const char *value);
-uint32_t                    rumble_has_dictionary_value(dvector *dict, const char *flag);
-void                        rumble_free_address(address *a);
-void                        rumble_free_account(rumble_mailbox *user);
-const char                  *rumble_smtp_reply_code(unsigned int code);
-ssize_t                     rumble_comm_send(sessionHandle *session, const char *message);
-ssize_t                     rumble_comm_send_bytes(sessionHandle *session, const char *message, size_t len);
-ssize_t                     rumble_comm_printf(sessionHandle *session, const char *d, ...);
-char                        *rumble_comm_read(sessionHandle *session);
-char                        *rumble_comm_read_bytes(sessionHandle *session, int len);
-const char                  *rumble_config_str(masterHandle *master, const char *key);
-uint32_t                    rumble_config_int(masterHandle *master, const char *key);
-void                        rumble_crypt_init(masterHandle *master);
-address                     *rumble_parse_mail_address(const char *addr);
-rumble_sendmail_response    *rumble_send_email
-                            (
-                                masterHandle    *master,
-                                const char      *mailserver,
-                                const char      *filename,
-                                address         *sender,
-                                address         *recipient
-                            );
-void                        statusLog(const char *msg, ...);
+char						*strclone(const void *o);
+void						rumble_release_state(lua_State *X);
+lua_State					*rumble_acquire_state(void);
+size_t						rumble_file_exists(const char *filename);
+void						rumble_test(void);
+char						*rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
+char						*rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
+char						*rumble_decode_base64(const char *src);
+void						rumble_string_lower(char *d);			/* Converts <d> into lowercase. */
+void						rumble_string_upper(char *d);			/* Converts <d> into uppercase. */
+rumble_args					*rumble_read_words(const char *d);
+void						rumble_args_free(rumble_args *d);
+char						*rumble_mtime(void);					/* mail time */
+char						*rumble_create_filename(void);			/* Generates random 16-letter filenames */
+void						rumble_scan_words(dvector *dict, const char *wordlist);
+void						rumble_scan_flags(dvector *dict, const char *flags);
+void						rumble_flush_dictionary(dvector *dict);
+const char					*rumble_get_dictionary_value(dvector *dict, const char *flag);
+void						rumble_add_dictionary_value(dvector *dict, const char *key, const char *value);
+uint32_t					rumble_has_dictionary_value(dvector *dict, const char *flag);
+void						rumble_free_address(address *a);
+void						rumble_free_account(rumble_mailbox *user);
+const char					*rumble_smtp_reply_code(unsigned int code);
+ssize_t						rumble_comm_send(sessionHandle *session, const char *message);
+ssize_t						rumble_comm_send_bytes(sessionHandle *session, const char *message, size_t len);
+ssize_t						rumble_comm_printf(sessionHandle *session, const char *d, ...);
+char						*rumble_comm_read(sessionHandle *session);
+char						*rumble_comm_read_bytes(sessionHandle *session, int len);
+const char					*rumble_config_str(masterHandle *master, const char *key);
+uint32_t					rumble_config_int(masterHandle *master, const char *key);
+void						rumble_crypt_init(masterHandle *master);
+address						*rumble_parse_mail_address(const char *addr);
+rumble_sendmail_response	*rumble_send_email
+							(
+								masterHandle	*master,
+								const char		*mailserver,
+								const char		*filename,
+								address			*sender,
+								address			*recipient
+							);
+void						statusLog(const char *msg, ...);
 
 /*$3
  =======================================================================================================================
@@ -652,15 +656,15 @@ void                        statusLog(const char *msg, ...);
  =======================================================================================================================
  */
 
-uint32_t        rumble_domain_exists(const char *domain);
-uint32_t        rumble_account_exists_raw(const char *user, const char *domain);
-rumble_domain   *rumble_domain_copy(const char *domain);
-cvector         *rumble_domains_list(void);
-uint32_t        rumble_account_exists(sessionHandle *session, const char *user, const char *domain);
-rumble_mailbox  *rumble_account_data(uint32_t uid, const char *user, const char *domain);
-rumble_mailbox  *rumble_account_data_auth(uint32_t uid, const char *user, const char *domain, const char *pass);
-cvector         *rumble_database_accounts_list(const char *domain);
-void            rumble_database_accounts_free(cvector *accounts);   /* cleanup func for the function above. */
+uint32_t		rumble_domain_exists(const char *domain);
+uint32_t		rumble_account_exists_raw(const char *user, const char *domain);
+rumble_domain	*rumble_domain_copy(const char *domain);
+cvector			*rumble_domains_list(void);
+uint32_t		rumble_account_exists(sessionHandle *session, const char *user, const char *domain);
+rumble_mailbox	*rumble_account_data(uint32_t uid, const char *user, const char *domain);
+rumble_mailbox	*rumble_account_data_auth(uint32_t uid, const char *user, const char *domain, const char *pass);
+cvector			*rumble_database_accounts_list(const char *domain);
+void			rumble_database_accounts_free(cvector *accounts);	/* cleanup func for the function above. */
 
 /*$3
  =======================================================================================================================
@@ -668,21 +672,21 @@ void            rumble_database_accounts_free(cvector *accounts);   /* cleanup f
  =======================================================================================================================
  */
 
-FILE                            *rumble_letters_open(rumble_mailbox *mbox, rumble_letter *letter);
-rumble_mailman_shared_bag       *rumble_mailman_open_bag(uint32_t uid);
-void                            rumble_mailman_close_bag(rumble_mailman_shared_bag *bag);
-rumble_mailman_shared_folder    *rumble_mailman_current_folder(accountSession *sess);
-rumble_mailman_shared_bag       *rumble_letters_retrieve_shared(uint32_t uid);
-void                            rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);
-uint32_t                        rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder);
-void                            rumble_mailman_free(rumble_mailman_shared_bag *bag);
-uint32_t                        rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
-size_t                          rumble_mailman_copy_letter
-                                (
-                                    rumble_mailbox                  *account,
-                                    rumble_letter                   *letter,
-                                    rumble_mailman_shared_folder    *folder
-                                );
+FILE							*rumble_letters_open(rumble_mailbox *mbox, rumble_letter *letter);
+rumble_mailman_shared_bag		*rumble_mailman_open_bag(uint32_t uid);
+void							rumble_mailman_close_bag(rumble_mailman_shared_bag *bag);
+rumble_mailman_shared_folder	*rumble_mailman_current_folder(accountSession *sess);
+rumble_mailman_shared_bag		*rumble_letters_retrieve_shared(uint32_t uid);
+void							rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);
+uint32_t						rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder);
+void							rumble_mailman_free(rumble_mailman_shared_bag *bag);
+uint32_t						rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
+size_t							rumble_mailman_copy_letter
+								(
+									rumble_mailbox					*account,
+									rumble_letter					*letter,
+									rumble_mailman_shared_folder	*folder
+								);
 
 /*$5
  #######################################################################################################################
@@ -690,19 +694,21 @@ size_t                          rumble_mailman_copy_letter
  #######################################################################################################################
  */
 
-#   define rrdict      rumble_get_dictionary_value  /* read dict */
-#   define rsdict      rumble_add_dictionary_value  /* set dict */
-#   define rfdict      rumble_flush_dictionary      /* flush dict */
-#   define rhdict      rumble_has_dictionary_value  /* returns 1 if value exists, 0 otherwise */
-#   define rcsend      rumble_comm_send
-#   define rcprintf    rumble_comm_printf
-#   define rcread      rumble_comm_read
-#   define merror()    { fprintf(stderr, "Memory allocation failed, this is bad!\n"); exit(1); }
-#   define and         &&
-#   define or          ||
-#   define rivp        (rumbleIntValuePair *)
-#   define rmsf        (rumble_mailman_shared_folder *)
-#   define rmsb        (rumble_mailman_shared_bag *)
+#define rrdict		rumble_get_dictionary_value /* read dict */
+#define rsdict		rumble_add_dictionary_value /* set dict */
+#define rfdict		rumble_flush_dictionary		/* flush dict */
+#define rhdict		rumble_has_dictionary_value /* returns 1 if value exists, 0 otherwise */
+#define rcsend		rumble_comm_send
+#define rcprintf	rumble_comm_printf
+#define rcread		rumble_comm_read
+#define merror()	{ fprintf(stderr, "Memory allocation failed, this is bad!\n"); exit(1); }
+#define and \
+&&
+#define or \
+||
+#define rivp	(rumbleIntValuePair *)
+#define rmsf	(rumble_mailman_shared_folder *)
+#define rmsb	(rumble_mailman_shared_bag *)
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
@@ -714,12 +720,12 @@ size_t                          rumble_mailman_copy_letter
  -----------------------------------------------------------------------------------------------------------------------
  */
 
-#   define foreach dforeach
-#   ifndef FALSE
-#      define FALSE   0
-#      define TRUE    1
-#   endif
-#   ifdef __cplusplus
+#define foreach dforeach
+#ifndef FALSE
+#define FALSE	0
+#define TRUE	1
+#endif
+#ifdef __cplusplus
 }
-#   endif
+#endif
 #endif /* RUMBLE_H */
