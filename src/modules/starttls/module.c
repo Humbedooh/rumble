@@ -1,5 +1,3 @@
-/*$T module.c GC 1.140 04/04/11 15:49:31 */
-
 /*
  * File: module.c Author: Humbedooh A simple (but efficient) load balancing module
  * for rumble. Created on January 3, 2011, 8:08 P
@@ -11,30 +9,28 @@
 #include <gcrypt.h>
 #include <errno.h>
 #ifndef ENOMEM
-#define ENOMEM	12
+#   define ENOMEM  12
 #endif
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
-static gnutls_dh_params_t	dh_params;
-static gnutls_rsa_params_t	rsa_params;
+static gnutls_dh_params_t   dh_params;
+static gnutls_rsa_params_t  rsa_params;
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-static void generate_dh_params(void)
-{
-	gnutls_dh_params_init(&dh_params);
-	gnutls_dh_params_generate2(dh_params, 1024);
+static void generate_dh_params(void) {
+    gnutls_dh_params_init(&dh_params);
+    gnutls_dh_params_generate2(dh_params, 1024);
 }
 
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-static void generate_rsa_params(void)
-{
-	gnutls_rsa_params_init(&rsa_params);
-	gnutls_rsa_params_generate2(rsa_params, 1024);
+static void generate_rsa_params(void) {
+    gnutls_rsa_params_init(&rsa_params);
+    gnutls_rsa_params_generate2(rsa_params, 1024);
 }
 
 /*
@@ -42,43 +38,42 @@ static void generate_rsa_params(void)
     Generic STARTTLS handler
  =======================================================================================================================
  */
-ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const char *arg, const char *extra)
-{
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	int									ret;
-	gnutls_certificate_credentials_t	*pcred;
-	gnutls_session_t					psess;
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const char *arg, const char *extra) {
 
-	switch(session->_tflags & RUMBLE_THREAD_SVCMASK)
-	{
-	case RUMBLE_THREAD_SMTP:	rcsend(session, "220 OK, starting TLS\r\n"); break;
-	case RUMBLE_THREAD_IMAP:	rcprintf(session, "%s OK Begin TLS negotiation now\r\n", extra); break;
-	case RUMBLE_THREAD_POP3:	rcsend(session, "OK, starting TLS\r\n"); break;
-	default:					return(RUMBLE_RETURN_IGNORE);
-	}
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int                                 ret;
+    gnutls_certificate_credentials_t    *pcred;
+    gnutls_session_t                    psess;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-	pcred = (gnutls_certificate_credentials_t *) master->_core.tls_credentials;
-	ret = gnutls_init(&psess, GNUTLS_SERVER);
-	ret = gnutls_priority_set_direct(psess, "EXPORT", NULL);
-	ret = gnutls_credentials_set(psess, GNUTLS_CRD_CERTIFICATE, *pcred);
-	gnutls_certificate_server_set_request(psess, GNUTLS_CERT_REQUEST);
-	gnutls_dh_set_prime_bits(psess, 1024);
-	gnutls_transport_set_ptr(psess, (gnutls_transport_ptr_t) session->client->socket);
-	ret = gnutls_handshake(psess);
-	session->client->tls = psess;
-	if(ret < 0)
-	{
-		fprintf(stderr, "*** TLS Handshake failed\n");
-		gnutls_perror(ret);
-		session->client->tls = 0;
-		return(RUMBLE_RETURN_FAILURE);
-	}
+    switch (session->_tflags & RUMBLE_THREAD_SVCMASK)
+    {
+    case RUMBLE_THREAD_SMTP:    rcsend(session, "220 OK, starting TLS\r\n"); break;
+    case RUMBLE_THREAD_IMAP:    rcprintf(session, "%s OK Begin TLS negotiation now\r\n", extra); break;
+    case RUMBLE_THREAD_POP3:    rcsend(session, "OK, starting TLS\r\n"); break;
+    default:                    return (RUMBLE_RETURN_IGNORE);
+    }
 
-	/* Set the dummy send/recv operators */
-	session->client->recv = (dummySocketOp) gnutls_record_recv;
-	session->client->send = (dummySocketOp) gnutls_record_send;
-	return(RUMBLE_RETURN_IGNORE);
+    pcred = (gnutls_certificate_credentials_t *) master->_core.tls_credentials;
+    ret = gnutls_init(&psess, GNUTLS_SERVER);
+    ret = gnutls_priority_set_direct(psess, "EXPORT", NULL);
+    ret = gnutls_credentials_set(psess, GNUTLS_CRD_CERTIFICATE, *pcred);
+    gnutls_certificate_server_set_request(psess, GNUTLS_CERT_REQUEST);
+    gnutls_dh_set_prime_bits(psess, 1024);
+    gnutls_transport_set_ptr(psess, (gnutls_transport_ptr_t) session->client->socket);
+    ret = gnutls_handshake(psess);
+    session->client->tls = psess;
+    if (ret < 0) {
+        fprintf(stderr, "*** TLS Handshake failed\n");
+        gnutls_perror(ret);
+        session->client->tls = 0;
+        return (RUMBLE_RETURN_FAILURE);
+    }
+
+    /* Set the dummy send/recv operators */
+    session->client->recv = (dummySocketOp) gnutls_record_recv;
+    session->client->send = (dummySocketOp) gnutls_record_send;
+    return (RUMBLE_RETURN_IGNORE);
 }
 
 /*
@@ -86,18 +81,16 @@ ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const cha
     Generic STOPTLS handler (or called when a TLS connection is closed)
  =======================================================================================================================
  */
-ssize_t rumble_tls_stop(sessionHandle *session, const char *junk)
-{
-	if(session->client->tls)
-	{
-		gnutls_bye((gnutls_session_t) session->client->tls, GNUTLS_SHUT_RDWR);
-		gnutls_deinit((gnutls_session_t) session->client->tls);
-		session->client->tls = 0;
-	}
+ssize_t rumble_tls_stop(sessionHandle *session, const char *junk) {
+    if (session->client->tls) {
+        gnutls_bye((gnutls_session_t) session->client->tls, GNUTLS_SHUT_RDWR);
+        gnutls_deinit((gnutls_session_t) session->client->tls);
+        session->client->tls = 0;
+    }
 
-	session->client->recv = 0;
-	session->client->send = 0;
-	return(0);
+    session->client->recv = 0;
+    session->client->send = 0;
+    return (0);
 }
 
 /*
@@ -105,87 +98,82 @@ ssize_t rumble_tls_stop(sessionHandle *session, const char *junk)
     Standard module initialization function
  =======================================================================================================================
  */
-rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo)
-{
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	masterHandle						*m = (masterHandle *) master;
-	gnutls_certificate_credentials_t	*pcred;
-	rumbleService						*svc;
-	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
-	printf("Initializing GNUTLS (this may take a while)...  ");
-	fflush(stdout);
-	modinfo->title = "TLS module";
-	modinfo->description = "Enables TLS/SSL transport for rumble.";
-	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    masterHandle                        *m = (masterHandle *) master;
+    gnutls_certificate_credentials_t    *pcred;
+    rumbleService                       *svc;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-	/*
-	 * gnutls_global_mutex_set (pthread_mutex_init, pthread_mutex_destroy(),
-	 * pthread_mutex_lock, pthread_mutex_unlock);
-	 */
-	gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
-	if(gnutls_global_init())
-	{
-		fprintf(stderr, "<TLS> Failed!\r\n");
-		return(EXIT_FAILURE);
-	}
+    printf("Initializing GNUTLS (this may take a while)...  ");
+    fflush(stdout);
+    modinfo->title = "TLS module";
+    modinfo->description = "Enables TLS/SSL transport for rumble.";
+    gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
 
-	m->_core.tls_credentials = (gnutls_certificate_credentials_t *) calloc(1, sizeof(gnutls_certificate_credentials_t));
-	pcred = (gnutls_certificate_credentials_t *) m->_core.tls_credentials;
-	if(gnutls_certificate_allocate_credentials(pcred))
-	{
-		fprintf(stderr, "<TLS> Failed!\r\n");
-		return(EXIT_FAILURE);
-	}
+    /*
+     * gnutls_global_mutex_set (pthread_mutex_init, pthread_mutex_destroy(),
+     * pthread_mutex_lock, pthread_mutex_unlock);
+     */
+    gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
+    if (gnutls_global_init()) {
+        fprintf(stderr, "<TLS> Failed!\r\n");
+        return (EXIT_FAILURE);
+    }
 
-	gnutls_certificate_set_x509_key_file(*pcred, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);
-	generate_dh_params();
-	generate_rsa_params();
-	gnutls_certificate_set_dh_params(*pcred, dh_params);
-	gnutls_certificate_set_rsa_export_params(*pcred, rsa_params);
-	printf("[OK]\r\n");
+    m->_core.tls_credentials = (gnutls_certificate_credentials_t *) calloc(1, sizeof(gnutls_certificate_credentials_t));
+    pcred = (gnutls_certificate_credentials_t *) m->_core.tls_credentials;
+    if (gnutls_certificate_allocate_credentials(pcred)) {
+        fprintf(stderr, "<TLS> Failed!\r\n");
+        return (EXIT_FAILURE);
+    }
 
-	/*$3
-	 ===================================================================================================================
-	    Service hooks
-	 ===================================================================================================================
-	 */
+    gnutls_certificate_set_x509_key_file(*pcred, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);
+    generate_dh_params();
+    generate_rsa_params();
+    gnutls_certificate_set_dh_params(*pcred, dh_params);
+    gnutls_certificate_set_rsa_export_params(*pcred, rsa_params);
+    printf("[OK]\r\n");
 
-	/*$2
-	 -------------------------------------------------------------------------------------------------------------------
-	    Hook the module to STARTTLS requests.
-	 -------------------------------------------------------------------------------------------------------------------
-	 */
+    /*$3
+     ===================================================================================================================
+        Service hooks
+     ===================================================================================================================
+     */
 
-	svc = comm_serviceHandleExtern((masterHandle *) master, "smtp");
-	if(svc)
-	{
-		rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
-		rumble_service_add_capability(svc, "STARTTLS");
-	}
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Hook the module to STARTTLS requests.
+     -------------------------------------------------------------------------------------------------------------------
+     */
 
-	svc = comm_serviceHandleExtern((masterHandle *) master, "pop3");
-	if(svc)
-	{
-		rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
-		rumble_service_add_capability(svc, "STARTTLS");
-	}
+    svc = comm_serviceHandleExtern((masterHandle *) master, "smtp");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
 
-	svc = comm_serviceHandleExtern((masterHandle *) master, "imap4");
-	if(svc)
-	{
-		rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
-		rumble_service_add_capability(svc, "STARTTLS");
-	}
+    svc = comm_serviceHandleExtern((masterHandle *) master, "pop3");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
 
-	/*$2
-	 -------------------------------------------------------------------------------------------------------------------
-	    Hook onto services closing connections
-	 -------------------------------------------------------------------------------------------------------------------
-	 */
+    svc = comm_serviceHandleExtern((masterHandle *) master, "imap4");
+    if (svc) {
+        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STARTTLS");
+    }
 
-	rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_CLOSE, rumble_tls_stop);
-	rumble_hook_function(master, RUMBLE_HOOK_POP3 + RUMBLE_HOOK_CLOSE, rumble_tls_stop);
-	rumble_hook_function(master, RUMBLE_HOOK_IMAP + RUMBLE_HOOK_CLOSE, rumble_tls_stop);
-	return(EXIT_SUCCESS);	/* Tell rumble that the module loaded okay. */
+    /*$2
+     -------------------------------------------------------------------------------------------------------------------
+        Hook onto services closing connections
+     -------------------------------------------------------------------------------------------------------------------
+     */
+
+    rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_CLOSE, rumble_tls_stop);
+    rumble_hook_function(master, RUMBLE_HOOK_POP3 + RUMBLE_HOOK_CLOSE, rumble_tls_stop);
+    rumble_hook_function(master, RUMBLE_HOOK_IMAP + RUMBLE_HOOK_CLOSE, rumble_tls_stop);
+    return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */
 }
