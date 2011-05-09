@@ -277,7 +277,7 @@ void *rumble_worker_process(void *m) {
 
                         free(ofilename);
                         free(nfilename);
-                        radb_run(0, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)", item->account->uid, item->fid, fsize);
+                        radb_run_inject(master->_core.db, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)", item->account->uid, item->fid, fsize);
 
                         /* done here! */
                     }
@@ -303,7 +303,7 @@ void *rumble_worker_process(void *m) {
                                     sprintf(loops, "%u", item->loops);
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
-                                        radb_run(0, "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
+                                        radb_run_inject(master->_core.db, "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
                                                  loops, item->fid, item->sender->raw, email, item->flags);
                                     }
                                 }
@@ -386,7 +386,7 @@ void *rumble_worker_process(void *m) {
                     statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s,%s)";
                 }
 
-                radb_run(0,
+                radb_run_inject(master->_core.db,
                          "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)",
                      item->loops, item->fid, tmp, item->recipient->raw, item->flags);
                 memset(tmp, 0, 256);

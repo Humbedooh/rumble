@@ -499,7 +499,7 @@ ssize_t rumble_server_imap_create(masterHandle *master, sessionHandle *session, 
         else {
 
             /* Add the folder to the SQL DB */
-            radb_run(master->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
+            radb_run_inject(master->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
 
             /* Update the local folder list */
             rumble_mailman_update_folders(imap->bag);
@@ -557,7 +557,7 @@ ssize_t rumble_server_imap_rename(masterHandle *master, sessionHandle *session, 
         else if (!oldFolder)
             rcprintf(session, "%s NO RENAME failed: No such folder <%s>\r\n", extra_data, oldName);
         else {
-            radb_run(master->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id);
+            radb_run_inject(master->_core.db, "UPDATE folders set name = %s WHERE id = %u", newName, oldFolder->id);
             free(oldFolder->name);
             oldFolder->name = (char *) calloc(1, strlen(newName) + 1);
             strncpy(oldFolder->name, newName, strlen(newName));
@@ -600,7 +600,7 @@ ssize_t rumble_server_imap_subscribe(masterHandle *master, sessionHandle *sessio
 
         if (!folder) rcprintf(session, "%s NO SUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
         else {
-            radb_run(master->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id);
+            radb_run_inject(master->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id);
             folder->subscribed = 1;
             rcprintf(session, "%s OK SUBSCRIBE completed\r\n", extra_data);
         }
@@ -641,7 +641,7 @@ ssize_t rumble_server_imap_unsubscribe(masterHandle *master, sessionHandle *sess
 
         if (!folder) rcprintf(session, "%s NO UNSUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
         else {
-            radb_run(master->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id);
+            radb_run_inject(master->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id);
             folder->subscribed = 0;
             rcprintf(session, "%s OK UNSUBSCRIBE completed\r\n", extra_data);
         }

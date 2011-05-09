@@ -1,10 +1,10 @@
 /*$I0 */
-#include <sys/stat.h>
 #include "rumble.h"
 #include "database.h"
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
+#include <sys/stat.h>
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
 extern FILE         *sysLog;
@@ -266,8 +266,8 @@ static int rumble_lua_deleteaccount(lua_State *L) {
                 }
             }
 
-            radb_do(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE domain = %s AND user = %s", domain, user);
-            radb_do(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE uid = %u", acc->uid);
+            radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE domain = %s AND user = %s", domain, user);
+            radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE uid = %u", acc->uid);
         }
     }
 
@@ -499,10 +499,10 @@ static int rumble_lua_updatedomain(lua_State *L) {
     newtype = luaL_optstring(L, 4, "");
     dmn = rumble_domain_copy(domain);
     if (dmn) {
-        radb_do(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname, newpath,
+        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname, newpath,
                 dmn->id);
         rumble_database_update_domains();
-        radb_do(rumble_database_master_handle->_core.db, "UPDATE accounts SET domain = %s WHERE domain = %s", newname, dmn->name);
+        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE accounts SET domain = %s WHERE domain = %s", newname, dmn->name);
         free(dmn->name);
         if (dmn->path) free(dmn->path);
     }
@@ -629,12 +629,12 @@ static int rumble_lua_saveaccount(lua_State *L) {
     if (rumble_domain_exists(domain)) {
         x = rumble_account_exists_raw(user, domain);
         if (uid && x) {
-            radb_do(rumble_database_master_handle->_core.db,
+            radb_run_inject(rumble_database_master_handle->_core.db,
                     "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u", user, domain, mtype,
                     password, arguments, uid);
             lua_pushboolean(L, 1);
         } else if (!x) {
-            radb_do(rumble_database_master_handle->_core.db, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)",
+            radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)",
                     user, domain, mtype, password, "moo");
             lua_pushboolean(L, 1);
         } else lua_pushboolean(L, 0);
@@ -667,7 +667,7 @@ static int rumble_lua_createdomain(lua_State *L) {
     path = lua_tostring(L, 2);
     lua_settop(L, 0);
     if (!rumble_domain_exists(domain)) {
-        radb_do(rumble_database_master_handle->_core.db, "INSERT INTO domains (domain,storagepath) VALUES (%s,%s)", domain, path);
+        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (domain,storagepath) VALUES (%s,%s)", domain, path);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
     } else lua_pushboolean(L, 0);
@@ -694,7 +694,7 @@ static int rumble_lua_deletedomain(lua_State *L) {
     domain = lua_tostring(L, 1);
     lua_settop(L, 0);
     if (rumble_domain_exists(domain)) {
-        radb_do(rumble_database_master_handle->_core.db, "DELETE FROM domains WHERE domain = %s", domain);
+        radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM domains WHERE domain = %s", domain);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
     } else lua_pushboolean(L, 0);

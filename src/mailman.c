@@ -457,7 +457,7 @@ size_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter
 
         fclose(in);
         fclose(out);
-        radb_do(rumble_database_master_handle->_core.db, "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)",
+        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)",
                 account->uid, filename, folder->id, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
         free(filename);
     }

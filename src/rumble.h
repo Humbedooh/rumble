@@ -131,6 +131,8 @@
 #ifdef R_WINDOWS
 #include <windows.h> 
 #endif
+#include <mysql.h>
+#include <sqlite3.h>
 #   include "radb/radb.h"
 
 /*$5
