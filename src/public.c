@@ -94,7 +94,6 @@ address *rumble_parse_mail_address(const char *addr) {
 
         /* First, try to scan for "<user@domain> FLAGS" */
         if (sscanf(addr, "<%256[^@]@%128[^>]>%128[A-Z= %-]", tmp, usr->domain, usr->_flags) < 2) {
-            printf("Found: <%s@%s>\n", tmp, usr->domain);
             /* Then, try scanning for "<> FLAGS" (bounce message) */
             sscanf(addr, "<%128[^>]>%128[A-Z= %-]", tmp, usr->_flags);
         }

@@ -525,10 +525,15 @@ static int rumble_lua_getaccount(lua_State *L) {
     int             uid = 0;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
+     if (lua_type(L, 1) == LUA_TNUMBER) {
+        uid = luaL_optinteger(L, 1, 0);
+     }
+    
     domain = lua_tostring(L, 1);
     user = lua_tostring(L, 2);
-    uid = luaL_optinteger(L, 1, 0);
-    acc = rumble_account_data(uid, domain, user);
+    
+    
+    acc = rumble_account_data(uid, user, domain);
     lua_settop(L, 0);
     if (acc) {
         mtype = "unknown";
@@ -550,7 +555,7 @@ static int rumble_lua_getaccount(lua_State *L) {
         lua_pushstring(L, acc->user);
         lua_rawset(L, -3);
         lua_pushliteral(L, "domain");
-        lua_pushstring(L, domain);
+        lua_pushstring(L, acc->domain->name);
         lua_rawset(L, -3);
         lua_pushliteral(L, "password");
         lua_pushstring(L, acc->hash);
@@ -562,6 +567,7 @@ static int rumble_lua_getaccount(lua_State *L) {
         lua_pushstring(L, acc->arg);
         lua_rawset(L, -3);
         rumble_free_account(acc);
+        rumble_domain_free(acc->domain);
         return (1);
     }
 

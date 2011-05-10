@@ -188,7 +188,6 @@ uint32_t rumble_account_exists(sessionHandle *session, const char *user, const c
     /*~~~*/
     int rc=0;
     /*~~~*/
-    printf("Checking for <%s@%s>...\n", user, domain);
     if (rumble_database_master_handle->_core.db->dbType == RADB_SQLITE3) {
         rc = radb_run_inject(rumble_database_master_handle->_core.db, "SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1", domain, user);
     }
@@ -465,6 +464,17 @@ void rumble_database_accounts_free(cvector *accounts) {
     }
 
     cvector_destroy(accounts);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_domain_free(rumble_domain* domain) {
+    if (!domain) return 0;
+    if (domain->name) free(domain->name);
+    if (domain->path) free(domain->path);
+    free(domain);
 }
 
 /*

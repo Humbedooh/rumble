@@ -670,6 +670,7 @@ rumble_mailbox  *rumble_account_data(uint32_t uid, const char *user, const char 
 rumble_mailbox  *rumble_account_data_auth(uint32_t uid, const char *user, const char *domain, const char *pass);
 cvector         *rumble_database_accounts_list(const char *domain);
 void            rumble_database_accounts_free(cvector *accounts);   /* cleanup func for the function above. */
+void rumble_domain_free(rumble_domain* domain); //cleanup for domain copies.
 
 /*$3
  =======================================================================================================================
