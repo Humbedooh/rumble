@@ -188,14 +188,14 @@ uint32_t rumble_account_exists(sessionHandle *session, const char *user, const c
     /*~~~*/
     int rc=0;
     /*~~~*/
-
+    printf("Checking for <%s@%s>...\n", user, domain);
     if (rumble_database_master_handle->_core.db->dbType == RADB_SQLITE3) {
         rc = radb_run_inject(rumble_database_master_handle->_core.db, "SELECT 1 FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1", domain, user);
     }
     else if (rumble_database_master_handle->_core.db->dbType == RADB_MYSQL) {
         rc = radb_run_inject(rumble_database_master_handle->_core.db, "SELECT 1 FROM accounts WHERE domain = %s AND %s LIKE user ORDER BY LENGTH(user) DESC LIMIT 1", domain, user);
     }
-    return (rc == RUMBLE_DB_RESULT) ? 1 : 0;
+    return rc;
 }
 
 /*

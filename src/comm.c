@@ -218,7 +218,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     
     va_start(vl, d);
     vsprintf(buffer, d, vl);
-    printf("we're sending: %s\n", buffer);
+    
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
     free(buffer);
@@ -301,7 +301,7 @@ char *rumble_comm_read(sessionHandle *session) {
 #ifndef PRIdPTR
 #   define PRIdPTR "ld"
 #endif
-            printf("timeout after %l"PRIdPTR " secs!\r\n", z);
+            printf("timeout after %"PRIdPTR " secs!\r\n", z);
             return (NULL);
         }
     }
