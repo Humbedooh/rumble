@@ -169,7 +169,7 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
                 if (bl)
                 {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr, dnshost);
+                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr);
 #endif
                     if (blacklist_logfile) {
 

@@ -635,7 +635,7 @@ static int rumble_lua_saveaccount(lua_State *L) {
             lua_pushboolean(L, 1);
         } else if (!x) {
             radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)",
-                    user, domain, mtype, password, "moo");
+                    user, domain, mtype, password, arguments);
             lua_pushboolean(L, 1);
         } else lua_pushboolean(L, 0);
     } else {
@@ -1234,6 +1234,7 @@ static int rumble_lua_createservice(lua_State *L) {
                     n;
     socketHandle    sock;
     int             isFirstCaller = 0;
+    pthread_attr_t attr;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -1265,6 +1266,8 @@ static int rumble_lua_createservice(lua_State *L) {
      */
 
     if (isFirstCaller) {
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize (&attr, 128*1024);
         lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
         svc = (rumbleService *) malloc(sizeof(rumbleService));
         svc->lua_handle = luaL_ref(L, LUA_REGISTRYINDEX);   /* Pop the ref and store it in the registry */
@@ -1286,7 +1289,7 @@ static int rumble_lua_createservice(lua_State *L) {
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
             cvector_add(svc->threads, thread);
-            pthread_create(&thread->thread, NULL, rumble_lua_handle_service, svc);
+            pthread_create(&thread->thread, &attr, rumble_lua_handle_service, svc);
         }
 
         lua_pushboolean(L, TRUE);

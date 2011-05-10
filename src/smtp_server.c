@@ -80,6 +80,9 @@ void *rumble_smtp_init(void *T) {
             rc = 500;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
+#if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
+                printf("Client said: %s %s\n", cmd, arg);
+#endif
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
                 } /* bye! */ else {

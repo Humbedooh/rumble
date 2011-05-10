@@ -128,10 +128,10 @@
 #   endif
 
 /*$3 RADB */
-#ifdef R_WINDOWS
+#ifdef RUMBLE_MSC
 #include <windows.h> 
 #endif
-#include <mysql.h>
+//#include <mysql.h>
 #include <sqlite3.h>
 #   include "radb/radb.h"
 
@@ -480,6 +480,7 @@ typedef struct
         const char  *port;
         const char  *name;
         int         threadCount;
+        size_t      stackSize;
     } settings;
 } rumbleService;
 typedef struct

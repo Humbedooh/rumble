@@ -59,13 +59,18 @@ ssize_t accept_hook(sessionHandle *session, const char *junk) {
         busy = svc->handles->size;      /* Number of threads busy */
         idle = workers - busy;          /* Number of threads idling */
         if ((idle <= 1 || workers < FOREMAN_FALLBACK) && workers < FOREMAN_MAX_THREADS) {
+            /*~~~~~~~~~~~~~~~~~~~~*/
+            pthread_attr_t attr;
+            /*~~~~~~~~~~~~~~~~~~~~*/
+            pthread_attr_init(&attr);
+            pthread_attr_setstacksize (&attr, svc->settings.stackSize);
             New = (workers + FOREMAN_THREAD_BUFFER) >= FOREMAN_FALLBACK ? FOREMAN_THREAD_BUFFER : FOREMAN_FALLBACK - workers;
             for (x = 0; x < New; x++) {
                 thread = (rumbleThread *) malloc(sizeof(rumbleThread));
                 thread->status = 0;
                 thread->svc = svc;
                 cvector_add(svc->threads, thread);
-                pthread_create(&thread->thread, 0, svc->init, (void *) thread);
+                pthread_create(&thread->thread, &attr, svc->init, (void *) thread);
             }
         }
 

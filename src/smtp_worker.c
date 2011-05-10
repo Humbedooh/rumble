@@ -427,6 +427,7 @@ void *rumble_worker_init(void *T) {
     const char      *statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= strftime('%%s','now') LIMIT 1";
     radbObject* dbo;
 	radbResult* result;
+        pthread_attr_t attr;
 
 
     if (master->_core.db->dbType == RADB_MYSQL) {
@@ -436,11 +437,16 @@ void *rumble_worker_init(void *T) {
     ignmx = rrdict(master->_core.conf, "ignoremx");
     badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
+    
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize (&attr, 256*1024); // let's see if 256kb is enough ;>
     for (x = 0; x < 25; x++) {
         thread = (rumbleThread *) malloc(sizeof(rumbleThread));
         cvector_add(svc->threads, thread);
         thread->status = 1;
-        pthread_create(&thread->thread, NULL, rumble_worker_process, svc);
+        pthread_create(&thread->thread, &attr, rumble_worker_process, svc);
     }
 
   dbo = radb_prepare(master->_core.db, statement);

@@ -26,13 +26,13 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
 
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
-    ftmp = fopen(dbpath, "r");
+    ftmp = fopen(dbpath, "a+");
     if (!ftmp) {
         sprintf(dbpath, "%s/%s/rumble.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
         sprintf(mailpath, "%s/%s/mail.sqlite", rrdict(master->_core.conf, "execpath"), rumble_config_str(master, "datafolder"));
     } else fclose(ftmp);
     printf("%-48s", "Loading database...");
-    statusLog("Loading database");
+    statusLog("Loading database %s", dbpath);
 
     /* Domains and accounts */
     master->_core.db = radb_init_sqlite(dbpath);
@@ -84,6 +84,7 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
  =======================================================================================================================
  =======================================================================================================================
  */
+#ifdef MYSQL_CLIENT
 void rumble_database_load_mysql(masterHandle *master, FILE *runlog) {
 
     /*~~~~~~~~~~~~~~~~*/
@@ -139,7 +140,7 @@ void rumble_database_load_mysql(masterHandle *master, FILE *runlog) {
     
     statusLog("Database successfully initialized");
 }
-
+#endif
 /*
  =======================================================================================================================
  =======================================================================================================================

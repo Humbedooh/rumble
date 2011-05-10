@@ -207,17 +207,22 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     len = _vscprintf(d, vl) + 10;
 #else
 #   if R_ARCH > 32  /* Some odd 64 bit libc bug? */
-    len = snprintf(moo, 1000, d, vl) + 1;
+    len = vsnprintf(moo, 1023, d, vl) + 1;
 #   else
     len = vsnprintf(NULL, 0, d, vl) + 1;
 #   endif
 #endif
+    va_end(vl);
     buffer = (char *) calloc(1, len);
     if (!buffer) merror();
+    
+    va_start(vl, d);
     vsprintf(buffer, d, vl);
+    printf("we're sending: %s\n", buffer);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
     free(buffer);
+    va_end(vl);
     return (len);
 }
 
