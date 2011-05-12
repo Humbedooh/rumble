@@ -115,7 +115,10 @@ address *rumble_parse_mail_address(const char *addr) {
 
         sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags);
     } else if (addr && strlen(addr)) {
-        sscanf(addr, "to:%256[^@]@%128c", usr->user, usr->domain);
+        if (!sscanf(addr, "to:%256[^@]@%128c", usr->user, usr->domain)) {
+            sscanf(addr, "%128[^@]@%128c", usr->user, usr->domain);
+        }
+        sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, "NOFLAGS");
     }
 
     free(tmp);

@@ -888,7 +888,7 @@ static int rumble_lua_sendmail(lua_State *L) {
     radb_run_inject(rumble_database_master_handle->_core.mail, \
                 "INSERT INTO queue (fid, sender, recipient) VALUES (%s,%s,%s)", \
                 fid, sender, recipient);
-    
+
     lua_pushstring(L, fid);
     
     

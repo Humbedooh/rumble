@@ -429,8 +429,8 @@ void *rumble_worker_init(void *T) {
     /*~~~~~~~~~~~~~~~~~~~~*/
     
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize (&attr, 128*1024); // let's see if 128kb is enough ;>
-    for (x = 0; x < 25; x++) {
+    pthread_attr_setstacksize (&attr, 128*1024); // let's see if 512kb is enough ;>
+    for (x = 0; x < 20; x++) {
         thread = (rumbleThread *) malloc(sizeof(rumbleThread));
         cvector_add(svc->threads, thread);
         thread->status = 1;
@@ -483,7 +483,7 @@ void *rumble_worker_init(void *T) {
             }
         } else {
             radb_cleanup(dbo);
-            sleep(7.5);   /* sleep for 7.5 seconds if there's nothing to do right now. */
+            sleep(1);   /* sleep for 1 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }
     }
