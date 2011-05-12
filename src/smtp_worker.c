@@ -483,7 +483,8 @@ void *rumble_worker_init(void *T) {
                 /* flags */
                 item->flags = strclone(result->column[5].data.string);
                 
-                mid = result->column[1].data.uint32;
+                mid = result->column[6].data.uint32;
+                
                 
                 radb_run_inject(master->_core.mail, "DELETE FROM queue WHERE id = %u", mid);
                 fflush(stdout);
