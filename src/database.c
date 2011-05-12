@@ -24,6 +24,7 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
     FILE    *ftmp;
     /*~~~~~~~~~~~~~~~~~~~*/
 
+    printf("Checking for thread-safe environment: %s\n", sqlite3_threadsafe() == 0? "No" : "Yes");
     sprintf(dbpath, "%s/rumble.sqlite", rumble_config_str(master, "datafolder"));
     sprintf(mailpath, "%s/mail.sqlite", rumble_config_str(master, "datafolder"));
     ftmp = fopen(dbpath, "a+");
@@ -486,7 +487,7 @@ void rumble_database_accounts_free(cvector *accounts) {
  =======================================================================================================================
  */
 void rumble_domain_free(rumble_domain* domain) {
-    if (!domain) return 0;
+    if (!domain) return;
     if (domain->name) free(domain->name);
     if (domain->path) free(domain->path);
     free(domain);

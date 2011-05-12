@@ -277,7 +277,7 @@ void *rumble_worker_process(void *m) {
 
                         free(ofilename);
                         free(nfilename);
-                        radb_run_inject(master->_core.db, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)", item->account->uid, item->fid, fsize);
+                        radb_run_inject(master->_core.mail, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)", item->account->uid, item->fid, fsize);
 
                         /* done here! */
                     }
@@ -303,7 +303,7 @@ void *rumble_worker_process(void *m) {
                                     sprintf(loops, "%u", item->loops);
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
-                                        radb_run_inject(master->_core.db, "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
+                                        radb_run_inject(master->_core.mail, "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
                                                  loops, item->fid, item->sender->raw, email, item->flags);
                                     }
                                 }
@@ -382,11 +382,11 @@ void *rumble_worker_process(void *m) {
                 /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
                 sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
                 statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)";
-                if (master->_core.db->dbType == RADB_MYSQL) {
+                if (master->_core.mail->dbType == RADB_MYSQL) {
                     statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s,%s)";
                 }
 
-                radb_run_inject(master->_core.db,
+                radb_run_inject(master->_core.mail,
                          "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)",
                      item->loops, item->fid, tmp, item->recipient->raw, item->flags);
                 memset(tmp, 0, 256);
@@ -424,14 +424,14 @@ void *rumble_worker_init(void *T) {
     masterHandle    *master = (masterHandle *) svc->master;
     int             x;
     const char      *ignmx;
-    const char      *statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= strftime('%%s','now') LIMIT 1";
+    const char      *statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= strftime('%%s','now') LIMIT 4";
     radbObject* dbo;
 	radbResult* result;
         pthread_attr_t attr;
 
 
     if (master->_core.mail->dbType == RADB_MYSQL) {
-        statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= NOW() LIMIT 1";
+        statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= NOW() LIMIT 4";
     }
 
     ignmx = rrdict(master->_core.conf, "ignoremx");
@@ -452,13 +452,12 @@ void *rumble_worker_init(void *T) {
   dbo = radb_prepare(master->_core.mail, statement);
   if (!dbo) printf("Something went wrong with this: %s\n", statement);
     while (1) {
-        result = radb_step(dbo);
+        result = radb_fetch_row(dbo);
         if (result) {
-
+            printf("We have a mail in the queue, processing...\n");
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
             uint32_t    mid;
-            char        *sql,
-                        *zErrMsg;
+
             mqueue      *item = (mqueue *) calloc(1, sizeof(mqueue));
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -486,12 +485,7 @@ void *rumble_worker_init(void *T) {
                 
                 mid = result->column[1].data.uint32;
                 
-                sql = (char *) calloc(1, 128);
-                if (!sql) return (0);
-                sprintf(sql, "DELETE FROM queue WHERE id=%u", mid);
-                zErrMsg = 0;
-                radb_do(master->_core.mail, sql);
-                free(sql);
+                radb_run_inject(master->_core.mail, "DELETE FROM queue WHERE id = %u", mid);
                 fflush(stdout);
                 pthread_mutex_lock(&svc->mutex);
                 current = item;
@@ -501,7 +495,7 @@ void *rumble_worker_init(void *T) {
         } else {
             radb_cleanup(dbo);
             sleep(5);   /* sleep for 5 seconds if there's nothing to do right now. */
-            dbo = radb_prepare(master->_core.db, statement);
+            dbo = radb_prepare(master->_core.mail, statement);
         }
     }
 }
