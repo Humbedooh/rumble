@@ -193,18 +193,6 @@ void *rumble_worker_process(void *m) {
     sess->_master = (masterHandle *) svc->master;
     tmp = (char *) calloc(1, 256);
 
-    /*
-     * sleep(3);
-     * ;
-     * for (rc = 0;
-     * rc < 1;
-     * rc++) { c.socket = comm_open(master, "localhost", 25);
-     * c.send = 0;
-     * c.recv = 0;
-     * rcsend(sess, "OH HAI!!\r\n");
-     * rcsend(sess, "QUIT\r\n");
-     * close(c.socket);
-     */
     while (1) {
         pthread_mutex_lock(&svc->mutex);
         pthread_cond_wait(&svc->cond, &svc->mutex);
@@ -441,7 +429,7 @@ void *rumble_worker_init(void *T) {
     /*~~~~~~~~~~~~~~~~~~~~*/
     
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize (&attr, 256*1024); // let's see if 256kb is enough ;>
+    pthread_attr_setstacksize (&attr, 128*1024); // let's see if 128kb is enough ;>
     for (x = 0; x < 25; x++) {
         thread = (rumbleThread *) malloc(sizeof(rumbleThread));
         cvector_add(svc->threads, thread);
@@ -495,7 +483,7 @@ void *rumble_worker_init(void *T) {
             }
         } else {
             radb_cleanup(dbo);
-            sleep(5);   /* sleep for 5 seconds if there's nothing to do right now. */
+            sleep(7.5);   /* sleep for 7.5 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }
     }
