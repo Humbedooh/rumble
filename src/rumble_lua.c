@@ -584,8 +584,7 @@ static int rumble_lua_getfolders(lua_State *L) {
     /*~~~~~~~~~~~~~~~~~~~~*/
     const char      *domain,
                     *user;
-    rumble_mailbox  *acc;
-    radbObject      *dbo;
+    radbObject      *dbo = 0;
     radbResult      *dbr;
     int             uid = 0;
     /*~~~~~~~~~~~~~~~~~~~~*/
@@ -601,15 +600,68 @@ static int rumble_lua_getfolders(lua_State *L) {
      }
         
     lua_settop(L, 0);
-    lua_newtable(L);
+    
     if (!dbo) return 0;
     
+    lua_newtable(L);
     lua_pushinteger(L, 0);
     lua_pushliteral(L, "INBOX");
+    lua_rawset(L, -3);
     while ((dbr = radb_fetch_row(dbo))) {
         lua_pushinteger(L, dbr->column[0].data.int64);
         lua_pushstring(L, dbr->column[1].data.string);
         lua_rawset(L, -3);
+    }
+    radb_cleanup(dbo);
+    return(1);
+}
+
+static int rumble_lua_getheaders(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    radbObject      *dbo = 0;
+    radbResult      *dbr;
+    int             uid = 0;
+    int64_t         folder = 0;
+    int n = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    uid = luaL_optinteger(L, 1, 0);
+    folder = luaL_optinteger(L, 1, 0);
+    if (uid) {
+        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT id, fid, size, delivered FROM mbox WHERE uid = %u AND folder = %l", uid, folder);
+    }
+    else return 0;
+    
+    lua_settop(L, 0);
+    
+    if (!dbo) return 0;
+    
+    lua_newtable(L);
+    
+    while ((dbr = radb_fetch_row(dbo))) {
+        n++;
+        lua_pushinteger(L, n);
+        lua_newtable(L);
+        
+            lua_pushstring(L, "id");
+            lua_pushinteger(L, dbr->column[0].data.uint64);
+            lua_rawset(L, -3);
+
+            lua_pushstring(L, "file");
+            lua_pushstring(L, dbr->column[1].data.string);
+            lua_rawset(L, -3);
+
+            lua_pushstring(L, "size");
+            lua_pushinteger(L, dbr->column[2].data.uint32);
+            lua_rawset(L, -3);
+
+            lua_pushstring(L, "sent");
+            lua_pushinteger(L, dbr->column[3].data.uint32);
+            lua_rawset(L, -3);
+        
+        lua_rawset(L, -3);
+        
     }
     radb_cleanup(dbo);
     return(1);
@@ -1399,6 +1451,7 @@ static const luaL_reg   Mailman_methods[] =
     { "deleteDomain", rumble_lua_deletedomain },
     { "updateDomain", rumble_lua_updatedomain },
     { "listFolders", rumble_lua_getfolders },
+    { "listHeaders", rumble_lua_getheaders },
     { 0, 0 }
 };
 static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };

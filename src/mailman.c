@@ -346,6 +346,13 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
      */
 
     if (bag->sessions <= 0) {
+        rumble_mailman_shared_bag* tmpbag;
+        foreach(rmsb, tmpbag, rumble_database_master_handle->mailboxes.list, fiter) {
+        if (tmpbag->uid == bag->uid) {
+            dvector_delete(&fiter);
+            break;
+        }
+    }
 
         /* Traverse folders */
         foreach(rmsf, folder, bag->folders, fiter) {
