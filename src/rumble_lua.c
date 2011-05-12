@@ -627,7 +627,7 @@ static int rumble_lua_getheaders(lua_State *L) {
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     uid = luaL_optinteger(L, 1, 0);
-    folder = luaL_optinteger(L, 1, 0);
+    folder = luaL_optinteger(L, 2, 0);
     if (uid) {
         dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT id, fid, size, delivered FROM mbox WHERE uid = %u AND folder = %l", uid, folder);
     }
