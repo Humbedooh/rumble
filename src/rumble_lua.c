@@ -579,6 +579,46 @@ static int rumble_lua_getaccount(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
+static int rumble_lua_getfolders(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    const char      *domain,
+                    *user;
+    rumble_mailbox  *acc;
+    radbObject      *dbo;
+    radbResult      *dbr;
+    int             uid = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+     if (lua_type(L, 1) == LUA_TNUMBER) {
+        uid = luaL_optinteger(L, 1, 0);
+        dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE uid = %u", uid);
+     }
+     else {
+        domain = lua_tostring(L, 1);
+        user = lua_tostring(L, 2);
+        dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE domain = %s AND user = %s", domain, user);
+     }
+        
+    lua_settop(L, 0);
+    lua_newtable(L);
+    if (!dbo) return 0;
+    
+    lua_pushinteger(L, 0);
+    lua_pushliteral(L, "INBOX");
+    while ((dbr = radb_fetch_row(dbo))) {
+        lua_pushinteger(L, dbr->column[0].data.int64);
+        lua_pushstring(L, dbr->column[1].data.string);
+        lua_rawset(L, -3);
+    }
+    radb_cleanup(dbo);
+    return(1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_saveaccount(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~*/
@@ -1358,6 +1398,7 @@ static const luaL_reg   Mailman_methods[] =
     { "createDomain", rumble_lua_createdomain },
     { "deleteDomain", rumble_lua_deletedomain },
     { "updateDomain", rumble_lua_updatedomain },
+    { "listFolders", rumble_lua_getfolders },
     { 0, 0 }
 };
 static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };

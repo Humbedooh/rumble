@@ -56,7 +56,7 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
      -------------------------------------------------------------------------------------------------------------------
      */
 
-    rc = radb_do(master->_core.db, "PRAGMA table_info (queue)");
+    rc = radb_do(master->_core.db, "PRAGMA table_info (accounts)");
     if (!rc) {
         printf("[OK]\r\n");
         printf("%-48s", "Setting up tables...");
@@ -67,10 +67,25 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
                      "CREATE TABLE \"accounts\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"user\" VARCHAR, \"password\" CHAR(64), \"type\" CHAR(5) NOT NULL  DEFAULT mbox, \"arg\" VARCHAR);");
         rc = radb_do(master->_core.db,
                      "CREATE TABLE \"folders\" (\"uid\" INTEGER NOT NULL  DEFAULT 0, \"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"name\" VARCHAR NOT NULL , \"subscribed\" BOOL NOT NULL  DEFAULT false);");
-        rc = radb_do(master->_core.db,
+        if (!rc) printf("[OK]\r\n");
+        else {
+            statusLog("Couldn't create database tables!");
+            printf("[BAD]\r\n");
+        }
+    } else printf("[OK]\r\n");
+    statusLog("Database successfully initialized");
+    
+    rc = radb_do(master->_core.mail, "PRAGMA table_info (queue)");
+    if (!rc) {
+        printf("[OK]\r\n");
+        printf("%-48s", "Setting up message tables...");
+        statusLog("New installation, creating mail DB");
+        rc = radb_do(master->_core.mail,
                      "CREATE TABLE \"mbox\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"uid\" INTEGER NOT NULL , \"fid\" VARCHAR NOT NULL , \"size\" INTEGER NOT NULL , \"delivered\" INTEGER DEFAULT (strftime('%%s', 'now')), \"folder\" INTEGER NOT NULL DEFAULT 0, \"flags\" INTEGER NOT NULL DEFAULT 1 );");
-        rc = radb_do(master->_core.db,
+        rc = radb_do(master->_core.mail,
                      "CREATE TABLE \"queue\" (\"id\" INTEGER PRIMARY KEY  NOT NULL ,\"time\" INTEGER NOT NULL  DEFAULT (STRFTIME('%%s','now')) ,\"loops\" INTEGER NOT NULL  DEFAULT (0) ,\"fid\" VARCHAR NOT NULL ,\"sender\" VARCHAR NOT NULL ,\"recipient\" VARCHAR NOT NULL ,\"flags\" INTEGER NOT NULL  DEFAULT (0) );");
+        rc = radb_do(master->_core.mail,
+                     "CREATE TABLE \"trash\" (\"id\" INTEGER PRIMARY KEY  NOT NULL ,\"fid\" VARCHAR NOT NULL);");
         if (!rc) printf("[OK]\r\n");
         else {
             statusLog("Couldn't create database tables!");

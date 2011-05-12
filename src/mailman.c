@@ -59,7 +59,7 @@ rumble_letter *rumble_mailman_letter_spawn(radbResult *dbr) {
 
     /* Folder */
     letter->folder = dbr->column[5].data.int64;
-    radb_free(dbr);
+
     return (letter);
 }
 
@@ -119,7 +119,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     }
 
     radb_cleanup(dbo);
-    dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u",
+    dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u",
                        uid);
     while ((dbr = radb_step(dbo))) {
         letter = rumble_mailman_letter_spawn(dbr);
@@ -210,7 +210,6 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
             dvector_add(bag->folders, folder);
         }
 
-        radb_free(dbr);
     }
 
     radb_cleanup(dbo);
@@ -238,7 +237,7 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
     if (!folder) return (0);
     r = 0;
     printf("<Mailman> Updating <%s> from ID > %llu\n", folder->name, folder->lastMessage);
-    dbo = radb_prepare(rumble_database_master_handle->_core.db,
+    dbo = radb_prepare(rumble_database_master_handle->_core.mail,
                        "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %l", folder->id,
                        folder->lastMessage);
     rumble_rw_start_write(folder->bag->rrw);    /* Lock the bag for writing */
@@ -250,7 +249,6 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         dvector_add(folder->letters, letter);
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
         printf("Adding letter %llu to <%s>\n", letter->id, folder->name);
-        radb_free(dbr);
     }
 
     printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
@@ -294,7 +292,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
 #endif
             sprintf(tmp, "%s/%s.msg", path, letter->fid);
             unlink(tmp);
-            dbo = radb_prepare(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE id = %l", letter->id);
+            dbo = radb_prepare(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
             radb_step(dbo);
             radb_cleanup(dbo);
             printf("DELETE FROM mbox WHERE id = %llu\n", letter->id);
@@ -311,7 +309,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             printf("Updating letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 #endif
             if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
-            dbo = radb_prepare(rumble_database_master_handle->_core.db, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags,
+            dbo = radb_prepare(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags,
                                letter->id);
             radb_step(dbo);
             radb_cleanup(dbo);
@@ -457,7 +455,7 @@ size_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter
 
         fclose(in);
         fclose(out);
-        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)",
+        radb_run_inject(rumble_database_master_handle->_core.mail, "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)",
                 account->uid, filename, folder->id, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
         free(filename);
     }

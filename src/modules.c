@@ -88,7 +88,7 @@ void rumble_modules_load(masterHandle *master) {
             mcheck = (rumbleVerCheck) dlsym(handle, "rumble_module_check");
             error = (init == 0 || mcheck == 0) ? "no errors" : 0;
             if (error != NULL) {
-                fprintf(stderr, "\nWarning: %s does not contain required module functions.\n", el->value);
+                fprintf(stderr, "\nWarning: %s does not contain required module functions (init = %p, mcheck = %p).\n", el->value,init,mcheck);
                 statusLog("Warning: %s does not contain required module functions.\n", el->value);
             }
 

@@ -1,3 +1,4 @@
+
 /*
  * File: blacklist.c Author: Humbedooh A simple black-listing module for rumble.
  * Created on January 3, 2011, 8:08 P
@@ -77,8 +78,6 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
     struct in6_addr         IP;
     dvector_element         *el;
     const char              *addr;
-    struct sockaddr_storage ss;
-    int                     sslen = sizeof(ss);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     /*
@@ -169,7 +168,7 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
                 if (bl)
                 {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr);
+                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr, dnshost);
 #endif
                     if (blacklist_logfile) {
 
@@ -225,13 +224,12 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     if (config) {
 
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        int     p = 0;
         char    *buffer = (char *) malloc(4096);
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         while (!feof(config)) {
             memset(buffer, 0, 4096);
-            fgets(buffer, 4096, config);
+            if (!fgets(buffer, 4096, config)) continue;
             if (!ferror(config)) {
 
                 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

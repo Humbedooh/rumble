@@ -430,7 +430,7 @@ void *rumble_worker_init(void *T) {
         pthread_attr_t attr;
 
 
-    if (master->_core.db->dbType == RADB_MYSQL) {
+    if (master->_core.mail->dbType == RADB_MYSQL) {
         statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= NOW() LIMIT 1";
     }
 
@@ -449,7 +449,7 @@ void *rumble_worker_init(void *T) {
         pthread_create(&thread->thread, &attr, rumble_worker_process, svc);
     }
 
-  dbo = radb_prepare(master->_core.db, statement);
+  dbo = radb_prepare(master->_core.mail, statement);
   if (!dbo) printf("Something went wrong with this: %s\n", statement);
     while (1) {
         result = radb_step(dbo);
@@ -490,7 +490,7 @@ void *rumble_worker_init(void *T) {
                 if (!sql) return (0);
                 sprintf(sql, "DELETE FROM queue WHERE id=%u", mid);
                 zErrMsg = 0;
-                radb_do(master->_core.db, sql);
+                radb_do(master->_core.mail, sql);
                 free(sql);
                 fflush(stdout);
                 pthread_mutex_lock(&svc->mutex);
