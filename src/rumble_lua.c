@@ -713,7 +713,7 @@ static int rumble_lua_deletemail(lua_State *L) {
     uid = luaL_optinteger(L, 1, 0);
     lid = luaL_optinteger(L, 2, 0);
     if (uid && lid) {
-        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT fid, size, delivered FROM mbox WHERE uid = %u AND id = %l LIMIT 1", uid, lid);
+        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT fid FROM mbox WHERE uid = %u AND id = %l LIMIT 1", uid, lid);
     }
     else return 0;
     
@@ -729,8 +729,9 @@ static int rumble_lua_deletemail(lua_State *L) {
     dbr = radb_fetch_row(dbo);
     if (dbr) {
         sprintf(filename, "%s/%s.msg", path, dbr->column[0].data.string);
+        printf("Mailman.deleteMail: removing %s\n", filename);
         unlink(filename);
-        radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE lid = %l", lid);
+        radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", lid);
     }
     radb_cleanup(dbo);
     return 0;

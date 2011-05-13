@@ -24,6 +24,7 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
     unsigned char   b = '-';
     /*~~~~~~~~~~~~~~~~~~~~*/
 
+    res->replyCode = 500;
     flag = (char *) calloc(1, 200);
     if (!flag) merror();
     if (res) {
@@ -92,7 +93,7 @@ rumble_sendmail_response *rumble_send_email(
     fsize = ftell(fp);
     rewind(fp);
     res->replyCode = 250;
-    return (res);
+    
     printf("connecting to %s...\n", mailserver);
     c.tls = 0;
     c.socket = comm_open(master, mailserver, 25);
@@ -368,15 +369,15 @@ void *rumble_worker_process(void *m) {
             } else if (delivered >= 400) {
 
                 /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
+                printf("MTA reported temporary error(%u), queuing mail for later\n", delivered);
                 sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
-                statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)";
+                statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
                 if (master->_core.mail->dbType == RADB_MYSQL) {
-                    statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s,%s)";
+                    statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s)";
                 }
 
-                radb_run_inject(master->_core.mail,
-                         "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s,%s)",
-                     item->loops, item->fid, tmp, item->recipient->raw, item->flags);
+                radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
+                printf("Queued\n");
                 memset(tmp, 0, 256);
             } else {
                 printf("Mail delivered.\r\n");
