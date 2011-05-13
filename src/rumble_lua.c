@@ -697,6 +697,244 @@ static int rumble_lua_getheaders(lua_State *L) {
     return(1);
 }
 
+static int rumble_lua_deletemail(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    radbObject      *dbo = 0;
+    radbResult      *dbr;
+    int             uid = 0;
+    int64_t         lid = 0;
+    char            filename[256];
+    const char* path;
+    
+   // rumble_domain* domain = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    uid = luaL_optinteger(L, 1, 0);
+    lid = luaL_optinteger(L, 2, 0);
+    if (uid && lid) {
+        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT fid, size, delivered FROM mbox WHERE uid = %u AND id = %l LIMIT 1", uid, lid);
+    }
+    else return 0;
+    
+    lua_settop(L, 0);
+    
+    if (!dbo) return 0;
+    
+    
+    //domain = rumble_domain_copy()
+    //path = strlen(mbox->domain->path) ? mbox->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+    path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+
+    dbr = radb_fetch_row(dbo);
+    if (dbr) {
+        sprintf(filename, "%s/%s.msg", path, dbr->column[0].data.string);
+        unlink(filename);
+        radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE lid = %l", lid);
+    }
+    radb_cleanup(dbo);
+    return 0;
+}
+
+static int rumble_lua_readmail(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    radbObject      *dbo = 0;
+    radbResult      *dbr;
+    int             uid = 0, size = 0;
+    int64_t         lid = 0;
+    char            filename[256], line[1024], key[1024], value[1024], boundary[128], xboundary[120];
+    char            *contents;
+    const char* path;
+    FILE* fp;
+   // rumble_domain* domain = 0;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+
+    uid = luaL_optinteger(L, 1, 0);
+    lid = luaL_optinteger(L, 2, 0);
+    if (uid && lid) {
+        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT fid, size, delivered FROM mbox WHERE uid = %u AND id = %l LIMIT 1", uid, lid);
+    }
+    else return 0;
+    
+    lua_settop(L, 0);
+    
+    if (!dbo) return 0;
+    
+    
+    //domain = rumble_domain_copy()
+    //path = strlen(mbox->domain->path) ? mbox->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+    path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+
+    dbr = radb_fetch_row(dbo);
+    if (dbr) {
+        lua_newtable(L);
+        
+        size = dbr->column[1].data.uint32;
+
+        lua_pushstring(L, "file");
+        lua_pushstring(L, dbr->column[0].data.string);
+        lua_rawset(L, -3);
+
+        lua_pushstring(L, "size");
+        lua_pushinteger(L, size);
+        lua_rawset(L, -3);
+
+        lua_pushstring(L, "sent");
+        lua_pushinteger(L, dbr->column[2].data.uint32);
+        lua_rawset(L, -3);
+        
+        
+
+        sprintf(filename, "%s/%s.msg", path, dbr->column[0].data.string);
+        fp = fopen(filename, "rb");
+        
+        if (fp) {
+            memset(boundary, 0, 128);
+            memset(xboundary, 0, 120);
+            /* Headers */
+            lua_pushstring(L, "headers");
+            lua_newtable(L);
+            while (!feof(fp)) {
+                if (fgets(line, 1024, fp)) {
+                    if (!strlen(line) || line[0] == '\r' || line[0] == '\n') break;
+                    memset(key, 0, 1024);
+                    memset(value, 0, 1024);
+                    if (sscanf(line, "%128[^:]: %1000[^\r\n]", key, value) == 2) {
+                        rumble_string_lower(key);
+                        lua_pushstring(L, key);
+                        lua_pushstring(L, value);
+                        lua_rawset(L, -3);
+                        if (!strcmp(key, "content-type")) {
+                            const char* at = strstr(value, "boundary=");
+                            if (at && sscanf(at, "boundary=\"%255[^\"]", xboundary)) {
+                                sprintf(boundary, "--%s", xboundary);
+                            }
+                        }
+                    }
+                }
+
+            }
+            lua_rawset(L, -3);
+            
+            /* Body (or parts) */
+            if (!feof(fp)) {
+                int left = size - ftell(fp);
+                left = (left > (15*1024*1024)) ? 15*1024*1024 : left;
+                printf("Reading body in %s (%u bytes left)...\n", filename, left);
+                if (!strlen(boundary)) {
+                    printf("Mail is non-multipart\n");
+                    contents = (char*) calloc(1, left+1);
+                    if (fread(contents, left, 1, fp)) {
+                            lua_pushstring(L, "contents");
+                            lua_pushlstring(L, contents, left);
+                            lua_rawset(L, -3);
+                    }
+                }
+                else {
+                    int k = 0, atbody = 0, atheaders = 1;
+                    size_t pos = 0, blen = strlen(boundary);
+                    printf("Mail is multipart, boundary is <%s> (%li chars)\n", boundary,blen);
+                    contents = (char*) calloc(1, left+1);
+                    printf("<parts>\n");
+                    lua_pushstring(L, "parts");
+                    lua_newtable(L);
+                    
+                    // parts[n]
+                    printf("    <part:%i>\n", k+1);
+                    lua_pushinteger(L, ++k);
+                    lua_newtable(L);
+                    
+                    // parts[n]->headers
+                    printf("        <headers>\n");
+                    lua_pushstring(L, "headers");
+                    lua_newtable(L);
+                    
+                    while (!feof(fp)) {
+                        if (fgets(line, 1024, fp)) {
+                            if (!strncmp(line, boundary, blen)) {
+                                
+                                // Ending body, push struct onto stack
+                                lua_pushliteral(L, "contents");
+                                contents[pos] = 0;
+                                lua_pushlstring(L, contents, pos);
+                                lua_rawset(L, -3); // parts[n]->body
+                                
+                                printf("\n        </body: %lu bytes>\n", pos);
+                                
+                                lua_rawset(L, -3);//  parts[n]
+                                printf("    </part:%i>\n", k);
+                                
+                                printf("    <part:%i>\n", k+1);
+                                lua_pushinteger(L, ++k);
+                                lua_newtable(L); //parts[++k]
+                                
+                                // parts[n]->headers
+                                printf("        <headers>\n");
+                                lua_pushstring(L, "headers");
+                                lua_newtable(L);
+                                atheaders = 1;
+
+                                atbody = -1;
+                                pos = 0;
+                            }
+                            else {
+                                if (atbody == 1) {
+                                    printf(".");
+                                    int len = strlen(line);
+                                    strncpy((char*) contents+pos, line, len);
+                                    pos += len;
+                                }
+                                else if (!strlen(line) || line[0] == '\r' || line[0] == '\n') {
+                                    printf("        </headers>\n");
+                                    lua_rawset(L, -3); // Finish headers, start body instead
+                                    atbody = 1;
+                                    atheaders = 0;
+                                    printf("        <body>\n            ");
+                                }
+                                else if (atbody < 1) {
+                                    atbody = 0;
+                                    memset(key, 0, 130);
+                                    memset(value, 0, 1024);
+                                    if (sscanf(line, "%128[^:]: %1000[^\r\n]", key, value) == 2) {
+                                        printf("            <%s = %s>\n", key, value);
+                                        rumble_string_lower(key);
+                                        lua_pushstring(L, key);
+                                        lua_pushstring(L, value);
+                                        lua_rawset(L, -3);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (atbody == -1) {
+                        printf("(tying up loose ends)\n");
+                        if (atheaders) {
+                            printf("        </headers>\n");
+                            lua_rawset(L, -3); 
+                        }
+                        lua_rawset(L, -3);//  parts[n]
+                        printf("    </part:%i>\n", k);
+                    }
+                    free(contents);
+                    
+                    printf("</parts>\n");
+                    lua_rawset(L, -3);
+                            
+                }
+                printf("Done here!\n");
+            }
+            fclose(fp);
+        }
+//        lua_rawset(L, -3);
+    }
+    else {
+        lua_pushnil(L);
+    }
+    radb_cleanup(dbo);
+    return(1);
+}
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -1534,6 +1772,8 @@ static const luaL_reg   Mailman_methods[] =
     { "listFolders", rumble_lua_getfolders },
     { "listHeaders", rumble_lua_getheaders },
     { "sendMail", rumble_lua_sendmail },
+    { "readMail", rumble_lua_readmail },
+    { "deleteMail", rumble_lua_deletemail },
     { 0, 0 }
 };
 static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };

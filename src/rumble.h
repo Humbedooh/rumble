@@ -707,7 +707,11 @@ size_t                          rumble_mailman_copy_letter
 #   define rcsend      rumble_comm_send
 #   define rcprintf    rumble_comm_printf
 #   define rcread      rumble_comm_read
-#   define merror()    { fprintf(stderr, "Memory allocation failed, this is bad!\n"); exit(1); }
+#   define merror()    { \
+                        fprintf(stderr, "Memory allocation failed, this is bad!\n"); \
+                        statusLog("Memory allocation failed at %s, aborting!\n", rumble_mtime());\
+                        exit(1); \
+                        }
 #   define and         &&
 #   define or          ||
 #   define rivp        (rumbleIntValuePair *)
