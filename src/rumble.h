@@ -538,6 +538,15 @@ typedef struct
     uint32_t    flags;      /* Various flags */
     uint32_t    _flags;     /* Original copy of flags (for update checks) */
 } rumble_letter;
+
+typedef struct {
+    cvector             *headers;
+    char                *body;
+    int                 is_multipart;
+    int                 is_last_part;
+    cvector             *multipart_chunks;
+} rumble_parsed_letter;
+
 typedef struct
 {
     rumble_mailbox  *account;   /* Pointer to account */
@@ -693,6 +702,9 @@ size_t                          rumble_mailman_copy_letter
                                     rumble_letter                   *letter,
                                     rumble_mailman_shared_folder    *folder
                                 );
+rumble_parsed_letter            *rumble_mailman_readmail_private(FILE* fp, const char* boundary, int depth);
+rumble_parsed_letter            *rumble_mailman_readmail(const char* filename);
+void                            rumble_mailman_free_parsed_letter(rumble_parsed_letter* letter);
 
 /*$5
  #######################################################################################################################

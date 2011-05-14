@@ -7,6 +7,7 @@
 #include "private.h"
 #include "database.h"
 #include <stdarg.h>
+#include <fcntl.h>
 extern masterHandle *rumble_database_master_handle;
 
 /*
@@ -130,7 +131,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
                 l++;
                 dvector_add(folder->letters, letter);
                 folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
-                printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
+                printf("<Mailman> Set last ID in <%s> to "PRIu64"\n", folder->name, folder->lastMessage);
                 break;
             }
         }
@@ -236,7 +237,7 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
      */
     if (!folder) return (0);
     r = 0;
-    printf("<Mailman> Updating <%s> from ID > %llu\n", folder->name, folder->lastMessage);
+    printf("<Mailman> Updating <%s> from ID > "PRIu64"\n", folder->name, folder->lastMessage);
     dbo = radb_prepare(rumble_database_master_handle->_core.mail,
                        "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %l", folder->id,
                        folder->lastMessage);
@@ -248,10 +249,10 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         letter->uid = folder->bag->uid;
         dvector_add(folder->letters, letter);
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
-        printf("Adding letter %llu to <%s>\n", letter->id, folder->name);
+        printf("Adding letter "PRIu64" to <%s>\n", letter->id, folder->name);
     }
 
-    printf("<Mailman> Set last ID in <%s> to %llu\n", folder->name, folder->lastMessage);
+    printf("<Mailman> Set last ID in <%s> to "PRIu64"\n", folder->name, folder->lastMessage);
     rumble_rw_stop_write(folder->bag->rrw);     /* Unlock the bag */
 
     /* Clean up DB */
@@ -282,20 +283,20 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
     rumble_rw_start_write(session->bag->rrw);   /* Lock the bag */
     printf("Running COMMIT on <%s>\n", folder->name);
     dforeach((rumble_letter *), letter, folder->letters, iter) {
-        printf("parsing letter no. %llu with flags %08x\n", letter->id, letter->flags);
+        printf("parsing letter no. "PRIu64" with flags %08x\n", letter->id, letter->flags);
         if ((letter->flags & RUMBLE_LETTER_DELETED))
         {
 
             /* Delete it? */
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-            printf("Deleting letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
+            printf("Deleting letter no. "PRIu64" (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 #endif
             sprintf(tmp, "%s/%s.msg", path, letter->fid);
             unlink(tmp);
             dbo = radb_prepare(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
             radb_step(dbo);
             radb_cleanup(dbo);
-            printf("DELETE FROM mbox WHERE id = %llu\n", letter->id);
+            printf("DELETE FROM mbox WHERE id = "PRIu64"\n", letter->id);
             r++;
             free(letter->fid);
             letter->fid = 0;
@@ -306,7 +307,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
         } else if (letter->flags != letter->_flags)
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-            printf("Updating letter no. %llu (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
+            printf("Updating letter no. "PRIu64" (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 #endif
             if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
             dbo = radb_prepare(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags,
@@ -469,3 +470,191 @@ size_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter
 
     return (1);
 }
+
+void rumble_mailman_free_parsed_letter(rumble_parsed_letter* letter) {
+    c_iterator iter;
+    rumbleKeyValuePair* pair;
+    rumble_parsed_letter* chunk;
+    if (letter->body) free(letter->body);
+    if (letter->headers) {
+        cforeach((rumbleKeyValuePair*), pair, letter->headers, iter) {
+            free((char*) pair->key);
+            free((char*) pair->value);
+        }
+        cvector_destroy(letter->headers);
+    }
+    if (letter->multipart_chunks) {
+        cforeach((rumble_parsed_letter*), chunk, letter->multipart_chunks, iter) {
+            rumble_mailman_free_parsed_letter(chunk);
+        }
+        cvector_destroy(letter->multipart_chunks);
+    }
+    free(letter);
+}
+
+
+rumble_parsed_letter* rumble_mailman_readmail(const char* filename) {
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    rumble_parsed_letter* letter = 0;
+    FILE* fp;
+
+    printf("Mailman.readMail: Opening <%s>\n", filename);
+    fp = fopen(filename, "rb");
+    if (fp) {
+        letter = rumble_mailman_readmail_private(fp, 0, 0);
+        fclose(fp);
+    }
+    printf("Closing <%s>\n", filename);
+    return letter;
+}
+
+void pdepth(int depth, const char* msg) {
+    int n;
+    for(n=0;n<depth;n++) printf("    ");
+    printf("%s\n", msg);
+}
+
+rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boundary, int depth) {
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    rumble_parsed_letter* letter;
+    rumbleKeyValuePair* header = 0;
+    int             headers = 1;
+    size_t          blen = 0, pos = 0, llen = 0, previous = 0;
+    char            line[1024], key[256], value[1024], starting_boundary[128], finishing_boundary[128], child_boundary[128];
+    c_iterator iter;
+    
+    if (!fp) return 0;
+//    printf("Parsing file pointer with boundary set to <%s>\n", boundary ? boundary : "(null)");
+    
+//    pdepth(depth, "<letter>");
+    letter = (rumble_parsed_letter*) malloc(sizeof(rumble_parsed_letter));
+    letter->body = 0;
+    letter->is_multipart = 0;
+    letter->is_last_part = 0;
+    letter->headers = cvector_init();
+    letter->multipart_chunks = cvector_init();
+    if (boundary) {
+        sprintf(starting_boundary, "--%s", boundary);
+        sprintf(finishing_boundary, "--%s--", boundary);
+        blen = strlen(starting_boundary);
+    }
+    memset(child_boundary, 0, 128);
+    
+    depth++;
+//    pdepth(depth, "<headers>");
+    while (!feof(fp)) {
+        if (fgets(line, 1024, fp)) {
+            llen = strlen(line);
+            // Check if we hit a boundary line.
+            if (boundary && !strncmp(line, starting_boundary, blen)) {
+                if (!strncmp(line, finishing_boundary, blen+2)) letter->is_last_part = 1; // Did we hit the last boundary?
+                break; // Finish up and return.
+            }
+            if (headers == 1) {                
+               if (!llen || line[0] == '\r' || line[0] == '\n') { 
+                   headers = 0; 
+  //                 pdepth(depth, "</headers>");
+                   continue; 
+               } // End of headers
+               
+               memset(key, 0, 256);
+               memset(value, 0, 1024);
+               
+               // Are we continuing the previous header line?
+               if (header && (line[0] == ' ' || line[0] == '\t')) {
+                   if (sscanf(line, "%1024[^\r\n]", value) == 1) {
+                       size_t old_len = strlen(header->value), new_len = strlen(value);
+                       value[new_len] = 0;
+                       //printf("Reallocating value to hold %lu bytes\n", old_len+new_len+1);
+                       header->value = realloc((char*) header->value, old_len + new_len + 1);
+                       strncpy((char*) header->value + old_len, line, new_len+1);
+                       //printf("+%s: %s\n", header->key, line);
+                       
+                   }
+               }
+               
+               // Or did we start on a new header pair?
+               if (sscanf(line, "%256[^:]: %1024[^\r\n]", key, value) == 2) {
+                   size_t klen = strlen(key), vlen = strlen(value);
+                   header = (rumbleKeyValuePair*) malloc(sizeof(rumbleKeyValuePair));
+                   header->key = calloc(1, klen+1);
+                   rumble_string_lower(key);
+                   strncpy((char*) header->key, key, klen);
+                   
+                   
+                   header->value = calloc(1, vlen+1);
+                   strncpy((char*) header->value, value, vlen);
+                   cvector_add(letter->headers, header);
+                   //printf("%s: %s\n", key, value);
+ //                  pdepth(depth+1, "<header>");
+  //                 pdepth(depth+1, line);
+               }
+            }
+            // Done with headers, browse through them and look for a boundary if any
+            else if (headers == 0) {
+                pdepth(depth, "<header check>");
+                cforeach( (rumbleKeyValuePair*), header, letter->headers, iter) {
+                    if (!strcmp(header->key, "content-type")) {
+    //                    printf("Found a content-type: %s\n", header->value);
+                        const char* at = strstr(header->value, "boundary=");
+                        if (at && sscanf(at, "boundary=\"%255[^\"]", child_boundary)) {
+   //                         printf("This message has boundary issues! ;D (%s)\n",child_boundary);
+                            letter->is_multipart = 1;
+                        }
+                    }
+                }
+                
+                headers = -1;
+   //             if (!letter->is_multipart) printf("Mail is single-part\n"); 
+   //             pdepth(depth, "</header check>");
+   //             pdepth(depth, "<body>");
+            }
+            
+            // Read body of message
+            if (headers == -1) {
+                // No multipart, just add the body.
+                if (!letter->is_multipart) {
+                    printf(".");
+                    // New body, malloc it.
+                    if (!letter->body) { 
+                        letter->body = calloc(1, llen+1);
+                        strncpy(letter->body, line, llen);
+                        pos = llen;
+                    }
+                    // Old body, append to it.
+                    else {
+                        letter->body = realloc((char*) letter->body, pos + llen + 1);
+                        strncpy((char*) letter->body + pos, line, llen);
+                        pos += llen;
+                        letter->body[pos] = 0;
+                    }
+                }
+                else {
+                    rumble_parsed_letter* child = 0;
+                    fseek(fp, previous, SEEK_SET);
+     //               printf("This line was: %s\n", line);
+                    while (1) {
+                        
+                        child = rumble_mailman_readmail_private(fp, child_boundary, depth);
+                        if (!child) break;
+                        cvector_add(letter->multipart_chunks, child);
+                        if (child->is_last_part) break;
+                    }
+                }
+            }
+            previous = ftell(fp);
+        }
+    }
+ //   printf("\n");
+//    pdepth(depth, "</body>");
+ //   pdepth(--depth, "</letter>");
+ //   if (letter->is_last_part) pdepth(--depth, "<last chunk>");
+    if (letter->body || letter->is_multipart) {
+        return letter;
+    }
+    else {
+        rumble_mailman_free_parsed_letter(letter);
+        return 0;
+    }
+}
+

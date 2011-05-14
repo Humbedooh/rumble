@@ -32,6 +32,7 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
             line = rcread(session);
             res->replyCode = 500;
             if (!line) break;
+            printf("MTA: %s\n", line);
             memset(res->replyMessage, 0, 1000);
             if (sscanf(line, "%3u%c%200c", &res->replyCode, &b, res->replyMessage) < 2) {
                 res->replyCode = 500;
@@ -137,8 +138,10 @@ rumble_sendmail_response *rumble_send_email(
         /* Do a MAIL FROM */
         if (rhdict(res->flags, "SIZE")) {
             rcprintf(&s, "MAIL FROM: <%s=%s@%s> SIZE=%u\r\n", sender->tag, sender->user, sender->domain, fsize);
+            printf("MAIL FROM: <%s=%s@%s> SIZE=%u\r\n", sender->tag, sender->user, sender->domain, fsize);
         } else {
             rcprintf(&s, "MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
+            printf("MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
         }
 
         get_smtp_response(&s, res);
