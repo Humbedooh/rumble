@@ -302,6 +302,7 @@ typedef long long           int64_t;
 #      endif
 #      ifndef PRIu64
 #         define PRIu64  "llu"
+#         define PRId64  "lld"
 #      endif
 #      define sleep(a)    Sleep(a * 1000)
 #      ifndef AI_PASSIVE

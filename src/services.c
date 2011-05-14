@@ -199,7 +199,6 @@ int comm_startService(rumbleService *svc) {
     rumbleThread    *thread;
     int             n;
     pthread_attr_t attr;
-    size_t mystacksize;
     /*~~~~~~~~~~~~~~~~~~~~*/
     
     pthread_attr_init(&attr);

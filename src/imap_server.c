@@ -103,7 +103,7 @@ void *rumble_imap_init(void *T) {
                 }
 
                 printf("Client said: <%s> %s %s\r\n", extra_data, cmd, parameters);
-                printf("Selected folder is: %lld\r\n", pops->folder);
+                printf("Selected folder is: %"PRId64"\r\n", pops->folder);
             }
 
             free(line);
@@ -871,9 +871,9 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     parts = 0;
     first = 0;
     last = 0;
-    if (sscanf(parameters, "%u:%c[*]", &first, (char *) &last) == 2) {
+    if (sscanf(parameters, "%lu:%c[*]", &first, (char *) &last) == 2) {
         last = -1;
-    } else sscanf(parameters, "%u:%u", &first, &last);
+    } else sscanf(parameters, "%lu:%lu", &first, &last);
     if (last == 0) last = first;
     if (body) sscanf(body, "BODY[%1000[^]]<%u>", line, &octets);
     else if (body_peek)
@@ -901,7 +901,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     d = 0;
     foreach((rumble_letter *), letter, folder->letters, iter) {
         a++;
-        printf("%d %s %llu\n", a, letter->fid, letter->id);
+        printf("%ld %s %"PRIu64"\n", a, letter->fid, letter->id);
         if (w_uid && (letter->id < first || (last > 0 && letter->id > last))) continue;
         if (!w_uid && (a < first || (last > 0 && a > last))) continue;
         d++;
@@ -990,7 +990,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     }
 
     rcprintf(session, "%s OK FETCH completed\r\n", extra_data);
-    if (folder) printf("Fetched %u letters from <%s>\n", d, folder->name);
+    if (folder) printf("Fetched %lu letters from <%s>\n", d, folder->name);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1068,7 +1068,7 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
                      (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
         }
 
-        printf("Set flags for letter %llu to %08x\n", letter->id, letter->flags);
+        printf("Set flags for letter %"PRIu64" to %08x\n", letter->id, letter->flags);
     }
 
     rcprintf(session, "%s OK STORE completed\r\n", extra_data);
@@ -1108,9 +1108,9 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
     /* Get the message range */
     first = 0;
     last = 0;
-    if (sscanf(parameters, "%u:%1[*]", &first, (char *) &last) == 2) {
+    if (sscanf(parameters, "%lu:%1[*]", &first, (char *) &last) == 2) {
         last = -1;
-    } else sscanf(parameters, "%u:%u", &first, &last);
+    } else sscanf(parameters, "%lu:%lu", &first, &last);
     if (last == 0) last = first;
     useUID = session->flags & rumble_mailman_HAS_UID;
 
@@ -1138,7 +1138,7 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
 
     folder = rumble_mailman_current_folder(imap);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-    printf("Copying letters %u through %u (UID = %s) to %lld...\n", first, last, useUID ? "enabled" : "disabled", destination->id);
+    printf("Copying letters %lu through %lu (UID = %s) to %"PRId64"...\n", first, last, useUID ? "enabled" : "disabled", destination->id);
     printf("Folder has %u letters\n", folder->letters->size);
 #endif
     if (destination) {
@@ -1148,7 +1148,7 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
             if (useUID && (letter->id < first || (last > 0 && letter->id > last))) continue;
             if (!useUID && (a < first || (last > 0 && a > last))) continue;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-            printf("Copying letter %llu...\n", letter->id);
+            printf("Copying letter %"PRIu64"...\n", letter->id);
 #endif
             rumble_mailman_copy_letter(imap->account, letter, destination);
         }

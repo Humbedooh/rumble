@@ -356,13 +356,13 @@ char *rumble_create_filename(void) {
     int             y[4],
                     x;
     /*~~~~~~~~~~~~~~~~~~*/
-
+ 
     name = (char *) calloc(1, 17);
     srand(time(0) * rand());
     y[0] = time(0);
     y[1] = rand() * rand();
-    y[2] = (int) &y - rand();
-    y[3] = (int) rumble_mtime * rand();
+    y[2] = (int) (&y - rand());
+    y[3] = (int) public_master_handle * rand();
     p = (unsigned char *) y;
     for (x = 0; x < 16; x++) {
         name[x] = (p[x] % 26) + 'a';
