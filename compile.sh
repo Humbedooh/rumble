@@ -9,9 +9,35 @@ if [ `arch` == "x86_64" ]; then
 else
 	echo "[33m32 bit[0m"
 fi
+
+
 printf "%-32s"  "Checking platform..."
 os=`uname -o`
 echo "[33m$os[0m"
+
+#Check for 'whereis'
+if where /Q whereis; then
+	haveWhereis=1
+else
+	haveWhereis=0
+fi
+
+
+#Check for 'wget'
+if where /Q wget; then
+	haveWget=1
+else
+	haveWget=0
+fi
+
+#Check for 'locate'
+if where /Q locate; then
+	haveLocate=1
+else
+	haveLocate=0
+fi
+
+
 
 printf "%-32s" "Checking for gcc..."
 gccver=`gcc -dumpversion`
@@ -46,9 +72,13 @@ for lib in sqlite3 gnutls gcrypt ssl pthread crypto lua resolv; do
 	msg="Checking for lib$lib..."
 	#echo -n $msg
 	printf "%-32s" "$msg"
-	for l in `whereis lib$lib`; do  files=`expr $files + 1`; done
+	if [ $haveWhereis -eq 1 ]; then
+		for l in `whereis lib$lib`; do  files=`expr $files + 1`; done
+	fi
 	if [ $files -lt 2 ]; then
-		for l in `locate -l 2 lib$lib`; do  files=`expr $files + 1`; done
+		if [ $haveLocate -eq 1 ]; then
+			for l in `locate -l 2 lib$lib`; do  files=`expr $files + 1`; done
+		fi
 	fi
 	if [ $files -lt 2 ]; then
 		echo "[31m[BAD][0m"
@@ -62,6 +92,7 @@ printf "%-32s" "Checking lua library version..."
 vone=0
 vtwo=0
 llua=""
+
 for l in `locate liblua5.1`; do vone=`expr $vone + 1`; done
 for l in `locate liblua5.2`; do vtwo=`expr $vtwo + 1`; done
 if [ $vtwo -gt 1 ]; then
@@ -82,10 +113,14 @@ for lib in sqlite3 gnutls openssl pthread crypto lua; do
 	msg="Checking for lib$lib-dev..."
 	#echo -n $msg
 	printf "%-32s" "$msg"
-	for l in `whereis /$lib.h | grep "\.h"`; do  files=`expr $files + 1`; done
+	if [ $haveWhereis -eq 1 ]; then
+		for l in `whereis /$lib.h | grep "\.h"`; do  files=`expr $files + 1`; done
+	fi
 	if [ $files -lt 2 ]; then
 		files=0
-		for l in `locate -l 2 /$lib.h`; do  files=`expr $files + 1`; done
+		if [ $haveLocate -eq 1 ]; then
+			for l in `locate -l 2 /$lib.h`; do  files=`expr $files + 1`; done
+		fi
 	fi
 	if [ $files -lt 1 ]; then
 		echo "[31m[BAD][0m"
@@ -115,17 +150,37 @@ done
 iscyg=`expr "$os" = "Cygwin"`
 if [ $iscyg -ne 0 ]; then
 	echo "Downloading Cygwin-specific components..."
-	wget -O src/ns_parse.c http://rumbleserver.sourceforge.net/ns_parse.c
+	if [ $haveWget -eq 1 ]; then
+		wget -O src/ns_parse.c http://rumbleserver.sourceforge.net/ns_parse.c
+	else
+		echo "Hmm, you don't have wget installed, and I kind of need it on Cygwin platforms"
+		echo "Please install it before trying to compile again."
+		exit
+	fi
 fi
 
-if [ $cmysql -ne 0]; then
+
+if [ ! -e "src/radb/radb.h" ]; then
+	if [ $haveWget -eq 1 ]; then
+		echo "Downloading RADB package..."
+		wget --no-check-certificate -O src/radb/radb.c https://github.com/Humbedooh/radb/raw/master/radb.c
+		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.h
+	else
+		echo "You don't have the RADB files in the src/radb folder, and I need wget to fetch them :("
+		echo "Please get RADB from https://github.com/Humbedooh/radb or install wget"
+		exit
+	fi
+fi
+
+if [ $cmysql -ne 0 ]; then
 	echo "Copying RADB for MySQL+SQLite"
 	cp src/radb/* src/
 	libmysql="-lmysqlclient_r"
 else
 	echo "Copying RADB for SQLite only"
-    cp src/radb/radb.c src/
-	cat src/radb/radb.h | grep -v mysql.h > src/radb/radb.h
+	cat src/radb/radb.h | grep -v mysql.h > src/radb/radb.h2
+	mv -f src/radb/radb.h2 src/radb/radb.h
+	cp src/radb/radb.* src/
 fi
 
 
