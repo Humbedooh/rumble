@@ -1,4 +1,3 @@
-
 /*
  * File: blacklist.c Author: Humbedooh A simple black-listing module for rumble.
  * Created on January 3, 2011, 8:08 P

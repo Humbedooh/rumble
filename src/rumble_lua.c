@@ -743,7 +743,7 @@ void rumble_lua_pushpart(lua_State *L, rumble_parsed_letter* letter) {
     rumble_parsed_letter* child;
     
     // Headers
-    printf("pushing headers\n");
+ //   printf("pushing headers\n");
     lua_pushliteral(L, "headers");
     lua_newtable(L);
     cforeach((rumbleKeyValuePair*), pair, letter->headers, iter) {
@@ -755,7 +755,7 @@ void rumble_lua_pushpart(lua_State *L, rumble_parsed_letter* letter) {
 
     // Body
     if (!letter->is_multipart) {
-        printf("pushing body\n");
+  //      printf("pushing body\n");
         lua_pushliteral(L, "body");
         lua_pushstring(L, letter->body);
         lua_rawset(L, -3);
@@ -763,7 +763,7 @@ void rumble_lua_pushpart(lua_State *L, rumble_parsed_letter* letter) {
     
     // Multipart
     else {
-        printf("pushing parts\n");
+   //     printf("pushing parts\n");
         int k = 0;
         lua_pushliteral(L, "parts");
         lua_newtable(L);
@@ -773,9 +773,9 @@ void rumble_lua_pushpart(lua_State *L, rumble_parsed_letter* letter) {
             rumble_lua_pushpart(L, child);
             lua_rawset(L, -3);
         }
-        printf("Closing parts table..");
+   //     printf("Closing parts table..");
         lua_rawset(L, -3);
-        printf("done\n");
+  //      printf("done\n");
     }
 }
 
@@ -811,7 +811,7 @@ static int rumble_lua_readmail(lua_State *L) {
 
     dbr = radb_fetch_row(dbo);
     if (dbr) {
-        printf("Found an email for parsing, getting info\n");
+      //  printf("Found an email for parsing, getting info\n");
 
         lua_newtable(L);
         
@@ -827,15 +827,15 @@ static int rumble_lua_readmail(lua_State *L) {
         lua_pushinteger(L, dbr->column[2].data.uint32);
         lua_rawset(L, -3);
         
-        printf("Formatting filename\n");
+   //     printf("Formatting filename\n");
         sprintf(filename, "%s/%s.msg", path, dbr->column[0].data.string);
-        printf("Callung readmail()\n");
+   //     printf("Callung readmail()\n");
         letter = rumble_mailman_readmail(filename);
         if (letter) {
-            printf("Creating letter struct for Lua\n");
+   //         printf("Creating letter struct for Lua\n");
             rumble_lua_pushpart(L, letter);
             rumble_mailman_free_parsed_letter(letter);
-            printf("Done!\n");
+   //         printf("Done!\n");
         }
     }
     else {
@@ -1007,44 +1007,51 @@ static int rumble_lua_accountexists(lua_State *L) {
 static int rumble_lua_sendmail(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~*/
-    const char  *sender,
-                *recipient,
-                *message,
+    const char  *message,
                 *sf;
     char        *filename,
                 *fid;
     FILE        *fp;
+    address     *sender, *recipient;
     /*~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     luaL_checktype(L, 2, LUA_TSTRING);
     luaL_checktype(L, 3, LUA_TSTRING);
-    sender = lua_tostring(L, 1);
-    recipient = lua_tostring(L, 2);
-    message = lua_tostring(L, 3);
     
-    fid = rumble_create_filename();
-    sf = rumble_config_str(rumble_database_master_handle, "storagefolder");
-    filename = (char *) calloc(1, strlen(sf) + 26);
-    if (!filename) merror();
+    sender = rumble_parse_mail_address(lua_tostring(L, 1));
+    recipient = rumble_parse_mail_address(lua_tostring(L, 2));
     
-    sprintf(filename, "%s/%s", sf, fid);
-    fp = fopen(filename, "wb");
-    fwrite(message, strlen(message), 1, fp);
-    fclose(fp);
-    
-    radb_run_inject(rumble_database_master_handle->_core.mail, \
-                "INSERT INTO queue (fid, sender, recipient) VALUES (%s,%s,%s)", \
-                fid, sender, recipient);
+    if (sender and recipient ) {
+        message = lua_tostring(L, 3);
 
-    lua_pushstring(L, fid);
-    
+        fid = rumble_create_filename();
+        sf = rumble_config_str(rumble_database_master_handle, "storagefolder");
+        filename = (char *) calloc(1, strlen(sf) + 26);
+        if (!filename) merror();
+
+        sprintf(filename, "%s/%s", sf, fid);
+        fp = fopen(filename, "wb");
+        fwrite(message, strlen(message), 1, fp);
+        fclose(fp);
+
+        radb_run_inject(rumble_database_master_handle->_core.mail, \
+                    "INSERT INTO queue (fid, sender, recipient) VALUES (%s,%s,%s)", \
+                    fid, sender->raw, recipient->raw);
+
+        lua_settop(L, 0);
+        lua_pushstring(L, fid);
+        free(filename);
+        free(fid);
+    }
+    else {
+        lua_settop(L, 0);
+        lua_pushboolean(L, FALSE);
+    }
     
     /* Cleanup */
-    lua_settop(L, 0);
-    free(filename);
-    free(fid);
-    
+    rumble_free_address(sender);
+    rumble_free_address(recipient);
     
     return (1);
 }
@@ -1648,61 +1655,6 @@ static int rumble_lua_reloadconfig(lua_State *L) {
     return (0);
 }
 
-static const luaL_reg   File_methods[] = { { "stat", rumble_lua_fileinfo }, { "exists", rumble_lua_fileexists }, { 0, 0 } };
-static const luaL_reg   String_methods[] = { { "SHA256", rumble_lua_sha256 }, { 0, 0 } };
-static const luaL_reg   Rumble_methods[] =
-{
-    { "createService", rumble_lua_createservice },
-    { "suspendService", rumble_lua_suspendservice },
-    { "resumeService", rumble_lua_resumeservice },
-    { "stopService", rumble_lua_killservice },
-    { "startService", rumble_lua_startservice },
-    { "readConfig", rumble_lua_config },
-    { "setHook", rumble_lua_sethook },
-    { "serverInfo", rumble_lua_serverinfo },
-    { "serviceInfo", rumble_lua_serviceinfo },
-    { "listModules", rumble_lua_listmodules },
-    { "dprint", rumble_lua_debug },
-    { "reloadModules", rumble_lua_reloadmodules },
-    { "reloadConfiguration", rumble_lua_reloadconfig },
-    { 0, 0 }
-};
-static const luaL_reg   Mailman_methods[] =
-{
-    { "listDomains", rumble_lua_getdomains },
-    { "listAccounts", rumble_lua_getaccounts },
-    { "readAccount", rumble_lua_getaccount },
-    { "saveAccount", rumble_lua_saveaccount },
-    { "deleteAccount", rumble_lua_deleteaccount },
-    { "accountExists", rumble_lua_accountexists },
-    { "addressExists", rumble_lua_addressexists },
-    { "createDomain", rumble_lua_createdomain },
-    { "deleteDomain", rumble_lua_deletedomain },
-    { "updateDomain", rumble_lua_updatedomain },
-    { "listFolders", rumble_lua_getfolders },
-    { "listHeaders", rumble_lua_getheaders },
-    { "sendMail", rumble_lua_sendmail },
-    { "readMail", rumble_lua_readmail },
-    { "deleteMail", rumble_lua_deletemail },
-    { 0, 0 }
-};
-static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-int Foo_register(lua_State *L) {
-    lua_atpanic(L, rumble_lua_panic);
-    luaL_register(L, "Mailman", Mailman_methods);   /* create methods table, add it to the globals */
-    luaL_register(L, "Rumble", Rumble_methods);     /* create methods table, add it to the globals */
-    luaL_register(L, "file", File_methods);         /* create methods table, add it to the globals */
-    luaL_register(L, "string", String_methods);     /* create methods table, add it to the globals */
-    luaL_register(L, "network", Network_methods);   /* create methods table, add it to the globals */
-#   undef LUA_MINSTACK
-#   define LUA_MINSTACK    50
-    return (1); /* return methods on the stack */
-}
 
 /*
  =======================================================================================================================
@@ -1795,3 +1747,59 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
     return (rc);
 }
 #endif
+
+static const luaL_reg   File_methods[] = { { "stat", rumble_lua_fileinfo }, { "exists", rumble_lua_fileexists }, { 0, 0 } };
+static const luaL_reg   String_methods[] = { { "SHA256", rumble_lua_sha256 }, { 0, 0 } };
+static const luaL_reg   Rumble_methods[] =
+{
+    { "createService", rumble_lua_createservice },
+    { "suspendService", rumble_lua_suspendservice },
+    { "resumeService", rumble_lua_resumeservice },
+    { "stopService", rumble_lua_killservice },
+    { "startService", rumble_lua_startservice },
+    { "readConfig", rumble_lua_config },
+    { "setHook", rumble_lua_sethook },
+    { "serverInfo", rumble_lua_serverinfo },
+    { "serviceInfo", rumble_lua_serviceinfo },
+    { "listModules", rumble_lua_listmodules },
+    { "dprint", rumble_lua_debug },
+    { "reloadModules", rumble_lua_reloadmodules },
+    { "reloadConfiguration", rumble_lua_reloadconfig },
+    { 0, 0 }
+};
+static const luaL_reg   Mailman_methods[] =
+{
+    { "listDomains", rumble_lua_getdomains },
+    { "listAccounts", rumble_lua_getaccounts },
+    { "readAccount", rumble_lua_getaccount },
+    { "saveAccount", rumble_lua_saveaccount },
+    { "deleteAccount", rumble_lua_deleteaccount },
+    { "accountExists", rumble_lua_accountexists },
+    { "addressExists", rumble_lua_addressexists },
+    { "createDomain", rumble_lua_createdomain },
+    { "deleteDomain", rumble_lua_deletedomain },
+    { "updateDomain", rumble_lua_updatedomain },
+    { "listFolders", rumble_lua_getfolders },
+    { "listHeaders", rumble_lua_getheaders },
+    { "sendMail", rumble_lua_sendmail },
+    { "readMail", rumble_lua_readmail },
+    { "deleteMail", rumble_lua_deletemail },
+    { 0, 0 }
+};
+static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+int Foo_register(lua_State *L) {
+    lua_atpanic(L, rumble_lua_panic);
+    luaL_register(L, "Mailman", Mailman_methods);   /* create methods table, add it to the globals */
+    luaL_register(L, "Rumble", Rumble_methods);     /* create methods table, add it to the globals */
+    luaL_register(L, "file", File_methods);         /* create methods table, add it to the globals */
+    luaL_register(L, "string", String_methods);     /* create methods table, add it to the globals */
+    luaL_register(L, "network", Network_methods);   /* create methods table, add it to the globals */
+#   undef LUA_MINSTACK
+#   define LUA_MINSTACK    50
+    return (1); /* return methods on the stack */
+}

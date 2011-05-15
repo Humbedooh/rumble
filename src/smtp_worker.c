@@ -9,8 +9,13 @@
 #include "private.h"
 #include "database.h"
 #include "comm.h"
+#include <sys/stat.h>
+#ifdef __GNUC__
+        #include <dirent.h>
+#endif
 mqueue  *current = 0;
 dvector *badmx;
+
 
 /*
  =======================================================================================================================
@@ -32,7 +37,7 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
             line = rcread(session);
             res->replyCode = 500;
             if (!line) break;
-            printf("MTA: %s\n", line);
+//            printf("MTA: %s\n", line);
             memset(res->replyMessage, 0, 1000);
             if (sscanf(line, "%3u%c%200c", &res->replyCode, &b, res->replyMessage) < 2) {
                 res->replyCode = 500;
@@ -171,6 +176,64 @@ rumble_sendmail_response *rumble_send_email(
     rcprintf(&s, "QUIT\r\n", sender);
     if (c.socket) close(c.socket);
     return (res);
+}
+
+void rumble_prune_storage(const char* folder) {
+    struct stat fileinfo;
+    time_t now;
+    #ifdef __GNUC__
+    DIR             *dir = 0;
+    struct dirent   *dirp;
+    char filename[512];
+    now = time(0);
+    
+    dir = opendir(folder);
+    if (dir != 0) {
+        while ( (dirp = readdir(dir)) )  {
+            if(dirp->d_name[0] == '.' || strstr(dirp->d_name, ".msg")) continue;
+            sprintf(filename, "%s/%s", folder, dirp->d_name);
+            if (stat(filename, &fileinfo) == -1) continue;
+            if ( (now - fileinfo.st_atime) > 86400 ) {
+                unlink(filename);
+            }
+        }
+    }
+    #else
+    /* use FindFirstFile/FindNextFile */
+    #endif
+
+
+}
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void *rumble_sanitation_process(void *m) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumbleService   *svc = (rumbleService *) m;
+    const char      *mainpath, *localpath;
+    masterHandle    *master = svc->master;
+    d_iterator      iter;
+    rumble_domain   *domain;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    mainpath = rumble_config_str(master, "storagefolder");
+    localpath = 0;
+    while (1) {
+        // Check the main storage folder.
+        rumble_prune_storage(mainpath);
+        
+        // Check for invididually set storage folders.
+        rumble_rw_start_read(master->domains.rrw);
+        foreach((rumble_domain *), domain, master->domains.list, iter) {
+            localpath = domain->path;
+            if (localpath and strlen(localpath) and strcmp(localpath, mainpath)) {
+                rumble_prune_storage(localpath);
+            }
+        }
+        rumble_rw_stop_read(master->domains.rrw);        
+        sleep(14400);
+    }
 }
 
 /*
@@ -342,8 +405,11 @@ void *rumble_worker_process(void *m) {
 
             printf("%s@%s is a foreign user\n", item->recipient->user, item->recipient->domain);
             mx = comm_mxLookup(item->recipient->domain);
-            if (!mx) merror();
-            if (mx->size) {
+            if (!mx) {
+                printf("Couldn't look up domain %s, faking a SMTP 450 error.\n", item->recipient->domain);
+                delivered = 450;
+            }
+            else if (mx->size) {
                 filename = (char *) calloc(1, 256);
                 if (!filename) merror();
                 sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
@@ -434,12 +500,18 @@ void *rumble_worker_init(void *T) {
     
     pthread_attr_init(&attr);
     pthread_attr_setstacksize (&attr, 128*1024); // let's see if 512kb is enough ;>
+    // MTA workers
     for (x = 0; x < 20; x++) {
         thread = (rumbleThread *) malloc(sizeof(rumbleThread));
         cvector_add(svc->threads, thread);
         thread->status = 1;
         pthread_create(&thread->thread, &attr, rumble_worker_process, svc);
     }
+    // Trash collector
+    thread = (rumbleThread *) malloc(sizeof(rumbleThread));
+    cvector_add(svc->threads, thread);
+    thread->status = 1;
+    pthread_create(&thread->thread, &attr, rumble_sanitation_process, svc);
 
   dbo = radb_prepare(master->_core.mail, statement);
   if (!dbo) printf("Something went wrong with this: %s\n", statement);
@@ -480,10 +552,21 @@ void *rumble_worker_init(void *T) {
                 
                 radb_run_inject(master->_core.mail, "DELETE FROM queue WHERE id = %u", mid);
                 fflush(stdout);
-                pthread_mutex_lock(&svc->mutex);
-                current = item;
-                pthread_cond_signal(&svc->cond);
-                pthread_mutex_unlock(&svc->mutex);
+                if (!item->sender or !item->recipient) {
+                    printf("BAD: Sender or Recipient is invalid, discarding mail.\n");
+                    if (item->recipient) rumble_free_address(item->recipient);
+                    if (item->sender) rumble_free_address(item->recipient);
+                    if (item->fid) free((char *) item->fid);
+                    if (item->flags) free((char *) item->flags);
+                    item->account = 0;
+                    free(item);
+                }
+                else {
+                    pthread_mutex_lock(&svc->mutex);
+                    current = item;
+                    pthread_cond_signal(&svc->cond);
+                    pthread_mutex_unlock(&svc->mutex);
+                }
             }
         } else {
             radb_cleanup(dbo);

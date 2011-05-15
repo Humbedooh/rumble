@@ -79,7 +79,6 @@ address *rumble_parse_mail_address(const char *addr) {
     address *usr = (address *) malloc(sizeof(address));
     char    *tmp;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     if (!usr) merror();
     usr->domain = (char *) calloc(1, 128);
     usr->user = (char *) calloc(1, 128);
@@ -120,7 +119,10 @@ address *rumble_parse_mail_address(const char *addr) {
         }
         sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, "NOFLAGS");
     }
-
+    if (!strlen(usr->user) or !strlen(usr->domain)) {
+        rumble_free_address(usr);
+        usr = 0;
+    }
     free(tmp);
     return (usr);
 }

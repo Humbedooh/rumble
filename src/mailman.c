@@ -498,13 +498,13 @@ rumble_parsed_letter* rumble_mailman_readmail(const char* filename) {
     rumble_parsed_letter* letter = 0;
     FILE* fp;
 
-    printf("Mailman.readMail: Opening <%s>\n", filename);
+ //   printf("Mailman.readMail: Opening <%s>\n", filename);
     fp = fopen(filename, "rb");
     if (fp) {
         letter = rumble_mailman_readmail_private(fp, 0, 0);
         fclose(fp);
     }
-    printf("Closing <%s>\n", filename);
+  //  printf("Closing <%s>\n", filename);
     return letter;
 }
 
@@ -592,7 +592,7 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
             }
             // Done with headers, browse through them and look for a boundary if any
             else if (headers == 0) {
-                pdepth(depth, "<header check>");
+     //           pdepth(depth, "<header check>");
                 cforeach( (rumbleKeyValuePair*), header, letter->headers, iter) {
                     if (!strcmp(header->key, "content-type")) {
     //                    printf("Found a content-type: %s\n", header->value);
@@ -614,7 +614,7 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
             if (headers == -1) {
                 // No multipart, just add the body.
                 if (!letter->is_multipart) {
-                    printf(".");
+       //             printf(".");
                     // New body, malloc it.
                     if (!letter->body) { 
                         letter->body = calloc(1, llen+1);
