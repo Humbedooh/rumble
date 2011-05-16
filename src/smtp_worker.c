@@ -191,7 +191,7 @@ void rumble_prune_storage(const char* folder) {
             if(dirp->d_name[0] == '.' || strstr(dirp->d_name, ".msg")) continue;
             sprintf(filename, "%s/%s", folder, dirp->d_name);
             if (stat(filename, &fileinfo) == -1) continue;
-            if ( (now - fileinfo.st_atime) > 86400 ) {
+            if ( (now - fileinfo.st_atime) > 43200 ) {
                 unlink(filename);
             }
         }
