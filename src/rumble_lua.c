@@ -353,6 +353,59 @@ static int rumble_lua_sha256(lua_State *L) {
  =======================================================================================================================
  =======================================================================================================================
  */
+static int rumble_lua_b64dec(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *string;
+    char        *output;
+    size_t      ilen, olen;
+    /*~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    string = lua_tostring(L, 1);
+    ilen = strlen(string);
+    if (ilen) {
+        output = malloc(ilen);
+        olen = rumble_unbase64((unsigned char*) output, (const unsigned char *) string, ilen);
+        lua_settop(L, 0);
+        lua_pushlstring(L, output, olen);
+        free(output);
+    }
+    else {
+        lua_settop(L, 0);
+        lua_pushliteral(L, "");
+    }    
+    return (1);
+}
+
+static int rumble_lua_b64enc(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~*/
+    const char  *string;
+    char        *output;
+    size_t      ilen;
+    /*~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    string = lua_tostring(L, 1);
+    ilen = strlen(string);
+    if (ilen) {
+        output =  rumble_encode_base64(string, ilen);
+        lua_settop(L, 0);
+        lua_pushstring(L, output);
+        free(output);
+    }
+    else {
+        lua_settop(L, 0);
+        lua_pushliteral(L, "");
+    }    
+    return (1);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_lock(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~~~~~~*/
@@ -1754,7 +1807,12 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
 #endif
 
 static const luaL_reg   File_methods[] = { { "stat", rumble_lua_fileinfo }, { "exists", rumble_lua_fileexists }, { 0, 0 } };
-static const luaL_reg   String_methods[] = { { "SHA256", rumble_lua_sha256 }, { 0, 0 } };
+static const luaL_reg   String_methods[] = {  
+    { "SHA256", rumble_lua_sha256 }, 
+    { "decode64", rumble_lua_b64dec },
+    { "encode64", rumble_lua_b64enc },
+    { 0, 0 }
+};
 static const luaL_reg   Rumble_methods[] =
 {
     { "createService", rumble_lua_createservice },

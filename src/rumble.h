@@ -595,6 +595,16 @@ typedef struct
     const char  *cmd;
     svcCommand  func;
 } svcCommandHook;
+
+typedef struct
+{
+	char step;
+	char result;
+	int stepcount;
+} base64_encodestate;
+
+
+
 #   ifdef __cplusplus
 extern "C"
 {
@@ -631,6 +641,8 @@ void                        rumble_test(void);
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
 char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
 char                        *rumble_decode_base64(const char *src);
+char                        *rumble_encode_base64(const char* src, size_t len);
+int                         rumble_unbase64(unsigned char *dest, const unsigned char *src, int srclen);
 void                        rumble_string_lower(char *d);           /* Converts <d> into lowercase. */
 void                        rumble_string_upper(char *d);           /* Converts <d> into uppercase. */
 rumble_args                 *rumble_read_words(const char *d);

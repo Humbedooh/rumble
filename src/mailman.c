@@ -614,7 +614,7 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
             if (headers == -1) {
                 // No multipart, just add the body.
                 if (!letter->is_multipart) {
-                    printf(".");
+         //           printf(".");
                     // New body, malloc it.
                     if (!letter->body) { 
                         letter->body = calloc(1, llen+1);
