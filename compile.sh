@@ -15,8 +15,16 @@ printf "%-32s"  "Checking platform..."
 os=`uname -o`
 echo "[33m$os[0m"
 
+
+#Check for where
+if where; then
+    where="where /Q"
+else
+	where="whereis"
+fi
+
 #Check for 'whereis'
-if where /Q whereis; then
+if $where whereis; then
 	haveWhereis=1
 else
 	haveWhereis=0
@@ -24,14 +32,14 @@ fi
 
 
 #Check for 'wget'
-if where /Q wget; then
+if $where wget; then
 	haveWget=1
 else
 	haveWget=0
 fi
 
 #Check for 'locate'
-if where /Q locate; then
+if $where locate; then
 	haveLocate=1
 else
 	haveLocate=0
@@ -137,10 +145,11 @@ echo "----------------------------------------"
 
 echo "Copying required header files..."
 heads=0
-for luah in lua.h lualib.h lauxlib.h; do
+for luah in lua.h lualib.h lauxlib.h luaconf.h; do
 	original=`locate -l 1 /$luah`
 	if [ "$original" ]; then
 		cp "$original" src/
+		cp "$original" /usr/include/
 echo cp "$original" src/
 	else
 		echo "Couldn't find lua.h, please install the liblua5.1-dev package."
