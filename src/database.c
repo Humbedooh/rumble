@@ -50,6 +50,9 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
         statusLog("ERROR: Can't open database <%s>\r\n", mailpath);
         exit(EXIT_FAILURE);
     }
+    radb_run(master->_core.db, "PRAGMA synchronous = 2");
+    radb_run(master->_core.mail, "PRAGMA synchronous = 1");
+    radb_run(master->_core.mail, "PRAGMA cache_size = 5000");
 
     /*$2
      -------------------------------------------------------------------------------------------------------------------
@@ -76,6 +79,7 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
     } else printf("[OK]\r\n");
     statusLog("Database successfully initialized");
     
+    printf("%-48s", "Loading mail db...");
     rc = radb_do(master->_core.mail, "PRAGMA table_info (queue)");
     if (!rc) {
         printf("[OK]\r\n");
@@ -531,7 +535,7 @@ void rumble_database_update_domains(void) {
         /* Optional domain specific storage path */
         domain->path = strclone(dbr->column[2].data.string);
         dvector_add(rumble_database_master_handle->domains.list, domain);
-        printf("Found domain: %s (%d)\r\n", domain->name, domain->id);
+        //printf("Found domain: %s (%d)\r\n", domain->name, domain->id);
     }
 
     rumble_rw_stop_write(rumble_database_master_handle->domains.rrw);

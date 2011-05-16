@@ -524,9 +524,9 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
     c_iterator iter;
     
     if (!fp) return 0;
-//    printf("Parsing file pointer with boundary set to <%s>\n", boundary ? boundary : "(null)");
+ //   printf("Parsing file pointer with boundary set to <%s>\n", boundary ? boundary : "(null)");
     
-//    pdepth(depth, "<letter>");
+ //   pdepth(depth, "<letter>");
     letter = (rumble_parsed_letter*) malloc(sizeof(rumble_parsed_letter));
     letter->body = 0;
     letter->is_multipart = 0;
@@ -541,7 +541,7 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
     memset(child_boundary, 0, 128);
     
     depth++;
-//    pdepth(depth, "<headers>");
+ //   pdepth(depth, "<headers>");
     while (!feof(fp)) {
         if (fgets(line, 1024, fp)) {
             llen = strlen(line);
@@ -553,7 +553,7 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
             if (headers == 1) {                
                if (!llen || line[0] == '\r' || line[0] == '\n') { 
                    headers = 0; 
-  //                 pdepth(depth, "</headers>");
+      //             pdepth(depth, "</headers>");
                    continue; 
                } // End of headers
                
@@ -565,10 +565,10 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
                    if (sscanf(line, "%1024[^\r\n]", value) == 1) {
                        size_t old_len = strlen(header->value), new_len = strlen(value);
                        value[new_len] = 0;
-                       //printf("Reallocating value to hold %lu bytes\n", old_len+new_len+1);
+     //                  printf("Reallocating value to hold %lu bytes\n", old_len+new_len+1);
                        header->value = realloc((char*) header->value, old_len + new_len + 1);
                        strncpy((char*) header->value + old_len, line, new_len+1);
-                       //printf("+%s: %s\n", header->key, line);
+     //                  printf("+%s: %s\n", header->key, line);
                        
                    }
                }
@@ -585,36 +585,36 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
                    header->value = calloc(1, vlen+1);
                    strncpy((char*) header->value, value, vlen);
                    cvector_add(letter->headers, header);
-                   //printf("%s: %s\n", key, value);
- //                  pdepth(depth+1, "<header>");
-  //                 pdepth(depth+1, line);
+  //                printf("%s: %s\n", key, value);
+  //                pdepth(depth+1, "<header>");
+  //                pdepth(depth+1, line);
                }
             }
             // Done with headers, browse through them and look for a boundary if any
             else if (headers == 0) {
-     //           pdepth(depth, "<header check>");
+   //             pdepth(depth, "<header check>");
                 cforeach( (rumbleKeyValuePair*), header, letter->headers, iter) {
                     if (!strcmp(header->key, "content-type")) {
-    //                    printf("Found a content-type: %s\n", header->value);
+   //                     printf("Found a content-type: %s\n", header->value);
                         const char* at = strstr(header->value, "boundary=");
                         if (at && sscanf(at, "boundary=\"%255[^\"]", child_boundary)) {
-   //                         printf("This message has boundary issues! ;D (%s)\n",child_boundary);
+  //                          printf("This message has boundary issues! ;D (%s)\n",child_boundary);
                             letter->is_multipart = 1;
                         }
                     }
                 }
                 
                 headers = -1;
-   //             if (!letter->is_multipart) printf("Mail is single-part\n"); 
-   //             pdepth(depth, "</header check>");
-   //             pdepth(depth, "<body>");
+  //              if (!letter->is_multipart) printf("Mail is single-part\n"); 
+ //               pdepth(depth, "</header check>");
+ //               pdepth(depth, "<body>");
             }
             
             // Read body of message
             if (headers == -1) {
                 // No multipart, just add the body.
                 if (!letter->is_multipart) {
-       //             printf(".");
+                    printf(".");
                     // New body, malloc it.
                     if (!letter->body) { 
                         letter->body = calloc(1, llen+1);
@@ -632,7 +632,7 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
                 else {
                     rumble_parsed_letter* child = 0;
                     fseek(fp, previous, SEEK_SET);
-     //               printf("This line was: %s\n", line);
+   //                 printf("This line was: %s\n", line);
                     while (1) {
                         
                         child = rumble_mailman_readmail_private(fp, child_boundary, depth);
@@ -640,14 +640,15 @@ rumble_parsed_letter* rumble_mailman_readmail_private(FILE* fp, const char* boun
                         cvector_add(letter->multipart_chunks, child);
                         if (child->is_last_part) break;
                     }
+                    if (child and child->is_last_part) break;
                 }
             }
             previous = ftell(fp);
         }
     }
- //   printf("\n");
+//    printf("\n");
 //    pdepth(depth, "</body>");
- //   pdepth(--depth, "</letter>");
+//    pdepth(--depth, "</letter>");
  //   if (letter->is_last_part) pdepth(--depth, "<last chunk>");
     if (letter->body || letter->is_multipart) {
         return letter;

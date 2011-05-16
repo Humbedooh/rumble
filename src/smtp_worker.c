@@ -143,10 +143,8 @@ rumble_sendmail_response *rumble_send_email(
         /* Do a MAIL FROM */
         if (rhdict(res->flags, "SIZE")) {
             rcprintf(&s, "MAIL FROM: <%s=%s@%s> SIZE=%u\r\n", sender->tag, sender->user, sender->domain, fsize);
-            printf("MAIL FROM: <%s=%s@%s> SIZE=%lu\r\n", sender->tag, sender->user, sender->domain, fsize);
         } else {
             rcprintf(&s, "MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
-            printf("MAIL FROM: <%s=%s@%s>\r\n", sender->tag, sender->user, sender->domain);
         }
 
         get_smtp_response(&s, res);
