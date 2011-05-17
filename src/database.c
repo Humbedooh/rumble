@@ -240,26 +240,35 @@ rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *
     /*~~~~~~~~~~~~~~~~~*/
     radbObject      *dbo = 0;
     radbResult      *dbr;
-    char            *tmp;
+    char            *tmp, *xusr, *xdmn;
     rumble_mailbox  *acc;
     /*~~~~~~~~~~~~~~~~~*/
+    
 
     if (uid) {
         dbo = radb_prepare(rumble_database_master_handle->_core.db,
                            "SELECT id, domain, user, password, type, arg FROM accounts WHERE id = %u LIMIT 1", uid);
     } else {
+        if (!domain or !user) return 0;
+        xusr = strclone(user);
+        xdmn = strclone(domain);
+        rumble_string_lower(xusr);
+        rumble_string_lower(xdmn);
         if (rumble_database_master_handle->_core.db->dbType == RADB_SQLITE3) {
                 dbo = radb_prepare(rumble_database_master_handle->_core.db,
                            "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s GLOB user ORDER BY LENGTH(user) DESC LIMIT 1",
-                       domain ? domain : "", user ? user : "");
+                       xdmn, xusr);
         }
         else if (rumble_database_master_handle->_core.db->dbType == RADB_MYSQL) {
             dbo = radb_prepare(rumble_database_master_handle->_core.db,
                            "SELECT id, domain, user, password, type, arg FROM accounts WHERE domain = %s AND %s LIKE user ORDER BY LENGTH(user) DESC LIMIT 1",
-                       domain ? domain : "", user ? user : "");
+                       xdmn, xusr);
         }
+        free(xusr);
+        free(xdmn);
     }
 
+   
     dbr = radb_step(dbo);
     acc = NULL;
     if (dbr) {
@@ -332,16 +341,21 @@ uint32_t rumble_domain_exists(const char *domain) {
     uint32_t        rc;
     rumble_domain   *dmn;
     d_iterator      iter;
+    char            *dmncpy;
+   
     /*~~~~~~~~~~~~~~~~~*/
+    dmncpy = strclone(domain);
+    rumble_string_lower(dmncpy);
 
     rc = 0;
     rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
     foreach((rumble_domain *), dmn, rumble_database_master_handle->domains.list, iter) {
-        if (!strcmp(dmn->name, domain)) {
+        if (!strcmp(dmn->name, dmncpy)) {
             rc = 1;
             break;
         }
     }
+    free(dmncpy);
 
     rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
     return (rc);
@@ -358,12 +372,16 @@ rumble_domain *rumble_domain_copy(const char *domain) {
     rumble_domain   *dmn,
                     *rc;
     d_iterator      iter;
+    char            *dmncpy;
+   
     /*~~~~~~~~~~~~~~~~~*/
+    dmncpy = strclone(domain);
+    rumble_string_lower(dmncpy);
 
     rc = 0;
     rumble_rw_start_read(rumble_database_master_handle->domains.rrw);
     foreach((rumble_domain *), dmn, rumble_database_master_handle->domains.list, iter) {
-        if (!strcmp(dmn->name, domain)) {
+        if (!strcmp(dmn->name, dmncpy)) {
             rc = (rumble_domain *) malloc(sizeof(rumble_domain));
             rc->name = (char *) calloc(1, strlen(dmn->name) + 1);
             rc->path = (char *) calloc(1, strlen(dmn->path) + 1);
@@ -375,6 +393,7 @@ rumble_domain *rumble_domain_copy(const char *domain) {
     }
 
     rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
+    free(dmncpy);
     return (rc);
 }
 

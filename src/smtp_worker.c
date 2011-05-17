@@ -389,6 +389,9 @@ void *rumble_worker_process(void *m) {
 
                 rumble_free_account(user);
             }
+            else {
+                printf("I couldn't find %s :(\n", item->recipient->raw);
+            }
         } /* Foreign delivery? */ else {
 
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

@@ -235,7 +235,6 @@ static int rumble_lua_deleteaccount(lua_State *L) {
                                     *domain,
                                     *path;
     int                             uid = 0;
-    radbObject                      *state;
     rumble_mailbox                  *acc;
     rumble_mailman_shared_bag       *bag;
     rumble_mailman_shared_folder    *folder;
@@ -247,28 +246,29 @@ static int rumble_lua_deleteaccount(lua_State *L) {
 
     if (lua_type(L, 1) == LUA_TNUMBER) {
         uid = luaL_optinteger(L, 1, 0);
-        state = radb_prepare(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE id = %u", uid);
-        radb_step(state);
-        radb_cleanup(state);
+        acc = rumble_account_data(uid, 0, 0);
     } else {
         luaL_checktype(L, 1, LUA_TSTRING);
         luaL_checktype(L, 2, LUA_TSTRING);
         domain = lua_tostring(L, 1);
         user = lua_tostring(L, 2);
         acc = rumble_account_data(0, user, domain);
-        if (acc) {
-            path = strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
-            bag = rumble_mailman_open_bag(acc->uid);
+    }
+    if (acc and acc->uid) {
+        radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE id = %u", acc->uid);
+        path = strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+        bag = rumble_mailman_open_bag(acc->uid);
+        if (bag) {
             dforeach(rmsf, folder, bag->folders, diter) {
                 dforeach((rumble_letter *), letter, folder->letters, liter) {
                     sprintf(tmp, "%s/%s.msg", path, letter->fid);
                     unlink(tmp);
                 }
             }
-
-            radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE domain = %s AND user = %s", domain, user);
-            radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM mbox WHERE uid = %u", acc->uid);
         }
+        radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE uid = %u", acc->uid);
+        rumble_mailman_close_bag(bag);
+        rumble_free_account(acc);
     }
 
     lua_settop(L, 0);
