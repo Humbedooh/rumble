@@ -311,9 +311,9 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         /* If rec isn't local, check if client is allowed to relay */
         if (!isLocalDomain) {
             if (session->flags & RUMBLE_SMTP_CAN_RELAY) {
-
+                if (rumble_config_int(master, "blockoutgoingmail")) rc = RUMBLE_RETURN_FAILURE;
                 /* Fire events scheduled for pre-processing run */
-                rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                else rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                                    RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
                                                    parameters);
                 if (rc != RUMBLE_RETURN_OKAY) {
