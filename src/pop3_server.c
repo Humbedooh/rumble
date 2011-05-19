@@ -296,7 +296,7 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
         if (!(letter->flags & RUMBLE_LETTER_DELETED)) s += letter->size;
     }
     rumble_rw_stop_read(pops->bag->rrw);
-    rcsend(session, "+OK %u %u\r\n", n, s);
+    rcprintf(session, "+OK %u %u\r\n", n, s);
     return (RUMBLE_RETURN_IGNORE);
 }
 
