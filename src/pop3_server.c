@@ -276,6 +276,34 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  =======================================================================================================================
  */
+ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumble_letter                   *letter;
+    uint32_t                        n, s;
+    rumble_mailman_shared_folder    *folder;
+    d_iterator                      iter;
+    accountSession                  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
+    rumble_rw_start_read(pops->bag->rrw);
+    folder = rumble_mailman_current_folder(pops);
+    n = 0;
+    s = 0;
+    foreach((rumble_letter *), letter, folder->letters, iter) {
+        n++;
+        if (!(letter->flags & RUMBLE_LETTER_DELETED)) s += letter->size;
+    }
+    rumble_rw_stop_read(pops->bag->rrw);
+    rcsend(session, "+OK %u %u\r\n", n, s);
+    return (RUMBLE_RETURN_IGNORE);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

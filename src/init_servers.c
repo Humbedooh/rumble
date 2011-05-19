@@ -82,6 +82,7 @@ void rumble_master_init(masterHandle *master) {
         rumble_service_add_command(svc, "DELE", rumble_server_pop3_dele);
         rumble_service_add_command(svc, "RETR", rumble_server_pop3_retr);
         rumble_service_add_command(svc, "LIST", rumble_server_pop3_list);
+        rumble_service_add_command(svc, "STAT", rumble_server_pop3_stat);
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
