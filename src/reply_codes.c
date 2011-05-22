@@ -57,6 +57,7 @@ const char *rumble_pop3_reply_code(unsigned int code) {
     case 104:   return ("+OK\r\n");
     case 105:   return ("-ERR Unrecognized command.\r\n");
     case 106:   return ("-ERR Wrong credentials given.\r\n");
+    case 107:   return ("-ERR Invalid syntax.\r\n");
     default:    return ("+OK\r\n");
     }
 }

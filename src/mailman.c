@@ -87,8 +87,12 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     bag->folders = dvector_init();
     bag->rrw = rumble_rw_init();
     bag->uid = uid;
+    bag->sessions = 1;
+    rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);
     dvector_add(rumble_database_master_handle->mailboxes.list, bag);
+    rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);
 
+    rumble_rw_start_write(bag->rrw);
     /* Add the default inbox */
     folder = (rumble_mailman_shared_folder *) malloc(sizeof(rumble_mailman_shared_folder));
     folder->id = 0;
@@ -141,7 +145,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
             free(letter);
         }
     }
-
+    rumble_rw_stop_write(bag->rrw);
     radb_cleanup(dbo);
     return (bag);
 }
@@ -157,6 +161,10 @@ rumble_mailman_shared_folder *rumble_mailman_current_folder(accountSession *sess
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    if (!sess->bag) { 
+          printf("Bad call made for mailman_current_folder!\n"); 
+        return 0;
+    }
 
     foreach(rmsf, folder, sess->bag->folders, iter) {
         if (folder->id == sess->folder) return (folder);
@@ -349,22 +357,17 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
     if (bag->sessions <= 0) {
         rumble_mailman_shared_bag* tmpbag;
         foreach(rmsb, tmpbag, rumble_database_master_handle->mailboxes.list, fiter) {
-        if (tmpbag->uid == bag->uid) {
-            dvector_delete(&fiter);
-            break;
+            if (tmpbag->uid == bag->uid) {
+                dvector_delete(&fiter);
+                break;
+            }
         }
-    }
 
         /* Traverse folders */
         foreach(rmsf, folder, bag->folders, fiter) {
 
             /* Traverse letters */
             foreach((rumble_letter *), letter, folder->letters, liter) {
-                if (!letter) {
-                    printf("Memory corruption?!\n");
-                    continue;
-                }
-
                 if (letter->fid) free(letter->fid);
                 free(letter);
             }
@@ -397,8 +400,8 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
     d_iterator                  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);    /* Lock mailboxes for writing */
-
+    rumble_rw_start_read(rumble_database_master_handle->mailboxes.rrw);    /* Lock mailboxes for writing */
+    printf("looking for bag...\n");
     /* Check if we have a shared mailbox instance available */
     foreach(rmsb, tmpbag, rumble_database_master_handle->mailboxes.list, iter) {
         if (tmpbag->uid == uid) {
@@ -407,16 +410,12 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
             break;
         }
     }
+    rumble_rw_stop_read(rumble_database_master_handle->mailboxes.rrw);
 
     /* If not, create a new shared object */
-    if (!bag) {
-        bag = rumble_letters_retrieve_shared(uid);
-        bag->sessions = 1;
-        bag->uid = uid;
-        dvector_add(rumble_database_master_handle->mailboxes.list, bag);
-    }
-
-    rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);     /* Unlock mailboxes */
+    if (!bag) bag = rumble_letters_retrieve_shared(uid);
+    else printf("Found an old bag\n");
+   
     return (bag);
 }
 

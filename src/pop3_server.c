@@ -191,6 +191,7 @@ ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_user(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
     if (session->flags & RUMBLE_POP3_HAS_AUTH) return (105);
+    if (!strlen(parameters)) return (107); // invalid syntax
     rfdict(session->dict);
     rsdict(session->dict, "user", parameters);
     session->flags |= RUMBLE_POP3_HAS_USER;
@@ -204,42 +205,42 @@ ssize_t rumble_server_pop3_user(masterHandle *master, sessionHandle *session, co
 ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char            *usr,
-                    *dmn,
+    char            usr[128],
+                    dmn[128],
                     *tmp;
+    int             n = 0;
     accountSession  *pops = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    if (!strlen(parameters)) return 107;
     if (!(session->flags & RUMBLE_POP3_HAS_USER)) return (105);
     if (session->flags & RUMBLE_POP3_HAS_AUTH) return (105);
-    usr = (char *) calloc(1, 128);
-    dmn = (char *) calloc(1, 128);
-    tmp = (char *) calloc(1, 65);
-    if (sscanf(rrdict(session->dict, "user"), "%128[^@]@%128c", usr, dmn) == 2) {
-        printf("searching for user <%s> @ <%s>\n", usr, dmn);
+
+    memset(usr, 0, 128);
+    memset(dmn, 0, 128);
+    if (sscanf(rrdict(session->dict, "user"), "%127[^@]@%127c", usr, dmn) == 2) {
+        printf("POP3 auth: Searching for user <%s> @ <%s>\n", usr, dmn);
         if ((pops->account = rumble_account_data(0, usr, dmn))) {
+            printf("Found account, matching password\n");
             tmp = rumble_sha256((const unsigned char *) parameters);
-            printf("matching %s against %s\n", tmp, pops->account->hash);
-            if (strcmp(tmp, pops->account->hash)) {
-                free(usr);
-                free(dmn);
-                free(tmp);
+            n = strcmp(tmp, pops->account->hash);
+            free(tmp);
+            if (n) {
+                printf("wrong pass!\n");
                 rumble_free_account(pops->account);
                 free(pops->account);
                 pops->account = 0;
                 return (106);
             }
-
-            free(usr);
-            free(dmn);
-            free(tmp);
-            session->flags |= RUMBLE_POP3_HAS_AUTH;
-            pops->bag = rumble_mailman_open_bag(pops->account->uid);
-            pops->folder = 0;   /* 0 = INBOX */
-            return (104);
+            else {
+                printf("Correct pass, fetching mail bag.\n");
+                session->flags |= RUMBLE_POP3_HAS_AUTH;
+                pops->bag = rumble_mailman_open_bag(pops->account->uid);
+                pops->folder = 0;   /* 0 = INBOX */
+                return (104);
+            }
         }
     }
-
     return (106);   /* bad user/pass given. */
 }
 
@@ -264,7 +265,7 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
     i = 0;
     foreach((rumble_letter *), letter, folder->letters, iter) {
         i++;
-        if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %u\r\n", i + 1, letter->size);
+        if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %u\r\n", i, letter->size);
     }
 
     rumble_rw_stop_read(pops->bag->rrw);
@@ -285,18 +286,24 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
     d_iterator                      iter;
     accountSession                  *pops = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    printf("Doing stat\n");
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rumble_rw_start_read(pops->bag->rrw);
     folder = rumble_mailman_current_folder(pops);
+    if (!folder) {
+        rcsend(session, "-ERR Temporary error\r\n");
+        return (RUMBLE_RETURN_IGNORE);
+    }
     n = 0;
     s = 0;
+    printf("summing up\n");
     foreach((rumble_letter *), letter, folder->letters, iter) {
         n++;
         if (!(letter->flags & RUMBLE_LETTER_DELETED)) s += letter->size;
     }
     rumble_rw_stop_read(pops->bag->rrw);
     rcprintf(session, "+OK %u %u\r\n", n, s);
+    printf("stat done\n");
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -321,7 +328,7 @@ ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, co
     i = 0;
     foreach((rumble_letter *), letter, folder->letters, iter) {
         i++;
-        if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %s\r\n", i + 1, letter->fid);
+        if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %s\r\n", i, letter->fid);
     }
 
     rumble_rw_stop_read(pops->bag->rrw);
@@ -409,7 +416,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         }
 
         fclose(fp);
-        rcsend(session, ".\r\n");
+        rcsend(session, "\r\n.\r\n");
     } else {
         rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n", i);
     }

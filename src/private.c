@@ -159,6 +159,7 @@ rumble_readerwriter *rumble_rw_init(void) {
  =======================================================================================================================
  */
 void rumble_rw_start_read(rumble_readerwriter *rrw) {
+    printf("rrw: <read>\n");
     pthread_mutex_lock(&rrw->mutex);
 
     /* Wait for any writers working (or queued for work) to do their stuff. */
@@ -176,6 +177,7 @@ void rumble_rw_start_read(rumble_readerwriter *rrw) {
  =======================================================================================================================
  */
 void rumble_rw_stop_read(rumble_readerwriter *rrw) {
+    printf("rrw: </read>\n");
     pthread_mutex_lock(&rrw->mutex);
     rrw->readers--;
 
@@ -192,6 +194,7 @@ void rumble_rw_stop_read(rumble_readerwriter *rrw) {
  =======================================================================================================================
  */
 void rumble_rw_start_write(rumble_readerwriter *rrw) {
+    printf("rrw: <write>\n");
     pthread_mutex_lock(&rrw->mutex);
 
     /* Wait for any previous writer to finish */
@@ -215,6 +218,7 @@ void rumble_rw_start_write(rumble_readerwriter *rrw) {
  =======================================================================================================================
  */
 void rumble_rw_stop_write(rumble_readerwriter *rrw) {
+    printf("rrw: </write>\n");
     pthread_mutex_lock(&rrw->mutex);
     if (rrw->writers) {
         rrw->writers--;
