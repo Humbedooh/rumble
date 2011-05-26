@@ -63,20 +63,19 @@
  =======================================================================================================================
  */
 
-/*
- * #define FORCE_OLD_PTHREAD comment out this field to use native windows
- * threading (vista or above)
- */
+/* #define FORCE_OLD_PTHREAD comment out this field to use native windows threading (vista or above) */
 #   ifdef RUMBLE_MSC
 #      define RUMBLE_WINSOCK
 #      define HAVE_STRUCT_TIMESPEC
 
 /*
- * Disable the useless Microsoft warnings about unsafe operators and not-yet
- * defined functions (this is C, not C++, m
+ * Disable the useless Microsoft warnings about unsafe operators and not-yet defined functions (this
+ * is C, not C++, m
  */
-#      pragma warning(disable : 5)
-#      pragma warning(disable : 996)
+#      ifndef __MINGW32__
+#         pragma warning(disable : 5)
+#         pragma warning(disable : 996)
+#      endif
 #      include <Ws2tcpip.h>
 #      include <WinSock2.h>
 #      include <windns.h>
@@ -91,6 +90,8 @@
 #         include <pthread.h>
 #      else
 #         include "winpthreads.h"
+
+/* include <pthread.h> */
 #      endif
 #   else
 
@@ -127,12 +128,18 @@
 #      include "rumble_lua.h"
 #   endif
 
-/*$3 RADB */
-#ifdef RUMBLE_MSC
-#include <windows.h> 
-#endif
-//#include <mysql.h>
-#include <sqlite3.h>
+/*$3
+ =======================================================================================================================
+    RADB
+ =======================================================================================================================
+ */
+
+#   ifdef RUMBLE_MSC
+#      include <windows.h>
+#   endif
+
+/* include <mysql.h> */
+#   include <sqlite3.h>
 #   include "radb/radb.h"
 
 /*$5
@@ -301,8 +308,8 @@ typedef signed int          ssize_t;
 typedef long long           int64_t;
 #      endif
 #      ifndef PRIu64
-#         define PRIu64  "llu"
-#         define PRId64  "lld"
+#         define PRIu64  "lu"
+#         define PRId64  "ld"
 #      endif
 #      define sleep(a)    Sleep(a * 1000)
 #      ifndef AI_PASSIVE
@@ -329,11 +336,13 @@ typedef int socketHandle;
  */
 
 #   ifdef RUMBLE_MSC
-#      define close(a)    closesocket(a)
+#      define disconnect(a)   closesocket(a)
 typedef int         socklen_t;
 typedef uint16_t    sa_family_t;
 typedef uint16_t    in_port_t;
 typedef uint32_t    in_addr_t;
+#   else
+#      define disconnect(a)   close(a)
 #   endif
 
 /*
@@ -539,15 +548,14 @@ typedef struct
     uint32_t    flags;      /* Various flags */
     uint32_t    _flags;     /* Original copy of flags (for update checks) */
 } rumble_letter;
-
-typedef struct {
-    cvector             *headers;
-    char                *body;
-    int                 is_multipart;
-    int                 is_last_part;
-    cvector             *multipart_chunks;
+typedef struct
+{
+    cvector *headers;
+    char    *body;
+    int     is_multipart;
+    int     is_last_part;
+    cvector *multipart_chunks;
 } rumble_parsed_letter;
-
 typedef struct
 {
     rumble_mailbox  *account;   /* Pointer to account */
@@ -595,16 +603,12 @@ typedef struct
     const char  *cmd;
     svcCommand  func;
 } svcCommandHook;
-
 typedef struct
 {
-	char step;
-	char result;
-	int stepcount;
+    char    step;
+    char    result;
+    int     stepcount;
 } base64_encodestate;
-
-
-
 #   ifdef __cplusplus
 extern "C"
 {
@@ -641,7 +645,7 @@ void                        rumble_test(void);
 char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
 char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
 char                        *rumble_decode_base64(const char *src);
-char                        *rumble_encode_base64(const char* src, size_t len);
+char                        *rumble_encode_base64(const char *src, size_t len);
 int                         rumble_unbase64(unsigned char *dest, const unsigned char *src, int srclen);
 void                        rumble_string_lower(char *d);           /* Converts <d> into lowercase. */
 void                        rumble_string_upper(char *d);           /* Converts <d> into uppercase. */
@@ -692,7 +696,7 @@ rumble_mailbox  *rumble_account_data(uint32_t uid, const char *user, const char 
 rumble_mailbox  *rumble_account_data_auth(uint32_t uid, const char *user, const char *domain, const char *pass);
 cvector         *rumble_database_accounts_list(const char *domain);
 void            rumble_database_accounts_free(cvector *accounts);   /* cleanup func for the function above. */
-void rumble_domain_free(rumble_domain* domain); //cleanup for domain copies.
+void            rumble_domain_free(rumble_domain *domain);          /* cleanup for domain copies. */
 
 /*$3
  =======================================================================================================================
@@ -715,9 +719,9 @@ size_t                          rumble_mailman_copy_letter
                                     rumble_letter                   *letter,
                                     rumble_mailman_shared_folder    *folder
                                 );
-rumble_parsed_letter            *rumble_mailman_readmail_private(FILE* fp, const char* boundary, int depth);
-rumble_parsed_letter            *rumble_mailman_readmail(const char* filename);
-void                            rumble_mailman_free_parsed_letter(rumble_parsed_letter* letter);
+rumble_parsed_letter            *rumble_mailman_readmail_private(FILE *fp, const char *boundary, int depth);
+rumble_parsed_letter            *rumble_mailman_readmail(const char *filename);
+void                            rumble_mailman_free_parsed_letter(rumble_parsed_letter *letter);
 
 /*$5
  #######################################################################################################################
@@ -732,16 +736,16 @@ void                            rumble_mailman_free_parsed_letter(rumble_parsed_
 #   define rcsend      rumble_comm_send
 #   define rcprintf    rumble_comm_printf
 #   define rcread      rumble_comm_read
-#   define merror()    { \
-                        fprintf(stderr, "Memory allocation failed, this is bad!\n"); \
-                        statusLog("Memory allocation failed at %s, aborting!\n", rumble_mtime());\
-                        exit(1); \
-                        }
-#   define and         &&
-#   define or          ||
-#   define rivp        (rumbleIntValuePair *)
-#   define rmsf        (rumble_mailman_shared_folder *)
-#   define rmsb        (rumble_mailman_shared_bag *)
+#   define merror() { \
+        fprintf(stderr, "Memory allocation failed, this is bad!\n"); \
+        statusLog("Memory allocation failed at %s, aborting!\n", rumble_mtime()); \
+        exit(1); \
+    }
+#   define and     &&
+#   define or      ||
+#   define rivp    (rumbleIntValuePair *)
+#   define rmsf    (rumble_mailman_shared_folder *)
+#   define rmsb    (rumble_mailman_shared_bag *)
 
 /*$2
  -----------------------------------------------------------------------------------------------------------------------

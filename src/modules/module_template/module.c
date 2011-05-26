@@ -1,7 +1,4 @@
-/*
- * File: module.c Author: Humbedooh A sample module for rumble. Created on January
- * 3, 2011, 8:08 P
- */
+/* File: module.c Author: Humbedooh A sample module for rumble. Created on January 3, 2011, 8:08 P */
 #include <string.h>
 #include "../../rumble.h"
 

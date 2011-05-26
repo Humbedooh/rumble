@@ -59,7 +59,7 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     x.sin_port = htons(atoi(port));
     x.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
     if (bind(sockfd, (struct sockaddr *) &x, sizeof(x)) == SOCKET_ERROR) {
-        close(sockfd);
+        disconnect(sockfd);
         fprintf(stderr, "Server: failed to bind: %d\n", WSAGetLastError());
         exit(0);
     }
@@ -94,7 +94,7 @@ socketHandle comm_init(masterHandle *m, const char *port) {
         }
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd);
+            disconnect(sockfd);
             statusLog("ERROR: Couldn't bind to socket (protocol %#X) on port %s!", p->ai_family, port);
             continue;
         }
@@ -215,10 +215,8 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     va_end(vl);
     buffer = (char *) calloc(1, len);
     if (!buffer) merror();
-    
     va_start(vl, d);
     vsprintf(buffer, d, vl);
-    
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
     free(buffer);

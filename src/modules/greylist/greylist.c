@@ -1,7 +1,4 @@
-/*
- * File: greylist.c Author: Humbedooh A simple grey-listing module for rumble.
- * Created on Jan
- */
+/* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
 #include "../../rumble.h"
 #include <string.h>
 #define GREYLIST_MAX_AGE    172800  /* Grey-list records will linger for 48 hours. */
@@ -30,10 +27,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
     d_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*
-     * First, check if the client has been given permission to skip this check by any
-     * other modu
-     */
+    /* First, check if the client has been given permission to skip this check by any other modu */
     if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
 
     /* Create the SHA1 hash that corresponds to the triplet. */

@@ -1,6 +1,6 @@
 /*
- * File: whitelist.c Author: Humbedooh A simple white-listing module for rumble.
- * Created on January 3, 2011, 8:0
+ * File: whitelist.c Author: Humbedooh A simple white-listing module for rumble. Created on January 3,
+ * 2011, 8:0
  */
 #include <string.h>
 #include "../../rumble.h"
@@ -92,4 +92,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     /* Hook the module to new connections. */
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, rumble_whitelist);
     return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */
+	
 }
+
+

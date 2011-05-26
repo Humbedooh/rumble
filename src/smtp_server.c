@@ -115,7 +115,7 @@ void *rumble_smtp_init(void *T) {
          */
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_SMTP);
-        close(session.client->socket);
+        disconnect(session.client->socket);
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -312,10 +312,14 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         if (!isLocalDomain) {
             if (session->flags & RUMBLE_SMTP_CAN_RELAY) {
                 if (rumble_config_int(master, "blockoutgoingmail")) rc = RUMBLE_RETURN_FAILURE;
+
                 /* Fire events scheduled for pre-processing run */
-                else rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
-                                                   RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
-                                                   parameters);
+                else {
+                    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
+                                                       parameters);
+                }
+
                 if (rc != RUMBLE_RETURN_OKAY) {
                     dvector_pop(session->recipients);   /* pop the last element from the vector */
                     rumble_free_address(recipient);     /* flush the memory */
@@ -480,8 +484,8 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
 
     fclose(fp);
     foreach((address *), el, session->recipients, iter) {
-        radb_run_inject(master->_core.mail, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid, session->sender->raw,
-                 el->raw, session->sender->_flags);
+        radb_run_inject(master->_core.mail, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
+                        session->sender->raw, el->raw, session->sender->_flags);
     }
 
     free(fid);

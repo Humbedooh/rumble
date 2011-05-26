@@ -16,7 +16,7 @@ void            comm_accept(socketHandle sock, clientHandle *client);
 dvector         *comm_mxLookup(const char *domain);
 socketHandle    comm_open(masterHandle *m, const char *host, unsigned short port);
 rumbleService   *comm_registerService(masterHandle *m, const char *svcName, void * (*init) (void *), const char *port, int threadCount);
-int comm_setServiceStack(rumbleService* svc, size_t stacksize);
+int             comm_setServiceStack(rumbleService *svc, size_t stacksize);
 int             comm_startService(rumbleService *svc);
 rumbleService   *comm_serviceHandleExtern(masterHandle *m, const char *svcName);
 rumbleService   *comm_serviceHandle(const char *svcName);

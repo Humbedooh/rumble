@@ -118,7 +118,7 @@ void *rumble_pop3_init(void *T) {
          */
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_POP3);
-        close(session.client->socket);
+        disconnect(session.client->socket);
 
         /* Start cleaning up after the session */
         free(arg);
@@ -191,7 +191,7 @@ ssize_t rumble_server_pop3_capa(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_user(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
     if (session->flags & RUMBLE_POP3_HAS_AUTH) return (105);
-    if (!strlen(parameters)) return (107); // invalid syntax
+    if (!strlen(parameters)) return (107);  /* invalid syntax */
     rfdict(session->dict);
     rsdict(session->dict, "user", parameters);
     session->flags |= RUMBLE_POP3_HAS_USER;
@@ -212,10 +212,9 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
     accountSession  *pops = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    if (!strlen(parameters)) return 107;
+    if (!strlen(parameters)) return (107);
     if (!(session->flags & RUMBLE_POP3_HAS_USER)) return (105);
     if (session->flags & RUMBLE_POP3_HAS_AUTH) return (105);
-
     memset(usr, 0, 128);
     memset(dmn, 0, 128);
     if (sscanf(rrdict(session->dict, "user"), "%127[^@]@%127c", usr, dmn) == 2) {
@@ -231,8 +230,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
                 free(pops->account);
                 pops->account = 0;
                 return (106);
-            }
-            else {
+            } else {
                 printf("Correct pass, fetching mail bag.\n");
                 session->flags |= RUMBLE_POP3_HAS_AUTH;
                 pops->bag = rumble_mailman_open_bag(pops->account->uid);
@@ -241,6 +239,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
             }
         }
     }
+
     return (106);   /* bad user/pass given. */
 }
 
@@ -281,11 +280,13 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
-    uint32_t                        n, s;
+    uint32_t                        n,
+                                    s;
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
     accountSession                  *pops = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     printf("Doing stat\n");
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rumble_rw_start_read(pops->bag->rrw);
@@ -294,6 +295,7 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
         rcsend(session, "-ERR Temporary error\r\n");
         return (RUMBLE_RETURN_IGNORE);
     }
+
     n = 0;
     s = 0;
     printf("summing up\n");
@@ -301,6 +303,7 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
         n++;
         if (!(letter->flags & RUMBLE_LETTER_DELETED)) s += letter->size;
     }
+
     rumble_rw_stop_read(pops->bag->rrw);
     rcprintf(session, "+OK %u %u\r\n", n, s);
     printf("stat done\n");

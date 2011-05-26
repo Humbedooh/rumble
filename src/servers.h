@@ -87,8 +87,8 @@ void    *rumble_smtp_init(void *m);
 void    *rumble_pop3_init(void *m);
 void    *rumble_imap_init(void *m);
 void    *rumble_worker_init(void *m);
-void rumble_prune_storage(const char* folder);
-void *rumble_sanitation_process(void *m);
+void    rumble_prune_storage(const char *folder);
+void    *rumble_sanitation_process(void *m);
 #   ifdef __cplusplus
 }
 #   endif

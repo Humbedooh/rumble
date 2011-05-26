@@ -107,7 +107,7 @@ int comm_killService(rumbleService *svc) {
         }
 
         svc->enabled = 0;   /* 2 = suspended */
-        if (svc->socket) close(svc->socket);
+        if (svc->socket) disconnect(svc->socket);
         svc->socket = 0;
         pthread_mutex_unlock(&svc->mutex);
     }
@@ -178,17 +178,21 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.port = port;
     svc->settings.name = svcp->svcName;
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;
-    svc->settings.stackSize = 2.5*1024*1024;
+    svc->settings.stackSize = 2.5 * 1024 * 1024;
     cvector_add(master->services, svcp);
     return (svc);
 }
 
-
-int comm_setServiceStack(rumbleService* svc, size_t stacksize) {
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+int comm_setServiceStack(rumbleService *svc, size_t stacksize) {
     if (!svc) return (0);
     svc->settings.stackSize = stacksize;
-    return 1;
+    return (1);
 }
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -198,11 +202,11 @@ int comm_startService(rumbleService *svc) {
     /*~~~~~~~~~~~~~~~~~~~~*/
     rumbleThread    *thread;
     int             n;
-    pthread_attr_t attr;
+    pthread_attr_t  attr;
     /*~~~~~~~~~~~~~~~~~~~~*/
-    
+
     pthread_attr_init(&attr);
-    pthread_attr_setstacksize (&attr, svc->settings.stackSize);
+    pthread_attr_setstacksize(&attr, svc->settings.stackSize);
     if (!svc) return (0);
     if (svc->settings.port) {
         svc->socket = comm_init(svc->master, svc->settings.port);

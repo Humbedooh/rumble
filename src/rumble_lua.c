@@ -12,7 +12,9 @@ extern FILE         *sysLog;
 #   ifndef __STDC__
 #      define __STDC__    1
 #   endif
-#   include <fcntl.h>
+#   if !defined(close)
+#      include <fcntl.h>
+#   endif
 
 /*
  =======================================================================================================================
@@ -254,6 +256,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         user = lua_tostring(L, 2);
         acc = rumble_account_data(0, user, domain);
     }
+
     if (acc and acc->uid) {
         radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE id = %u", acc->uid);
         path = strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
@@ -266,6 +269,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
                 }
             }
         }
+
         radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE uid = %u", acc->uid);
         rumble_mailman_close_bag(bag);
         rumble_free_account(acc);
@@ -358,7 +362,8 @@ static int rumble_lua_b64dec(lua_State *L) {
     /*~~~~~~~~~~~~~~~~*/
     const char  *string;
     char        *output;
-    size_t      ilen, olen;
+    size_t      ilen,
+                olen;
     /*~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
@@ -366,18 +371,22 @@ static int rumble_lua_b64dec(lua_State *L) {
     ilen = strlen(string);
     if (ilen) {
         output = malloc(ilen);
-        olen = rumble_unbase64((unsigned char*) output, (const unsigned char *) string, ilen);
+        olen = rumble_unbase64((unsigned char *) output, (const unsigned char *) string, ilen);
         lua_settop(L, 0);
         lua_pushlstring(L, output, olen);
         free(output);
-    }
-    else {
+    } else {
         lua_settop(L, 0);
         lua_pushliteral(L, "");
-    }    
+    }
+
     return (1);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_b64enc(lua_State *L) {
 
     /*~~~~~~~~~~~~~~~~*/
@@ -390,15 +399,15 @@ static int rumble_lua_b64enc(lua_State *L) {
     string = lua_tostring(L, 1);
     ilen = strlen(string);
     if (ilen) {
-        output =  rumble_encode_base64(string, ilen);
+        output = rumble_encode_base64(string, ilen);
         lua_settop(L, 0);
         lua_pushstring(L, output);
         free(output);
-    }
-    else {
+    } else {
         lua_settop(L, 0);
         lua_pushliteral(L, "");
-    }    
+    }
+
     return (1);
 }
 
@@ -552,8 +561,8 @@ static int rumble_lua_updatedomain(lua_State *L) {
     newtype = luaL_optstring(L, 4, "");
     dmn = rumble_domain_copy(domain);
     if (dmn) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname, newpath,
-                dmn->id);
+        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname,
+                        newpath, dmn->id);
         rumble_database_update_domains();
         radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE accounts SET domain = %s WHERE domain = %s", newname, dmn->name);
         free(dmn->name);
@@ -578,14 +587,12 @@ static int rumble_lua_getaccount(lua_State *L) {
     int             uid = 0;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
-     if (lua_type(L, 1) == LUA_TNUMBER) {
+    if (lua_type(L, 1) == LUA_TNUMBER) {
         uid = luaL_optinteger(L, 1, 0);
-     }
-    
+    }
+
     domain = lua_tostring(L, 1);
     user = lua_tostring(L, 2);
-    
-    
     acc = rumble_account_data(uid, user, domain);
     lua_settop(L, 0);
     if (acc) {
@@ -634,28 +641,26 @@ static int rumble_lua_getaccount(lua_State *L) {
  */
 static int rumble_lua_getfolders(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    const char      *domain,
-                    *user;
-    radbObject      *dbo = 0;
-    radbResult      *dbr;
-    int             uid = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~*/
+    const char  *domain,
+                *user;
+    radbObject  *dbo = 0;
+    radbResult  *dbr;
+    int         uid = 0;
+    /*~~~~~~~~~~~~~~~~~*/
 
-     if (lua_type(L, 1) == LUA_TNUMBER) {
+    if (lua_type(L, 1) == LUA_TNUMBER) {
         uid = luaL_optinteger(L, 1, 0);
         dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE uid = %u", uid);
-     }
-     else {
+    } else {
         domain = lua_tostring(L, 1);
         user = lua_tostring(L, 2);
-        dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE domain = %s AND user = %s", domain, user);
-     }
-        
+        dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name FROM folders WHERE domain = %s AND user = %s", domain,
+                           user);
+    }
+
     lua_settop(L, 0);
-    
-    if (!dbo) return 0;
-    
+    if (!dbo) return (0);
     lua_newtable(L);
     lua_pushinteger(L, 0);
     lua_pushliteral(L, "INBOX");
@@ -665,242 +670,286 @@ static int rumble_lua_getfolders(lua_State *L) {
         lua_pushstring(L, dbr->column[1].data.string);
         lua_rawset(L, -3);
     }
+
     radb_cleanup(dbo);
-    return(1);
+    return (1);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_getheaders(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    radbObject      *dbo = 0;
-    radbResult      *dbr;
-    int             uid = 0;
-    int64_t         folder = 0;
-    char            filename[256], line[1024], key[1024], value[1024];
-    const char* path;
-    FILE* fp;
-   // rumble_domain* domain = 0;
-    int n = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    radbObject  *dbo = 0;
+    radbResult  *dbr;
+    int         uid = 0;
+    int64_t     folder = 0;
+    char        filename[256],
+                line[1024],
+                key[1024],
+                value[1024];
+    const char  *path;
+    FILE        *fp;
+    /*
+     * rumble_domain* domain = 0;
+     */
+    int         n = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     uid = luaL_optinteger(L, 1, 0);
     folder = luaL_optinteger(L, 2, 0);
     if (uid) {
-        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT id, fid, size, delivered, flags FROM mbox WHERE uid = %u AND folder = %l", uid, folder);
-    }
-    else return 0;
-    
+        dbo = radb_prepare(rumble_database_master_handle->_core.mail,
+                           "SELECT id, fid, size, delivered, flags FROM mbox WHERE uid = %u AND folder = %l", uid, folder);
+    } else return (0);
     lua_settop(L, 0);
-    
-    if (!dbo) return 0;
-    
+    if (!dbo) return (0);
     lua_newtable(L);
-    
-    //domain = rumble_domain_copy()
-    //path = strlen(mbox->domain->path) ? mbox->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+
+    /*
+     * domain = rumble_domain_copy() ;
+     * path = strlen(mbox->domain->path) ? mbox->domain->path :
+     * rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+     */
     path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
-            
-    
     while ((dbr = radb_fetch_row(dbo))) {
         n++;
         lua_pushinteger(L, n);
         lua_newtable(L);
-        
-            lua_pushstring(L, "id");
-            lua_pushinteger(L, dbr->column[0].data.uint64);
-            lua_rawset(L, -3);
-
-            lua_pushstring(L, "file");
-            lua_pushstring(L, dbr->column[1].data.string);
-            lua_rawset(L, -3);
-
-            lua_pushstring(L, "size");
-            lua_pushinteger(L, dbr->column[2].data.uint32);
-            lua_rawset(L, -3);
-
-            lua_pushstring(L, "sent");
-            lua_pushinteger(L, dbr->column[3].data.uint32);
-            lua_rawset(L, -3);
-            
-            lua_pushstring(L, "read");
-            lua_pushboolean(L, (dbr->column[4].data.uint32 == RUMBLE_LETTER_READ) ? 1: 0);
-            lua_rawset(L, -3);
-            
-            sprintf(filename, "%s/%s.msg", path, dbr->column[1].data.string);
-            fp = fopen(filename, "rb");
-            if (fp) {
-                while (!feof(fp)) {
-                    if (fgets(line, 1024, fp)) {
-                        if (!strlen(line) || line[0] == '\r' || line[0] == '\n') break;
-                        memset(key, 0, 1024);
-                        memset(value, 0, 1024);
-                        if (sscanf(line, "%128[^:]: %1000[^\r\n]", key, value) == 2) {
-                            rumble_string_lower(key);
-                            lua_pushstring(L, key);
-                            lua_pushstring(L, value);
-                            lua_rawset(L, -3);
-                        }
-                    }
-                    
-                }
-                fclose(fp);
-            }
-            
-        
+        lua_pushstring(L, "id");
+        lua_pushinteger(L, dbr->column[0].data.uint64);
         lua_rawset(L, -3);
-        
+        lua_pushstring(L, "file");
+        lua_pushstring(L, dbr->column[1].data.string);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "size");
+        lua_pushinteger(L, dbr->column[2].data.uint32);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "sent");
+        lua_pushinteger(L, dbr->column[3].data.uint32);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "read");
+        lua_pushboolean(L, (dbr->column[4].data.uint32 == RUMBLE_LETTER_READ) ? 1 : 0);
+        lua_rawset(L, -3);
+        sprintf(filename, "%s/%s.msg", path, dbr->column[1].data.string);
+        fp = fopen(filename, "rb");
+        if (fp) {
+            while (!feof(fp)) {
+                if (fgets(line, 1024, fp)) {
+                    if (!strlen(line) || line[0] == '\r' || line[0] == '\n') break;
+                    memset(key, 0, 1024);
+                    memset(value, 0, 1024);
+                    if (sscanf(line, "%128[^:]: %1000[^\r\n]", key, value) == 2) {
+                        rumble_string_lower(key);
+                        lua_pushstring(L, key);
+                        lua_pushstring(L, value);
+                        lua_rawset(L, -3);
+                    }
+                }
+            }
+
+            fclose(fp);
+        }
+
+        lua_rawset(L, -3);
     }
+
     radb_cleanup(dbo);
-    return(1);
+    return (1);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_deletemail(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    radbObject      *dbo = 0;
-    radbResult      *dbr;
-    int             uid = 0;
-    int64_t         lid = 0;
-    char            filename[256];
-    const char* path;
-    
-   // rumble_domain* domain = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    radbObject  *dbo = 0;
+    radbResult  *dbr;
+    int         uid = 0;
+    int64_t     lid = 0;
+    char        filename[256];
+    const char  *path;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
 
+    /*
+     * rumble_domain* domain = 0;
+     */
     uid = luaL_optinteger(L, 1, 0);
     lid = luaL_optinteger(L, 2, 0);
     if (uid && lid) {
         dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT fid FROM mbox WHERE id = %l AND uid = %uLIMIT 1", lid, uid);
-    }
-    else return 0;
-    
+    } else return (0);
     lua_settop(L, 0);
-    
-    if (!dbo) return 0;
-    
-    
-    //domain = rumble_domain_copy()
-    //path = strlen(mbox->domain->path) ? mbox->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
-    path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+    if (!dbo) return (0);
 
+    /*
+     * domain = rumble_domain_copy() ;
+     * path = strlen(mbox->domain->path) ? mbox->domain->path :
+     * rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+     */
+    path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
     dbr = radb_fetch_row(dbo);
     if (dbr) {
         sprintf(filename, "%s/%s.msg", path, dbr->column[0].data.string);
-        //printf("Mailman.deleteMail: removing %s\n", filename);
+
+        /*
+         * printf("Mailman.deleteMail: removing %s\n", filename);
+         */
         unlink(filename);
         radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", lid);
     }
+
     radb_cleanup(dbo);
-    return 0;
+    return (0);
 }
 
-void rumble_lua_pushpart(lua_State *L, rumble_parsed_letter* letter) {
-    c_iterator          iter;
-    rumbleKeyValuePair* pair;
-    rumble_parsed_letter* child;
-    
-    // Headers
- //   printf("pushing headers\n");
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_lua_pushpart(lua_State *L, rumble_parsed_letter *letter) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    c_iterator              iter;
+    rumbleKeyValuePair      *pair;
+    rumble_parsed_letter    *child;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    /*
+     * Headers ;
+     * printf("pushing headers\n");
+     */
     lua_pushliteral(L, "headers");
     lua_newtable(L);
-    cforeach((rumbleKeyValuePair*), pair, letter->headers, iter) {
+    cforeach((rumbleKeyValuePair *), pair, letter->headers, iter) {
         lua_pushstring(L, pair->key);
         lua_pushstring(L, pair->value);
         lua_rawset(L, -3);
     }
+
     lua_rawset(L, -3);
 
-    // Body
+    /* Body */
     if (!letter->is_multipart) {
-  //      printf("pushing body\n");
+
+        /*
+         * printf("pushing body\n");
+         */
         lua_pushliteral(L, "body");
         lua_pushstring(L, letter->body);
         lua_rawset(L, -3);
-    }
-    
-    // Multipart
-    else {
-   //     printf("pushing parts\n");
+    } /* Multipart */ else {
+
+        /*~~~~~~*/
+        /*
+         * printf("pushing parts\n");
+         */
         int k = 0;
+        /*~~~~~~*/
+
         lua_pushliteral(L, "parts");
         lua_newtable(L);
-        cforeach((rumble_parsed_letter*), child, letter->multipart_chunks, iter) {
+        cforeach((rumble_parsed_letter *), child, letter->multipart_chunks, iter) {
             lua_pushinteger(L, ++k);
             lua_newtable(L);
             rumble_lua_pushpart(L, child);
             lua_rawset(L, -3);
         }
-   //     printf("Closing parts table..");
+
+        /*
+         * printf("Closing parts table..");
+         */
         lua_rawset(L, -3);
-  //      printf("done\n");
+
+        /*
+         * printf("done\n");
+         */
     }
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_readmail(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
-    radbObject      *dbo = 0;
-    radbResult      *dbr;
-    int             uid = 0;
-    int64_t         lid = 0;
-    char            filename[256];
-    const char* path;
-    rumble_parsed_letter* letter = 0;
-    
-   // rumble_domain* domain = 0;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    radbObject              *dbo = 0;
+    radbResult              *dbr;
+    int                     uid = 0;
+    int64_t                 lid = 0;
+    char                    filename[256];
+    const char              *path;
+    rumble_parsed_letter    *letter = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    /*
+     * rumble_domain* domain = 0;
+     */
     uid = luaL_optinteger(L, 1, 0);
     lid = luaL_optinteger(L, 2, 0);
     if (uid && lid) {
-        dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT fid, size, delivered FROM mbox WHERE id = %l AND uid = %u LIMIT 1", lid, uid);
-    }
-    else return 0;
-    
+        dbo = radb_prepare(rumble_database_master_handle->_core.mail,
+                           "SELECT fid, size, delivered FROM mbox WHERE id = %l AND uid = %u LIMIT 1", lid, uid);
+    } else return (0);
     lua_settop(L, 0);
-    
-    if (!dbo) return 0;
-    
-    
-    //domain = rumble_domain_copy()
-    //path = strlen(mbox->domain->path) ? mbox->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
-    path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+    if (!dbo) return (0);
 
+    /*
+     * domain = rumble_domain_copy() ;
+     * path = strlen(mbox->domain->path) ? mbox->domain->path :
+     * rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
+     */
+    path = rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
     dbr = radb_fetch_row(dbo);
     if (dbr) {
-      //  printf("Found an email for parsing, getting info\n");
+
+        /*
+         * printf("Found an email for parsing, getting info\n");
+         */
         radb_run_inject(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE id = %l", RUMBLE_LETTER_READ, lid);
-        
         lua_newtable(L);
-        
         lua_pushstring(L, "file");
         lua_pushstring(L, dbr->column[0].data.string);
         lua_rawset(L, -3);
-
         lua_pushstring(L, "size");
         lua_pushinteger(L, dbr->column[1].data.uint32);
         lua_rawset(L, -3);
-
         lua_pushstring(L, "sent");
         lua_pushinteger(L, dbr->column[2].data.uint32);
         lua_rawset(L, -3);
-        
-   //     printf("Formatting filename\n");
+
+        /*
+         * printf("Formatting filename\n");
+         */
         sprintf(filename, "%s/%s.msg", path, dbr->column[0].data.string);
-   //     printf("Callung readmail()\n");
+
+        /*
+         * printf("Callung readmail()\n");
+         */
         letter = rumble_mailman_readmail(filename);
         if (letter) {
-   //         printf("Creating letter struct for Lua\n");
+
+            /*
+             * printf("Creating letter struct for Lua\n");
+             */
             rumble_lua_pushpart(L, letter);
             rumble_mailman_free_parsed_letter(letter);
-   //         printf("Done!\n");
+
+            /*
+             * printf("Done!\n");
+             */
         }
-    }
-    else {
+    } else {
         lua_pushnil(L);
     }
+
     radb_cleanup(dbo);
-    return(1);
+    return (1);
 }
 
 /*
@@ -964,12 +1013,13 @@ static int rumble_lua_saveaccount(lua_State *L) {
         x = rumble_account_exists_raw(user, domain);
         if (uid && x) {
             radb_run_inject(rumble_database_master_handle->_core.db,
-                    "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u", user, domain, mtype,
-                    password, arguments, uid);
+                            "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u", user, domain,
+                            mtype, password, arguments, uid);
             lua_pushboolean(L, 1);
         } else if (!x) {
-            radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)",
-                    user, domain, mtype, password, arguments);
+            radb_run_inject(rumble_database_master_handle->_core.db,
+                            "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)", user, domain, mtype, password,
+                            arguments);
             lua_pushboolean(L, 1);
         } else lua_pushboolean(L, 0);
     } else {
@@ -1056,61 +1106,57 @@ static int rumble_lua_accountexists(lua_State *L) {
     return (1);
 }
 
-
-
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
 static int rumble_lua_sendmail(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~*/
     const char  *message,
                 *sf;
     char        *filename,
                 *fid;
     FILE        *fp;
-    address     *sender, *recipient;
-    /*~~~~~~~~~~~~~~~~*/
+    address     *sender,
+                *recipient;
+    /*~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TSTRING);
     luaL_checktype(L, 2, LUA_TSTRING);
     luaL_checktype(L, 3, LUA_TSTRING);
-    
     sender = rumble_parse_mail_address(lua_tostring(L, 1));
     recipient = rumble_parse_mail_address(lua_tostring(L, 2));
-    
-    if (sender and recipient ) {
+    if (sender and recipient) {
         message = lua_tostring(L, 3);
-
         fid = rumble_create_filename();
         sf = rumble_config_str(rumble_database_master_handle, "storagefolder");
         filename = (char *) calloc(1, strlen(sf) + 26);
         if (!filename) merror();
-
         sprintf(filename, "%s/%s", sf, fid);
         fp = fopen(filename, "wb");
-        fwrite(message, strlen(message), 1, fp);
-        fclose(fp);
-
-        radb_run_inject(rumble_database_master_handle->_core.mail, \
-                    "INSERT INTO queue (fid, sender, recipient) VALUES (%s,%s,%s)", \
-                    fid, sender->raw, recipient->raw);
-
-        lua_settop(L, 0);
-        lua_pushstring(L, fid);
+        if (!fp) {
+            lua_settop(L, 0);
+            lua_pushboolean(L, FALSE);
+        }
+        else {
+            fwrite(message, strlen(message), 1, fp);
+            fclose(fp);
+            radb_run_inject(rumble_database_master_handle->_core.mail, "INSERT INTO queue (fid, sender, recipient) VALUES (%s,%s,%s)", fid,
+                            sender->raw, recipient->raw);
+            lua_settop(L, 0);
+            lua_pushstring(L, fid);
+        }
         free(filename);
         free(fid);
-    }
-    else {
+    } else {
         lua_settop(L, 0);
         lua_pushboolean(L, FALSE);
     }
-    
+
     /* Cleanup */
     rumble_free_address(sender);
     rumble_free_address(recipient);
-    
     return (1);
 }
 
@@ -1247,7 +1293,7 @@ void *rumble_lua_handle_service(void *s) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        close(session.client->socket);
+        disconnect(session.client->socket);
         rumble_clean_session(sessptr);
         lua_gc(L, LUA_GCCOLLECT, 0);
         rumble_release_state(L);
@@ -1626,7 +1672,7 @@ static int rumble_lua_createservice(lua_State *L) {
                     n;
     socketHandle    sock;
     int             isFirstCaller = 0;
-    pthread_attr_t attr;
+    pthread_attr_t  attr;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     luaL_checktype(L, 1, LUA_TFUNCTION);
@@ -1659,7 +1705,7 @@ static int rumble_lua_createservice(lua_State *L) {
 
     if (isFirstCaller) {
         pthread_attr_init(&attr);
-        pthread_attr_setstacksize (&attr, 128*1024);
+        pthread_attr_setstacksize(&attr, 128 * 1024);
         lua_settop(L, 1);   /* Pop the stack so only the function ref is left. */
         svc = (rumbleService *) malloc(sizeof(rumbleService));
         svc->lua_handle = luaL_ref(L, LUA_REGISTRYINDEX);   /* Pop the ref and store it in the registry */
@@ -1712,7 +1758,6 @@ static int rumble_lua_reloadconfig(lua_State *L) {
     rumble_config_load(rumble_database_master_handle, 0);
     return (0);
 }
-
 
 /*
  =======================================================================================================================
@@ -1805,10 +1850,10 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
     return (rc);
 }
 #endif
-
 static const luaL_reg   File_methods[] = { { "stat", rumble_lua_fileinfo }, { "exists", rumble_lua_fileexists }, { 0, 0 } };
-static const luaL_reg   String_methods[] = {  
-    { "SHA256", rumble_lua_sha256 }, 
+static const luaL_reg   String_methods[] =
+{
+    { "SHA256", rumble_lua_sha256 },
     { "decode64", rumble_lua_b64dec },
     { "encode64", rumble_lua_b64enc },
     { 0, 0 }
@@ -1862,7 +1907,7 @@ int Foo_register(lua_State *L) {
     luaL_register(L, "file", File_methods);         /* create methods table, add it to the globals */
     luaL_register(L, "string", String_methods);     /* create methods table, add it to the globals */
     luaL_register(L, "network", Network_methods);   /* create methods table, add it to the globals */
-#   undef LUA_MINSTACK
-#   define LUA_MINSTACK    50
+#undef LUA_MINSTACK
+#define LUA_MINSTACK    50
     return (1); /* return methods on the stack */
 }

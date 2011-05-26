@@ -1,6 +1,6 @@
 /*
- * File: module.c Author: Humbedooh A simple (but efficient) load balancing module
- * for rumble. Created on January 3, 2011, 8:08 P
+ * File: module.c Author: Humbedooh A simple (but efficient) load balancing module for rumble. Created
+ * on January 3, 2011, 8:08 P
  */
 #include "../../rumble.h"
 #include "../../comm.h"
@@ -62,10 +62,11 @@ ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const cha
     gnutls_dh_set_prime_bits(psess, 1024);
     gnutls_transport_set_ptr(psess, (gnutls_transport_ptr_t) session->client->socket);
     ret = gnutls_handshake(psess);
-    if ( ret == GNUTLS_E_DH_PRIME_UNACCEPTABLE ) {
+    if (ret == GNUTLS_E_DH_PRIME_UNACCEPTABLE) {
         gnutls_dh_set_prime_bits(psess, 2048);
         ret = gnutls_handshake(psess);
     }
+
     session->client->tls = psess;
     if (ret < 0) {
         fprintf(stderr, "*** TLS Handshake failed\n");
@@ -115,13 +116,16 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";
     modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
+#ifndef RUMBLE_MSC
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+#endif
 
     /*
-     gnutls_global_mutex_set (pthread_mutex_init, pthread_mutex_destroy(),
-     pthread_mutex_lock, pthread_mutex_unlock);
+     * gnutls_global_mutex_set (pthread_mutex_init, pthread_mutex_destroy(), pthread_mutex_lock, pthread_mutex_unlock);
      */
+#ifndef RUMBLE_MSC
     gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
+#endif
     if (gnutls_global_init()) {
         fprintf(stderr, "<TLS> Failed!\r\n");
         return (EXIT_FAILURE);

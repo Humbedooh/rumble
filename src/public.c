@@ -79,6 +79,7 @@ address *rumble_parse_mail_address(const char *addr) {
     address *usr = (address *) malloc(sizeof(address));
     char    *tmp;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     if (!usr) merror();
     usr->domain = (char *) calloc(1, 128);
     usr->user = (char *) calloc(1, 128);
@@ -93,6 +94,7 @@ address *rumble_parse_mail_address(const char *addr) {
 
         /* First, try to scan for "<user@domain> FLAGS" */
         if (sscanf(addr, "<%256[^@]@%128[^>]>%128[A-Z= %-]", tmp, usr->domain, usr->_flags) < 2) {
+
             /* Then, try scanning for "<> FLAGS" (bounce message) */
             sscanf(addr, "<%128[^>]>%128[A-Z= %-]", tmp, usr->_flags);
         }
@@ -117,12 +119,15 @@ address *rumble_parse_mail_address(const char *addr) {
         if (!sscanf(addr, "to:%256[^@]@%128c", usr->user, usr->domain)) {
             sscanf(addr, "%128[^@]@%128c", usr->user, usr->domain);
         }
+
         sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, "NOFLAGS");
     }
-    if (!strlen(usr->user) or !strlen(usr->domain)) {
+
+    if (!strlen(usr->user) or!strlen(usr->domain)) {
         rumble_free_address(usr);
         usr = 0;
     }
+
     free(tmp);
     return (usr);
 }
@@ -358,7 +363,7 @@ char *rumble_create_filename(void) {
     int             y[4],
                     x;
     /*~~~~~~~~~~~~~~~~~~*/
- 
+
     name = (char *) calloc(1, 17);
     srand(time(0) * rand());
     y[0] = time(0);

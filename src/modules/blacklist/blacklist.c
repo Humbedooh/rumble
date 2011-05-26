@@ -1,6 +1,6 @@
 /*
- * File: blacklist.c Author: Humbedooh A simple black-listing module for rumble.
- * Created on January 3, 2011, 8:08 P
+ * File: blacklist.c Author: Humbedooh A simple black-listing module for rumble. Created on January 3,
+ * 2011, 8:08 P
  */
 #include "../../rumble.h"
 
@@ -71,34 +71,38 @@ ssize_t rumble_blacklist_domains(sessionHandle *session, const char *junk) {
  */
 ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~*/
     /* Resolve client address name */
-    struct hostent          *client;
-    struct in6_addr         IP;
-    dvector_element         *el;
-    const char              *addr;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    struct hostent  *client;
+    struct in6_addr IP;
+    dvector_element *el;
+    const char      *addr;
+    /*~~~~~~~~~~~~~~~~~~~~*/
 
-    /*
-     * Check if the client has been given permission to skip this check by any other
-     * modules.
-     */
+    /* Check if the client has been given permission to skip this check by any other modules. */
     if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
-#ifndef RUMBLE_MSC
-
-    /* ANSI method */
-    inet_pton(session->client->client_info.ss_family, session->client->addr, &IP);
+    else
+    {
+#if !defined(RUMBLE_MSC)
+        
+        /* ANSI method */
+        inet_pton(session->client->client_info.ss_family, session->client->addr, &IP);
 #else
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+        struct sockaddr ss;
+        int             sslen = sizeof(struct sockaddr);
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /* Windows method */
-    WSAStringToAddressA(session->client->addr, session->client->client_info.ss_family, NULL, (struct sockaddr *) &ss, &sslen);
-    IP = ((struct sockaddr_in6 *) &ss)->sin6_addr;
+        /* Windows method */
+        WSAStringToAddressA(session->client->addr, session->client->client_info.ss_family, NULL, (struct sockaddr *) &ss, &sslen);
+        IP = ((struct sockaddr_in6 *) &ss)->sin6_addr;
 #endif
-    client = gethostbyaddr((char *) &IP, (session->client->client_info.ss_family == AF_INET) ? 4 : 16,
-                           session->client->client_info.ss_family);
-    if (!client) return (RUMBLE_RETURN_IGNORE);
-    addr = (const char *) client->h_name;
-    rumble_string_lower((char *) addr);
+        client = gethostbyaddr((char *) &IP, (session->client->client_info.ss_family == AF_INET) ? 4 : 16,
+                               session->client->client_info.ss_family);
+        if (!client) return (RUMBLE_RETURN_IGNORE);
+        addr = (const char *) client->h_name;
+        rumble_string_lower((char *) addr);
+    }
 
     /* Check against pre-configured list of bad hosts */
     if (blacklist_badhosts->size) {

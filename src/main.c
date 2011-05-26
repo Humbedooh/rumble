@@ -13,7 +13,7 @@ static dvector          *s_args;
 #ifdef RUMBLE_MSC
 SERVICE_STATUS          ServiceStatus;
 SERVICE_STATUS_HANDLE   hStatus;
-SERVICE_TABLE_ENTRY     ServiceTable[2];
+SERVICE_TABLE_ENTRYA    ServiceTable[2];
 void                    ServiceMain(int argc, char **argv);
 
 /*
@@ -72,7 +72,7 @@ void ServiceMain(int argc, char **argv) {
     ServiceStatus.dwServiceSpecificExitCode = 0;
     ServiceStatus.dwCheckPoint = 0;
     ServiceStatus.dwWaitHint = 0;
-    hStatus = RegisterServiceCtrlHandler(L"Rumble Mail Server", (LPHANDLER_FUNCTION) ControlHandler);
+    hStatus = RegisterServiceCtrlHandlerA("Rumble Mail Server", (LPHANDLER_FUNCTION) ControlHandler);
     if (hStatus == (SERVICE_STATUS_HANDLE) 0) {
 
         /* Registering Control Handler failed */
@@ -155,12 +155,11 @@ int rumbleStart(void) {
     printf("%-48s", "Launching core service...");
     statusLog("Launching core service");
     svc = comm_registerService(master, "mailman", rumble_worker_init, 0, 1);
-    comm_setServiceStack(svc, 1024*1024);
+    comm_setServiceStack(svc, 1024 * 1024);
     rc = comm_startService(svc);
     printf("[OK]\n");
-    
     svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
-    comm_setServiceStack(svc, 128*1024); // Set stack size for service to 128kb (should be enough)
+    comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 128kb (should be enough) */
     if (rumble_config_int(master, "enablesmtp")) {
         printf("%-48s", "Launching SMTP service...");
         statusLog("Launching SMTP service");
@@ -175,7 +174,7 @@ int rumbleStart(void) {
     }
 
     svc = comm_registerService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"), RUMBLE_INITIAL_THREADS);
-    comm_setServiceStack(svc, 128*1024); // Set stack size for service to 256kb (should be enough)
+    comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 256kb (should be enough) */
     if (rumble_config_int(master, "enablepop3")) {
         printf("%-48s", "Launching POP3 service...");
         statusLog("Launching POP3 service...");
@@ -190,7 +189,7 @@ int rumbleStart(void) {
     }
 
     svc = comm_registerService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
-    comm_setServiceStack(svc, 1024*1024); // Set stack size for service to 1MB (should be enough)
+    comm_setServiceStack(svc, 1024 * 1024); /* Set stack size for service to 1MB (should be enough) */
     if (rumble_config_int(master, "enableimap4")) {
         printf("%-48s", "Launching IMAP4 service...");
         statusLog("Launching IMAP4 service...");
@@ -299,13 +298,13 @@ int main(int argc, char **argv) {
         setsid();
         rumbleStart();
 #else
-        ServiceTable[0].lpServiceName = L"Rumble Mail Server";
-        ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTION) ServiceMain;
+        ServiceTable[0].lpServiceName = "Rumble Mail Server";
+        ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTIONA) ServiceMain;
         ServiceTable[1].lpServiceName = NULL;
         ServiceTable[1].lpServiceProc = NULL;
 
         /* Start the control dispatcher thread for our service */
-        StartServiceCtrlDispatcher(ServiceTable);
+        StartServiceCtrlDispatcherA(ServiceTable);
         while (1) sleep(3600);
 #endif
         return (0);

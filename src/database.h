@@ -13,7 +13,6 @@
 #   define RUMBLE_POSTGRESQL       3
 #   define RUMBLE_DATABASE_MODEL   RUMBLE_SQLITE3
 
-
 /*$2
  -----------------------------------------------------------------------------------------------------------------------
     Server specific functions

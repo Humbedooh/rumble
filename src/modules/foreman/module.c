@@ -1,6 +1,6 @@
 /*
- * File: module.c Author: Humbedooh A simple (but efficient) load balancing module
- * for rumble. Created on January 3, 2011, 8:08
+ * File: module.c Author: Humbedooh A simple (but efficient) load balancing module for rumble. Created
+ * on January 3, 2011, 8:08
  */
 #include "../../rumble.h"
 #define FOREMAN_MAX_JOBS        250 /* Maximum amount of "jobs" each worker is allowed before it's destroyed */
@@ -50,20 +50,19 @@ ssize_t accept_hook(sessionHandle *session, const char *junk) {
     if (svc) {
         if (svc->enabled != 1) return (RUMBLE_RETURN_IGNORE);           /* Return immediately if svc isn't running */
 
-        /*
-         * Check if there's a shortage of workers. If there is, make some more, if not,
-         * just retur
-         */
+        /* Check if there's a shortage of workers. If there is, make some more, if not, just retur */
         pthread_mutex_lock(&(svc->mutex));
         workers = svc->threads->size;   /* Number of threads alive */
         busy = svc->handles->size;      /* Number of threads busy */
         idle = workers - busy;          /* Number of threads idling */
         if ((idle <= 1 || workers < FOREMAN_FALLBACK) && workers < FOREMAN_MAX_THREADS) {
-            /*~~~~~~~~~~~~~~~~~~~~*/
-            pthread_attr_t attr;
-            /*~~~~~~~~~~~~~~~~~~~~*/
+
+            /*~~~~~~~~~~~~~~~~~*/
+            pthread_attr_t  attr;
+            /*~~~~~~~~~~~~~~~~~*/
+
             pthread_attr_init(&attr);
-            pthread_attr_setstacksize (&attr, svc->settings.stackSize);
+            pthread_attr_setstacksize(&attr, svc->settings.stackSize);
             New = (workers + FOREMAN_THREAD_BUFFER) >= FOREMAN_FALLBACK ? FOREMAN_THREAD_BUFFER : FOREMAN_FALLBACK - workers;
             for (x = 0; x < New; x++) {
                 thread = (rumbleThread *) malloc(sizeof(rumbleThread));

@@ -3,29 +3,25 @@
 #pragma warning(disable : 13)
 
 /*
- * Posix Threads library for Microsoft Windows Use at own risk, there is no
- * implied warranty to this code. It uses undocumented features of Microsoft
- * Windows that can change at any time in the future. (C) 2010 Lockless Inc. All
- * rights reserved. Redistribution and use in source and binary forms, with or
- * without modification, are permitted provided that the following conditions are
- * met: Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer. Redistributions in binary
- * form must reproduce the above copyright notice, this list of conditions and the
- * following disclaimer in the documentation and/or other materials provided with
- * the distribution. Neither the name of Lockless Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission. THIS SOFTWARE IS PROVIDED
- * BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AN ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
- * EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * Posix Threads library for Microsoft Windows Use at own risk, there is no implied warranty to this
+ * code. It uses undocumented features of Microsoft Windows that can change at any time in the future.
+ * (C) 2010 Lockless Inc. All rights reserved. Redistribution and use in source and binary forms, with
+ * or without modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright notice, this list of conditions and
+ * the following disclaimer. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation and/or other materials
+ * provided with the distribution. Neither the name of Lockless Inc. nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without specific prior
+ * written permission. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AN
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef WIN_PTHREADS
 #   define WIN_PTHREADS
@@ -989,10 +985,7 @@ static int pthread_detach(pthread_t t) {
     struct _pthread_v   *tv = t;
     /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    /*
-     * This can't race with thread exit because our call would be undefined if called
-     * on a dead thread.
-     */
+    /* This can't race with thread exit because our call would be undefined if called on a dead thread. */
     CloseHandle(tv->h);
     _ReadWriteBarrier();
     tv->h = 0;
@@ -1545,6 +1538,7 @@ static int pthread_rwlockattr_destroy(pthread_rwlockattr_t *a) {
  */
 static int pthread_rwlockattr_init(pthread_rwlockattr_t *a) {
     *a = 0;
+    return (0);
 }
 
 /*
@@ -1634,55 +1628,59 @@ static int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *a, int s) {
     define Sleep(...) (pthread_testcancel(), Sleep(__VA_ARGS__))
  =======================================================================================================================
  */
-#   define system(...)             (pthread_testcancel(), system(__VA_ARGS__))
-#   define access(...)             (pthread_testcancel(), _access(__VA_ARGS__))
-#   define asctime(...)            (pthread_testcancel(), asctime(__VA_ARGS__))
-#   define asctime_r(...)          (pthread_testcancel(), asctime_r(__VA_ARGS__))
-#   define catclose(...)           (pthread_testcancel(), catclose(__VA_ARGS__))
-#   define catgets(...)            (pthread_testcancel(), catgets(__VA_ARGS__))
-#   define catopen(...)            (pthread_testcancel(), catopen(__VA_ARGS__))
-#   define closedir(...)           (pthread_testcancel(), closedir(__VA_ARGS__))
-#   define closelog(...)           (pthread_testcancel(), closelog(__VA_ARGS__))
-#   define ctermid(...)            (pthread_testcancel(), ctermid(__VA_ARGS__))
-#   define ctime(...)              (pthread_testcancel(), ctime(__VA_ARGS__))
-#   define ctime_r(...)            (pthread_testcancel(), ctime_r(__VA_ARGS__))
-#   define dbm_close(...)          (pthread_testcancel(), dbm_close(__VA_ARGS__))
-#   define dbm_delete(...)         (pthread_testcancel(), dbm_delete(__VA_ARGS__))
-#   define dbm_fetch(...)          (pthread_testcancel(), dbm_fetch(__VA_ARGS__))
-#   define dbm_nextkey(...)        (pthread_testcancel(), dbm_nextkey(__VA_ARGS__))
-#   define dbm_open(...)           (pthread_testcancel(), dbm_open(__VA_ARGS__))
-#   define dbm_store(...)          (pthread_testcancel(), dbm_store(__VA_ARGS__))
-#   define dlclose(...)            (pthread_testcancel(), dlclose(__VA_ARGS__))
-#   define dlopen(...)             (pthread_testcancel(), dlopen(__VA_ARGS__))
-#   define endgrent(...)           (pthread_testcancel(), endgrent(__VA_ARGS__))
-#   define endhostent(...)         (pthread_testcancel(), endhostent(__VA_ARGS__))
-#   define endnetent(...)          (pthread_testcancel(), endnetent(__VA_ARGS__))
-#   define endprotoent(...)        (pthread_testcancel(), endprotoend(__VA_ARGS__))
-#   define endpwent(...)           (pthread_testcancel(), endpwent(__VA_ARGS__))
-#   define endservent(...)         (pthread_testcancel(), endservent(__VA_ARGS__))
-#   define endutxent(...)          (pthread_testcancel(), endutxent(__VA_ARGS__))
-#   define fclose(...)             (pthread_testcancel(), fclose(__VA_ARGS__))
-#   define fflush(...)             (pthread_testcancel(), fflush(__VA_ARGS__))
-#   define fgetc(...)              (pthread_testcancel(), fgetc(__VA_ARGS__))
-#   define fgetpos(...)            (pthread_testcancel(), fgetpos(__VA_ARGS__))
-#   define fgets(...)              (pthread_testcancel(), fgets(__VA_ARGS__))
-#   define fgetwc(...)             (pthread_testcancel(), fgetwc(__VA_ARGS__))
-#   define fgetws(...)             (pthread_testcancel(), fgetws(__VA_ARGS__))
-#   define fmtmsg(...)             (pthread_testcancel(), fmtmsg(__VA_ARGS__))
-#   define fopen(...)              (pthread_testcancel(), fopen(__VA_ARGS__))
-#   define fpathconf(...)          (pthread_testcancel(), fpathconf(__VA_ARGS__))
-#   define fprintf(...)            (pthread_testcancel(), fprintf(__VA_ARGS__))
-#   define fputc(...)              (pthread_testcancel(), fputc(__VA_ARGS__))
-#   define fputs(...)              (pthread_testcancel(), fputs(__VA_ARGS__))
-#   define fputwc(...)             (pthread_testcancel(), fputwc(__VA_ARGS__))
-#   define fputws(...)             (pthread_testcancel(), fputws(__VA_ARGS__))
-#   define fread(...)              (pthread_testcancel(), fread(__VA_ARGS__))
-#   define freopen(...)            (pthread_testcancel(), freopen(__VA_ARGS__))
-#   define fscanf(...)             (pthread_testcancel(), fscanf(__VA_ARGS__))
-#   define fseek(...)              (pthread_testcancel(), fseek(__VA_ARGS__))
-#   define fseeko(...)             (pthread_testcancel(), fseeko(__VA_ARGS__))
-#   define fsetpos(...)            (pthread_testcancel(), fsetpos(__VA_ARGS__))
-#   define fstat(...)              (pthread_testcancel(), fstat(__VA_ARGS__))
+#   define system(...)         (pthread_testcancel(), system(__VA_ARGS__))
+#   define access(...)         (pthread_testcancel(), _access(__VA_ARGS__))
+#   define asctime(...)        (pthread_testcancel(), asctime(__VA_ARGS__))
+#   define asctime_r(...)      (pthread_testcancel(), asctime_r(__VA_ARGS__))
+#   define catclose(...)       (pthread_testcancel(), catclose(__VA_ARGS__))
+#   define catgets(...)        (pthread_testcancel(), catgets(__VA_ARGS__))
+#   define catopen(...)        (pthread_testcancel(), catopen(__VA_ARGS__))
+#   define closedir(...)       (pthread_testcancel(), closedir(__VA_ARGS__))
+#   define closelog(...)       (pthread_testcancel(), closelog(__VA_ARGS__))
+#   define ctermid(...)        (pthread_testcancel(), ctermid(__VA_ARGS__))
+#   define ctime(...)          (pthread_testcancel(), ctime(__VA_ARGS__))
+#   define ctime_r(...)        (pthread_testcancel(), ctime_r(__VA_ARGS__))
+#   define dbm_close(...)      (pthread_testcancel(), dbm_close(__VA_ARGS__))
+#   define dbm_delete(...)     (pthread_testcancel(), dbm_delete(__VA_ARGS__))
+#   define dbm_fetch(...)      (pthread_testcancel(), dbm_fetch(__VA_ARGS__))
+#   define dbm_nextkey(...)    (pthread_testcancel(), dbm_nextkey(__VA_ARGS__))
+#   define dbm_open(...)       (pthread_testcancel(), dbm_open(__VA_ARGS__))
+#   define dbm_store(...)      (pthread_testcancel(), dbm_store(__VA_ARGS__))
+#   define dlclose(...)        (pthread_testcancel(), dlclose(__VA_ARGS__))
+#   define dlopen(...)         (pthread_testcancel(), dlopen(__VA_ARGS__))
+#   define endgrent(...)       (pthread_testcancel(), endgrent(__VA_ARGS__))
+#   define endhostent(...)     (pthread_testcancel(), endhostent(__VA_ARGS__))
+#   define endnetent(...)      (pthread_testcancel(), endnetent(__VA_ARGS__))
+#   define endprotoent(...)    (pthread_testcancel(), endprotoend(__VA_ARGS__))
+#   define endpwent(...)       (pthread_testcancel(), endpwent(__VA_ARGS__))
+#   define endservent(...)     (pthread_testcancel(), endservent(__VA_ARGS__))
+#   define endutxent(...)      (pthread_testcancel(), endutxent(__VA_ARGS__))
+#   define fclose(...)         (pthread_testcancel(), fclose(__VA_ARGS__))
+#   define fflush(...)         (pthread_testcancel(), fflush(__VA_ARGS__))
+#   define fgetc(...)          (pthread_testcancel(), fgetc(__VA_ARGS__))
+#   define fgetpos(...)        (pthread_testcancel(), fgetpos(__VA_ARGS__))
+#   define fgets(...)          (pthread_testcancel(), fgets(__VA_ARGS__))
+#   define fgetwc(...)         (pthread_testcancel(), fgetwc(__VA_ARGS__))
+#   define fgetws(...)         (pthread_testcancel(), fgetws(__VA_ARGS__))
+#   define fmtmsg(...)         (pthread_testcancel(), fmtmsg(__VA_ARGS__))
+#   define fopen(...)          (pthread_testcancel(), fopen(__VA_ARGS__))
+#   define fpathconf(...)      (pthread_testcancel(), fpathconf(__VA_ARGS__))
+#   define fprintf(...)        (pthread_testcancel(), fprintf(__VA_ARGS__))
+#   define fputc(...)          (pthread_testcancel(), fputc(__VA_ARGS__))
+#   define fputs(...)          (pthread_testcancel(), fputs(__VA_ARGS__))
+#   define fputwc(...)         (pthread_testcancel(), fputwc(__VA_ARGS__))
+#   define fputws(...)         (pthread_testcancel(), fputws(__VA_ARGS__))
+#   define fread(...)          (pthread_testcancel(), fread(__VA_ARGS__))
+#   define freopen(...)        (pthread_testcancel(), freopen(__VA_ARGS__))
+#   define fscanf(...)         (pthread_testcancel(), fscanf(__VA_ARGS__))
+#   define fseek(...)          (pthread_testcancel(), fseek(__VA_ARGS__))
+#   define fseeko(...)         (pthread_testcancel(), fseeko(__VA_ARGS__))
+#   define fsetpos(...)        (pthread_testcancel(), fsetpos(__VA_ARGS__))
+/*
+ =======================================================================================================================
+    define fstat(...) (pthread_testcancel(), fstat(__VA_ARGS__))
+ =======================================================================================================================
+ */
 #   define ftell(...)              (pthread_testcancel(), ftell(__VA_ARGS__))
 #   define ftello(...)             (pthread_testcancel(), ftello(__VA_ARGS__))
 #   define ftw(...)                (pthread_testcancel(), ftw(__VA_ARGS__))
@@ -1800,27 +1798,31 @@ static int pthread_rwlockattr_setpshared(pthread_rwlockattr_t *a, int s) {
 #   define setpwent(...)       (pthread_testcancel(), setpwent(__VA_ARGS__))
 #   define setservent(...)     (pthread_testcancel(), setservent(__VA_ARGS__))
 #   define setutxent(...)      (pthread_testcancel(), setutxent(__VA_ARGS__))
-#   define stat(...)           (pthread_testcancel(), stat(__VA_ARGS__))
-#   define strerror(...)       (pthread_testcancel(), strerror(__VA_ARGS__))
-#   define strerror_r(...)     (pthread_testcancel(), strerror_r(__VA_ARGS__))
-#   define strftime(...)       (pthread_testcancel(), strftime(__VA_ARGS__))
-#   define symlink(...)        (pthread_testcancel(), symlink(__VA_ARGS__))
-#   define sync(...)           (pthread_testcancel(), sync(__VA_ARGS__))
-#   define syslog(...)         (pthread_testcancel(), syslog(__VA_ARGS__))
-#   define tmpfile(...)        (pthread_testcancel(), tmpfile(__VA_ARGS__))
-#   define tmpnam(...)         (pthread_testcancel(), tmpnam(__VA_ARGS__))
-#   define ttyname(...)        (pthread_testcancel(), ttyname(__VA_ARGS__))
-#   define ttyname_r(...)      (pthread_testcancel(), ttyname_r(__VA_ARGS__))
-#   define tzset(...)          (pthread_testcancel(), tzset(__VA_ARGS__))
-#   define ungetc(...)         (pthread_testcancel(), ungetc(__VA_ARGS__))
-#   define ungetwc(...)        (pthread_testcancel(), ungetwc(__VA_ARGS__))
-#   define unlink(...)         (pthread_testcancel(), unlink(__VA_ARGS__))
-#   define vfprintf(...)       (pthread_testcancel(), vfprintf(__VA_ARGS__))
-#   define vfwprintf(...)      (pthread_testcancel(), vfwprintf(__VA_ARGS__))
-#   define vprintf(...)        (pthread_testcancel(), vprintf(__VA_ARGS__))
-#   define vwprintf(...)       (pthread_testcancel(), vwprintf(__VA_ARGS__))
-#   define wcsftime(...)       (pthread_testcancel(), wcsftime(__VA_ARGS__))
-#   define wordexp(...)        (pthread_testcancel(), wordexp(__VA_ARGS__))
-#   define wprintf(...)        (pthread_testcancel(), wprintf(__VA_ARGS__))
-#   define wscanf(...)         (pthread_testcancel(), wscanf(__VA_ARGS__))
+/*
+ =======================================================================================================================
+    define stat(...) (pthread_testcancel(), stat(__VA_ARGS__))
+ =======================================================================================================================
+ */
+#   define strerror(...)   (pthread_testcancel(), strerror(__VA_ARGS__))
+#   define strerror_r(...) (pthread_testcancel(), strerror_r(__VA_ARGS__))
+#   define strftime(...)   (pthread_testcancel(), strftime(__VA_ARGS__))
+#   define symlink(...)    (pthread_testcancel(), symlink(__VA_ARGS__))
+#   define sync(...)       (pthread_testcancel(), sync(__VA_ARGS__))
+#   define syslog(...)     (pthread_testcancel(), syslog(__VA_ARGS__))
+#   define tmpfile(...)    (pthread_testcancel(), tmpfile(__VA_ARGS__))
+#   define tmpnam(...)     (pthread_testcancel(), tmpnam(__VA_ARGS__))
+#   define ttyname(...)    (pthread_testcancel(), ttyname(__VA_ARGS__))
+#   define ttyname_r(...)  (pthread_testcancel(), ttyname_r(__VA_ARGS__))
+#   define tzset(...)      (pthread_testcancel(), tzset(__VA_ARGS__))
+#   define ungetc(...)     (pthread_testcancel(), ungetc(__VA_ARGS__))
+#   define ungetwc(...)    (pthread_testcancel(), ungetwc(__VA_ARGS__))
+#   define unlink(...)     (pthread_testcancel(), unlink(__VA_ARGS__))
+#   define vfprintf(...)   (pthread_testcancel(), vfprintf(__VA_ARGS__))
+#   define vfwprintf(...)  (pthread_testcancel(), vfwprintf(__VA_ARGS__))
+#   define vprintf(...)    (pthread_testcancel(), vprintf(__VA_ARGS__))
+#   define vwprintf(...)   (pthread_testcancel(), vwprintf(__VA_ARGS__))
+#   define wcsftime(...)   (pthread_testcancel(), wcsftime(__VA_ARGS__))
+#   define wordexp(...)    (pthread_testcancel(), wordexp(__VA_ARGS__))
+#   define wprintf(...)    (pthread_testcancel(), wprintf(__VA_ARGS__))
+#   define wscanf(...)     (pthread_testcancel(), wscanf(__VA_ARGS__))
 #endif /* WIN_PTHREADS */
