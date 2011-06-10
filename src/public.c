@@ -81,13 +81,13 @@ address *rumble_parse_mail_address(const char *addr) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!usr) merror();
-    usr->domain = (char *) calloc(1, 128);
-    usr->user = (char *) calloc(1, 128);
+    usr->domain = (char *) calloc(1, 130);
+    usr->user = (char *) calloc(1, 130);
     usr->raw = (char *) calloc(1, 256);
     usr->flags = dvector_init();
-    usr->tag = (char *) calloc(1, 128);
-    usr->_flags = (char *) calloc(1, 128);
-    tmp = (char *) calloc(1, 256);
+    usr->tag = (char *) calloc(1, 130);
+    usr->_flags = (char *) calloc(1, 130);
+    tmp = (char *) calloc(1, 260);
     if (!tmp) merror();
     if (strchr(addr, '<')) {
         addr = strchr(addr, '<');
@@ -116,7 +116,7 @@ address *rumble_parse_mail_address(const char *addr) {
 
         sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags);
     } else if (addr && strlen(addr)) {
-        if (!sscanf(addr, "to:%256[^@]@%128c", usr->user, usr->domain)) {
+        if (!sscanf(addr, "to:%128[^@]@%128c", usr->user, usr->domain)) {
             sscanf(addr, "%128[^@]@%128c", usr->user, usr->domain);
         }
 
