@@ -245,6 +245,7 @@ void *rumble_sanitation_process(void *m) {
         rumble_rw_stop_read(master->domains.rrw);
         sleep(14400);
     }
+    return 0;
 }
 
 /*
@@ -581,4 +582,5 @@ void *rumble_worker_init(void *T) {
             dbo = radb_prepare(master->_core.mail, statement);
         }
     }
+    return 0;
 }

@@ -81,6 +81,7 @@ address *rumble_parse_mail_address(const char *addr) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!usr) merror();
+    if (!addr) return 0;
     usr->domain = (char *) calloc(1, 130);
     usr->user = (char *) calloc(1, 130);
     usr->raw = (char *) calloc(1, 256);
@@ -114,19 +115,19 @@ address *rumble_parse_mail_address(const char *addr) {
             }
         }
 
-        sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags);
-    } else if (addr && strlen(addr)) {
+        
+    } else if (strlen(addr)) {
         if (!sscanf(addr, "to:%128[^@]@%128c", usr->user, usr->domain)) {
             sscanf(addr, "%128[^@]@%128c", usr->user, usr->domain);
         }
-
-        sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, "NOFLAGS");
     }
 
     if (!strlen(usr->user) or!strlen(usr->domain)) {
         rumble_free_address(usr);
         usr = 0;
     }
+    
+    sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags ? usr->_flags : "NOFLAGS");
 
     free(tmp);
     return (usr);
@@ -355,27 +356,35 @@ char *rumble_mtime(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
+#if defined __x86_64__
+#define ptr2int(a) (uint32_t) (((uintptr_t) a << 32))
+#else
+#define ptr2int(a) (uint32_t) a
+#endif
 char *rumble_create_filename(void) {
 
     /*~~~~~~~~~~~~~~~~~~*/
     char            *name;
-    unsigned char   *p;
-    int             y[4],
-                    x;
+    unsigned char* p;
+    uint32_t            y[4], x;
     /*~~~~~~~~~~~~~~~~~~*/
-
-    name = (char *) calloc(1, 17);
-    srand(time(0) * rand());
-    y[0] = time(0);
+    
+    name = (char *) malloc(17);
+    
+    
+    y[0] = time(NULL) - rand();
     y[1] = rand() * rand();
-    y[2] = (int) (&y - rand());
-    y[3] = (int) public_master_handle * rand();
+    
+    
+    y[3] = ptr2int(rumble_create_filename) * rand();
+    y[2] = ptr2int(&y) - rand();
+
     p = (unsigned char *) y;
     for (x = 0; x < 16; x++) {
         name[x] = (p[x] % 26) + 'a';
     }
-
-    return (name);
+    name[16] = 0;
+    return name;
 }
 
 /*

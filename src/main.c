@@ -124,14 +124,22 @@ int rumbleStart(void) {
                     x;
     rumbleService   *svc;
     /*~~~~~~~~~~~~~~~~~~~~*/
+    
 
-    printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
-    statusLog("Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    srand(time(NULL));
     master = (masterHandle *) malloc(sizeof(masterHandle));
     if (!master) merror();
     rumble_database_master_handle = master;
     public_master_handle = master;
     comm_master_handle = master;
+    
+    for (x=0;x<100;x++) {
+        printf("rand: %s\n", rumble_create_filename());
+    }
+    exit(0);
+    
+    printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    statusLog("Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     master->_core.uptime = time(0);
     lua_callback = rumble_lua_callback;
     master->_core.modules = dvector_init();
