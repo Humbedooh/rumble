@@ -1,9 +1,15 @@
 Rumble is a mail server for SMTP(ESMTPA), POP3 and IMAP4rev1.
 On top of the basic services, Rumble offers an extensive API for attaching modules in either
 C/C++ or Lua to any aspect of mail handling, such as the included (default) 
-white/grey/black-listing modules, mailing list module and load balancing module
+white/grey/black-listing modules, mailing list module and load balancing module.
 
-Obviously, you're not gonna download this piece of rubbish just yet, as it's far from done.
+Domain and accounts can be managed through either SQLite3(default) or MySQL.
+
+You can either configure and manage Rumble through the intuitive configuration files and databases,
+or you can use the web interface module (RumbleLua) to configure any aspect of your server.
+
+Rumble also has its own webmail system, courtesy of SpamRelay.com, which can be enabled in the main 
+configuration file (rumble.conf).
 
 Rumble works with both IPv4 and IPv6 as well as the following service extensions:
 
