@@ -36,7 +36,6 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
             line = rcread(session);
             res->replyCode = 500;
             if (!line) break;
-
             /*
              * printf("MTA: %s\n", line);
              */
@@ -125,7 +124,6 @@ rumble_sendmail_response *rumble_send_email(
         el->value = (char *) time(0);
         dvector_add(master->_core.batv, el);
     }
-
     while (c.socket) {
         get_smtp_response(&s, res);
         if (res->replyCode >= 300) break;
@@ -206,8 +204,26 @@ void rumble_prune_storage(const char *folder) {
     }
 
 #else
-
-    /* use FindFirstFile/FindNextFile */
+	LPWIN32_FIND_DATAA		fd;
+	HANDLE fh;
+	char            path[MAX_PATH], filename[MAX_PATH+64];
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+	fd = (LPWIN32_FIND_DATAA) malloc(sizeof(WIN32_FIND_DATAA));
+	sprintf(path, "%s/*", folder);
+	now = time(0);
+    fh = FindFirstFileA((LPCSTR) path,fd);
+	if(fh != INVALID_HANDLE_VALUE) {
+		do {
+			if (!strchr(fd->cFileName, '.')) {
+				sprintf(filename, "%s/%s", folder, fd->cFileName);
+				if (stat(filename, &fileinfo) == -1) continue;
+				if ((now - fileinfo.st_atime) > 43200) {
+					unlink(filename);
+				}
+			}
+		} while(FindNextFileA(fh,fd));
+	}
+	FindClose(fh);
 #endif
 }
 
@@ -420,7 +436,7 @@ void *rumble_worker_process(void *m) {
 
             printf("%s@%s is a foreign user\n", item->recipient->user, item->recipient->domain);
             mx = comm_mxLookup(item->recipient->domain);
-            if (!mx) {
+            if (!mx or !mx->size) {
                 printf("Couldn't look up domain %s, faking a SMTP 450 error.\n", item->recipient->domain);
                 delivered = 450;
             } else if (mx->size) {
@@ -440,6 +456,7 @@ void *rumble_worker_process(void *m) {
                     free(res->replyMessage);
                     free(res);
                     if (delivered <= 299) break;            /* yay! */
+					printf("MTA <%s> returned code %d (%s)\n", res->replyServer, delivered, res->replyMessage);
                 }
 
                 free(filename);
@@ -465,6 +482,7 @@ void *rumble_worker_process(void *m) {
             } else {
                 printf("Mail delivered.\r\n");
             }
+            if (mx) comm_mxFree(mx); // Clean up DNS records.
 
             /* All done! */
         }

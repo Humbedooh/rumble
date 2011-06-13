@@ -90,9 +90,8 @@ dvector *comm_mxLookup(const char *domain) {
             mx->preference = ns_get16((u_char *) ns_rr_rdata(query_parse_rr));
             mx->host = calloc(1, 1024);
             if (ns_name_uncompress(ns_msg_base(query_parse_msg), ns_msg_end(query_parse_msg), (u_char *) ns_rr_rdata(query_parse_rr) + 2,
-                (char *) mx->host, 1024) < 0)
-                break;
-            dvector_add(vec, mx);
+                (char *) mx->host, 1024) < 0) { free(mx->host); free(mx); continue; }
+            else dvector_add(vec, mx);
         }
     }
 #endif
@@ -121,8 +120,19 @@ dvector *comm_mxLookup(const char *domain) {
             strncpy((char *) mx->host, b, len);
             mx->preference = 10;
             free(a);
+            dvector_add(vec, mx);
         }
     }
 
     return (vec);
+}
+
+void comm_mxFree(dvector* list) {
+    d_iterator iter;
+    mxRecord* mx;
+    dforeach((mxRecord*), mx, list, iter) {
+        free((char*) mx->host);
+        free(mx);
+    }
+    dvector_destroy(list);
 }

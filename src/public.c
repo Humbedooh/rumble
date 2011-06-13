@@ -94,7 +94,7 @@ address *rumble_parse_mail_address(const char *addr) {
         addr = strchr(addr, '<');
 
         /* First, try to scan for "<user@domain> FLAGS" */
-        if (sscanf(addr, "<%256[^@]@%128[^>]>%128[A-Z= %-]", tmp, usr->domain, usr->_flags) < 2) {
+        if (sscanf(addr, "<%256[^@ ]@%128[^>]>%128[A-Z= %-]", tmp, usr->domain, usr->_flags) < 2) {
 
             /* Then, try scanning for "<> FLAGS" (bounce message) */
             sscanf(addr, "<%128[^>]>%128[A-Z= %-]", tmp, usr->_flags);
@@ -117,17 +117,15 @@ address *rumble_parse_mail_address(const char *addr) {
 
         
     } else if (strlen(addr)) {
-        if (!sscanf(addr, "to:%128[^@]@%128c", usr->user, usr->domain)) {
-            sscanf(addr, "%128[^@]@%128c", usr->user, usr->domain);
-        }
+        addr = strstr(addr, ": ") ? strstr(addr, ": ")+2 : strchr(addr, ':')+1;
+        if (addr > 1) sscanf(addr, "%128[^@ ]@%128c", usr->user, usr->domain);
     }
 
-    if (!strlen(usr->user) or!strlen(usr->domain)) {
+    if (!strlen(usr->user) or !strlen(usr->domain)) {
         rumble_free_address(usr);
         usr = 0;
     }
-    
-    sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags ? usr->_flags : "NOFLAGS");
+    else sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags ? usr->_flags : "NOFLAGS");
 
     free(tmp);
     return (usr);

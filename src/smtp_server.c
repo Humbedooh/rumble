@@ -1,7 +1,6 @@
 /*$I0 */
 #include "rumble.h"
 #include "servers.h"
-#include "sqlite3.h"
 #include "comm.h"
 #include "private.h"
 #include "database.h"
