@@ -114,9 +114,12 @@ address *rumble_parse_mail_address(const char *addr) {
                 memset(usr->tag, 0, 128);
             }
         }
+	// Try plain old "mail from: user@domain" ?
     } else if (strlen(addr)) {
-        addr = strstr(addr, ": ") ? strstr(addr, ": ") + 2 : strchr(addr, ':') + 1;
-        if (addr > 1) sscanf(addr, "%128[^@ ]@%128c", usr->user, usr->domain);
+		if (strstr(addr, ": ")) addr = strstr(addr, ": ") + 2;
+		else if (strchr(addr, ':')) addr = strchr(addr, ':') + 1;
+		else addr = 0;
+        if (addr) sscanf(addr, "%128[^@ ]@%128c", usr->user, usr->domain);
     }
 
     if (!strlen(usr->user) or!strlen(usr->domain)) {
