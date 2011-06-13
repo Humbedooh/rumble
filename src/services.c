@@ -187,7 +187,7 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
  =======================================================================================================================
  =======================================================================================================================
  */
-int comm_setServiceStack(rumbleService *svc, size_t stacksize) {
+int comm_setServiceStack(rumbleService *svc, unsigned int stacksize) {
     if (!svc) return (0);
     svc->settings.stackSize = stacksize;
     return (1);

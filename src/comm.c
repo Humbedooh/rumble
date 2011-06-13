@@ -197,7 +197,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     va_list vl;
     char    *buffer;
     int     len;
-#if (R_ARCH > 32) & defined(R_POSIX)
+#if (R_ARCH > 32) && !defined(_CRTIMP)
     char    moo[1024];
 #endif
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

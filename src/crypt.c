@@ -110,7 +110,7 @@ inline char value(char c) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int rumble_unbase64(unsigned char *dest, const unsigned char *src, int srclen) {
+int rumble_unbase64(unsigned char *dest, const unsigned char *src, size_t srclen) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~*/
     unsigned char   *p = dest;
@@ -159,7 +159,7 @@ char *rumble_decode_base64(const char *src) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     size_t  ilen = strlen(src);
-    char    *output = malloc(ilen);
+    char    *output = (char*) malloc(ilen);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_unbase64((unsigned char *) output, (const unsigned char *) src, ilen);
@@ -201,7 +201,7 @@ char base64_encode_value(char value_in) {
  =======================================================================================================================
  =======================================================================================================================
  */
-int base64_encode_block(const char *plaintext_in, int length_in, char *code_out, base64_encodestate *state_in) {
+int base64_encode_block(const char *plaintext_in, size_t length_in, char *code_out, base64_encodestate *state_in) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     const char          *plainchar = plaintext_in;

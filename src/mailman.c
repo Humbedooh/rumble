@@ -561,8 +561,8 @@ rumble_parsed_letter *rumble_mailman_readmail_private(FILE *fp, const char *boun
     int                     headers = 1;
     size_t                  blen = 0,
                             pos = 0,
-                            llen = 0,
-                            previous = 0;
+                            llen = 0;
+	unsigned long previous = 0;
     char                    line[1024],
                             key[256],
                             value[1024],
@@ -711,11 +711,11 @@ rumble_parsed_letter *rumble_mailman_readmail_private(FILE *fp, const char *boun
                      * New body, malloc it.
                      */
                     if (!letter->body) {
-                        letter->body = calloc(1, llen + 1);
+                        letter->body = (char*) calloc(1, llen + 1);
                         strncpy(letter->body, line, llen);
                         pos = llen;
                     } /* Old body, append to it. */ else {
-                        letter->body = realloc((char *) letter->body, pos + llen + 1);
+                        letter->body = (char*) realloc((char *) letter->body, pos + llen + 1);
                         strncpy((char *) letter->body + pos, line, llen);
                         pos += llen;
                         letter->body[pos] = 0;
