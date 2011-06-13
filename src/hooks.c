@@ -343,8 +343,8 @@ ssize_t rumble_service_schedule_hooks(rumbleService *svc, sessionHandle *session
     default:                    break;
     }
 
-    rumble_service_execute_hooks(hook, session, flags, line);
-    return (RUMBLE_RETURN_OKAY);
+    
+    return (rumble_service_execute_hooks(hook, session, flags, line));
 }
 
 /*

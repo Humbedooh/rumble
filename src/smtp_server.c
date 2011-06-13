@@ -441,13 +441,14 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
 #ifdef RUMBLE_DEBUG_STORAGE
     printf("Writing to file %s...\n", filename);
 #endif
-    free(filename);
+    
     if (!fp)
     {
 #ifdef RUMBLE_DEBUG_STORAGE
         perror("Couldn't open file for writing");
 #endif
         free(fid);
+        free(filename);
         return (451);   /* Couldn't open file for writing :/ */
     }
 
@@ -468,6 +469,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
         if (!line) {
             fclose(fp);
             free(fid);
+            free(filename);
             return (RUMBLE_RETURN_FAILURE);
         }
 
@@ -477,16 +479,23 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
             /* Writing failed? */
             fclose(fp);
             free(fid);
+            free(filename);
             return (452);
         }
     }
 
     fclose(fp);
-    foreach((address *), el, session->recipients, iter) {
-        radb_run_inject(master->_core.mail, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
-                        session->sender->raw, el->raw, session->sender->_flags);
+    // Run hooks for data filtering prior to adding the message to the queue
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_DATA, filename);
+    
+    if (rc == RUMBLE_RETURN_OKAY) {
+        foreach((address *), el, session->recipients, iter) {
+            radb_run_inject(master->_core.mail, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
+                            session->sender->raw, el->raw, session->sender->_flags);
+        }
     }
-
+    free(filename);
     free(fid);
     return (250);
 }
