@@ -560,7 +560,7 @@ ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, co
 
     /*
      * Do...nothing ;
-     * Fire post-processing hooks.
+     * Fire post-processing hooks
      */
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_NOOP, parameters);

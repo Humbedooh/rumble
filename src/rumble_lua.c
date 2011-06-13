@@ -1138,8 +1138,7 @@ static int rumble_lua_sendmail(lua_State *L) {
         if (!fp) {
             lua_settop(L, 0);
             lua_pushboolean(L, FALSE);
-        }
-        else {
+        } else {
             fwrite(message, strlen(message), 1, fp);
             fclose(fp);
             radb_run_inject(rumble_database_master_handle->_core.mail, "INSERT INTO queue (fid, sender, recipient) VALUES (%s,%s,%s)", fid,
@@ -1147,6 +1146,7 @@ static int rumble_lua_sendmail(lua_State *L) {
             lua_settop(L, 0);
             lua_pushstring(L, fid);
         }
+
         free(filename);
         free(fid);
     } else {

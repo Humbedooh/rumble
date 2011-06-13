@@ -84,7 +84,7 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
     else
     {
 #if !defined(RUMBLE_MSC)
-        
+
         /* ANSI method */
         inet_pton(session->client->client_info.ss_family, session->client->addr, &IP);
 #else

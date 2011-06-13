@@ -81,7 +81,7 @@ address *rumble_parse_mail_address(const char *addr) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!usr) merror();
-    if (!addr) return 0;
+    if (!addr) return (0);
     usr->domain = (char *) calloc(1, 130);
     usr->user = (char *) calloc(1, 130);
     usr->raw = (char *) calloc(1, 256);
@@ -114,19 +114,15 @@ address *rumble_parse_mail_address(const char *addr) {
                 memset(usr->tag, 0, 128);
             }
         }
-
-        
     } else if (strlen(addr)) {
-        addr = strstr(addr, ": ") ? strstr(addr, ": ")+2 : strchr(addr, ':')+1;
+        addr = strstr(addr, ": ") ? strstr(addr, ": ") + 2 : strchr(addr, ':') + 1;
         if (addr > 1) sscanf(addr, "%128[^@ ]@%128c", usr->user, usr->domain);
     }
 
-    if (!strlen(usr->user) or !strlen(usr->domain)) {
+    if (!strlen(usr->user) or!strlen(usr->domain)) {
         rumble_free_address(usr);
         usr = 0;
-    }
-    else sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags ? usr->_flags : "NOFLAGS");
-
+    } else sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags ? usr->_flags : "NOFLAGS");
     free(tmp);
     return (usr);
 }
@@ -329,10 +325,10 @@ void rumble_free_address(address *a) {
  */
 char *rumble_mtime(void) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    time_t      rawtime;
-    char        *txt = (char *) malloc(48);
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    time_t  rawtime;
+    char    *txt = (char *) malloc(48);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!txt) merror();
     time(&rawtime);
@@ -340,39 +336,37 @@ char *rumble_mtime(void) {
     return (txt);
 }
 
+#if defined __x86_64__
+#   define ptr2int(a)  (uint32_t) (((uintptr_t) a << 32))
+#else
+#   define ptr2int(a)  (uint32_t) a
+#endif
+
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
-#if defined __x86_64__
-#define ptr2int(a) (uint32_t) (((uintptr_t) a << 32))
-#else
-#define ptr2int(a) (uint32_t) a
-#endif
 char *rumble_create_filename(void) {
 
     /*~~~~~~~~~~~~~~~~~~*/
     char            *name;
-    unsigned char* p;
-    uint32_t            y[4], x;
+    unsigned char   *p;
+    uint32_t        y[4],
+                    x;
     /*~~~~~~~~~~~~~~~~~~*/
-    
+
     name = (char *) malloc(17);
-    
-    
     y[0] = time(NULL) - rand();
     y[1] = rand() * rand();
-    
-    
     y[3] = ptr2int(rumble_create_filename) * rand();
     y[2] = ptr2int(&y) - rand();
-
     p = (unsigned char *) y;
     for (x = 0; x < 16; x++) {
         name[x] = (p[x] % 26) + 'a';
     }
+
     name[16] = 0;
-    return name;
+    return (name);
 }
 
 /*

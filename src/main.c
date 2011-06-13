@@ -124,7 +124,6 @@ int rumbleStart(void) {
                     x;
     rumbleService   *svc;
     /*~~~~~~~~~~~~~~~~~~~~*/
-    
 
     srand(time(NULL));
     master = (masterHandle *) malloc(sizeof(masterHandle));
@@ -132,7 +131,6 @@ int rumbleStart(void) {
     rumble_database_master_handle = master;
     public_master_handle = master;
     comm_master_handle = master;
-    
     printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     statusLog("Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     master->_core.uptime = time(0);
