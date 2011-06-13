@@ -333,22 +333,12 @@ char *rumble_mtime(void) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     time_t      rawtime;
-    struct tm   *timeinfo;
-    char        *txt = (char *) calloc(1, 128);
+    char        *txt = (char *) malloc(48);
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    if (!txt) {
-        perror("calloc() failed!");
-        exit(1);
-    }
-
+    if (!txt) merror();
     time(&rawtime);
-    timeinfo = gmtime(&rawtime);
-    strftime(txt, 128, "%a, %d %b %Y %X +0000 (UTC)", timeinfo);
-
-    /*
-     * free(timeinfo);
-     */
+    strftime(txt, 48, "%a, %d %b %Y %X +0000 (UTC)", gmtime(&rawtime));
     return (txt);
 }
 
