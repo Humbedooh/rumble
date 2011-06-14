@@ -12,6 +12,23 @@
 dvector* sa_config;
 int sa_spamscore, sa_modifyifspam, sa_modifyifham, sa_deleteifspam, sa_port, sa_usedaemon, sa_enabled;
 const char *sa_host, *sa_exec;
+typedef struct
+{
+    const char  *key;
+    const char  *val;
+} _cft;
+
+static _cft sa_conf_tags[] =
+{
+    { "windows", R_WINDOWS ? "1" : "" },
+    { "unix", R_POSIX && !R_CYGWIN ? "1" : "" },
+    { "linux", R_LINUX ? "1" : "" },
+    { "cygwin", R_CYGWIN ? "1" : "" },
+    { "x64", R_ARCH == 64 ? "1" : "" },
+    { "x86", R_ARCH == 32 ? "1" : "" },
+    { "architecture", R_ARCH == 32 ? "32" : "64" },
+    { 0, 0 }
+};
 
 static int sa_compare_value(const char *key, const char *oper, const char *value) {
 
@@ -46,9 +63,11 @@ void sa_config_load(masterHandle *master) {
 
     char                cfgfile[4096];
     FILE                *config;
+	int n;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sa_config = dvector_init();
+	for (n = 0; sa_conf_tags[n].key; n++) rsdict(sa_config, sa_conf_tags[n].key, sa_conf_tags[n].val);
     sprintf(cfgfile, "%s/spamassassin.conf", ((masterHandle *) master)->cfgdir);
     config = fopen(cfgfile, "r");
     if (config) {
@@ -143,7 +162,7 @@ ssize_t sa_check(sessionHandle *session, const char *filename) {
 	ssize_t ret = RUMBLE_RETURN_OKAY;
 
 	printf("[SA]: SpamAssassin plugin is now checking %s...\n", filename ? filename : "??");
-
+	rcsend(session, "250-Checking message...\r\n");
 	fp = fopen(filename, "rb");
     if (!fp) {
         perror("Couldn't open file!");
@@ -185,13 +204,11 @@ ssize_t sa_check(sessionHandle *session, const char *filename) {
 				printf("[SA] Recieving response...\n");
 				line = rcread(&s);
 				if (line) {
-					printf("%s\n", line);
 					if (strstr(line, "EX_OK")) {
 						while (strlen(line) > 2) {
 							free(line);
 							line = rcread(&s);
 							if (!line) break;
-							printf("%s\n", line);
 							if (strstr(line, "Spam: True")) { spam = 1; }
 							if (strstr(line, "Spam: False")) { spam = 0; }
 						}
@@ -226,6 +243,52 @@ ssize_t sa_check(sessionHandle *session, const char *filename) {
         }
 		else fclose(fp);
     }
+	else {
+		int spam = 0, x = 0;
+		char tempfile[L_tmpnam];
+		printf("[SA]: Running check\n");
+		fclose(fp);
+		memset(tempfile, 0, L_tmpnam);
+		tmpnam(tempfile);
+		
+#ifdef RUMBLE_MSCs
+		sprintf(buffer, "< \"%s\" > \"%s\"", filename, tempfile);
+		printf("Executing: %s\n", buffer);
+		x = execl(sa_exec, buffer, 0);
+		printf("[SA]: execl returned %i\n", x);
+		//ShellExecuteA( NULL, "open", sa_exec,buffer, "",SW_SHOW);
+#else
+		sprintf(buffer, "%s < %s > %s", sa_exec, filename, tempfile);
+		printf("Executing: %s\n", buffer);
+		system(buffer);
+#endif
+		fp = fopen(tempfile, "rb");
+		if (fp) {
+			if (!fgets(buffer, 2000, fp)) memset(buffer, 0, 2000);
+			while (strlen(buffer) > 2) {
+				printf("%s\n", buffer);
+				if (strstr(buffer, "X-Spam-Status: Yes")) { spam = 1; }
+				if (strstr(buffer, "X-Spam-Status: No")) { spam = 0; }
+				if (!fgets(buffer, 2000, fp)) break;	
+			}
+			fclose(fp);
+		}
+		printf("[SA]: The message is %s!\n", spam ? "SPAM" : "not spam");
+		if (spam and sa_deleteifspam) {
+			printf("[SA] Deleting %s\n", filename);
+			unlink(filename);
+			unlink(tempfile);
+			ret = RUMBLE_RETURN_FAILURE;
+		}
+		else if ( (!spam and sa_modifyifham) or (spam and sa_modifyifspam) ) {
+			unlink(filename);
+			printf("Moving modified file\n");
+			if (rename(tempfile, filename)) {
+				printf("[SA] Couldn't move file :(\n");
+			}
+			unlink(tempfile);
+		}
+	}
     return ret;
 }
 /*
