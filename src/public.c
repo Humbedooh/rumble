@@ -2,6 +2,7 @@
 #include "rumble.h"
 FILE            *sysLog = 0;
 masterHandle    *public_master_handle = 0;
+dvector			*debugLog = 0;
 
 /*
  =======================================================================================================================
@@ -418,6 +419,51 @@ void statusLog(const char *msg, ...) {
         vfprintf(sysLog, msg, vl);
         rc = fprintf(sysLog, "\r\n");
         fflush(sysLog);
+		va_end(vl);
+		va_start(vl, msg);
+		rumble_vdebug("core", msg, vl);
+    }
+}
+
+
+void rumble_vdebug(const char* svc, const char *msg, va_list args) {
+
+    /*~~~~~~~~~~~~~~~~~~*/
+    time_t      rawtime;
+    struct tm   *timeinfo;
+	char		dummy[512], txt[130];
+	char		*dstring;
+	dvector_element* obj;
+    int         rc = 0;
+    /*~~~~~~~~~~~~~~~~~~*/
+
+    if (debugLog) {
+		dstring = (char*) debugLog->last->object;
+		obj = debugLog->last;
+		obj->next = debugLog->first;
+		obj->prev->next = 0;
+		debugLog->last = obj->prev;
+		debugLog->first->prev = obj;
+		debugLog->first = obj;
+		obj->prev = 0;
+        time(&rawtime);
+        timeinfo = gmtime(&rawtime);
+        strftime(txt, 128, "%Y/%m/%d %X", timeinfo);
+        sprintf(dummy, "%s [%s]: \t %s\r\n", txt, (svc ? svc : "core"), msg);
+        vsprintf(dstring, dummy, args);
+		vprintf(dummy, args);
+    }
+}
+
+void rumble_debug(const char* svc, const char *msg, ...) {
+
+    /*~~~~~~~~~~~~~~~~~~*/
+    va_list     vl;
+    /*~~~~~~~~~~~~~~~~~~*/
+
+    if (debugLog) {
+        va_start(vl, msg);
+        rumble_vdebug(svc, msg, vl);
     }
 }
 

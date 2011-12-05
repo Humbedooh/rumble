@@ -33,12 +33,13 @@ end
 ?>
 
 <h3>Traffic:</h3> <?
-local sent, recv, total = math.comma(my.svcinfo.sent), math.comma(my.svcinfo.received),math.comma(my.svcinfo.sent + my.svcinfo.received);
+local sent, recv, total, jobs = math.comma(my.svcinfo.sent), math.comma(my.svcinfo.received),math.comma(my.svcinfo.sent + my.svcinfo.received), math.comma(my.svcinfo.sessions);
 printf([[
 <table border="0" cellspacing="5">
+<tr><td><b>Jobs:</b></td><td align="right"> %s handled</td></tr>
 <tr><td><b>Sent:</b></td><td align="right"> %s bytes</td></tr>
 <tr><td><b>Received:</b></td><td align="right"> %s bytes</td></tr>
 <tr ><td><b>Total:</b></td><td align="right"style="border-top: 1px solid #000; border-bottom: 1px solid #000;"> %s bytes</td></tr>
 </table>
-]], sent, recv, total);
+]], jobs, sent, recv, total);
 ?>

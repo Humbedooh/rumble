@@ -55,6 +55,7 @@ int comm_suspendService(rumbleService *svc) {
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (svc) {
+		rumble_debug("svc", "Preparing to suspend service (%s) on port %s.", svc->settings.name, svc->settings.port);
         pthread_mutex_lock(&svc->mutex);
         cforeach((rumbleThread *), thread, svc->threads, iter) {
             if (thread->status == 0)
@@ -71,11 +72,12 @@ int comm_suspendService(rumbleService *svc) {
             } else {
                 thread->status = -1;
             }
+			
         }
-
+		svc->threads->size = 0;
         svc->enabled = 2;   /* 2 = suspended */
     }
-
+	rumble_debug("svc", "Suspended service (%s) on port %s.", svc->settings.name, svc->settings.port);
     return (0);
 }
 
@@ -111,7 +113,7 @@ int comm_killService(rumbleService *svc) {
         svc->socket = 0;
         pthread_mutex_unlock(&svc->mutex);
     }
-
+	rumble_debug("svc", "Killed service (%s) on port %s.", svc->settings.name, svc->settings.port);
     return (0);
 }
 
@@ -128,6 +130,7 @@ int comm_resumeService(rumbleService *svc) {
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     if (svc) {
+		rumble_debug("svc", "Preparing to resume service (%s) on port %s.", svc->settings.name, svc->settings.port);
         if (svc->enabled != 2) return (0);
         pthread_mutex_lock(&svc->mutex);
         y = RUMBLE_INITIAL_THREADS - svc->threads->size;
@@ -143,7 +146,7 @@ int comm_resumeService(rumbleService *svc) {
         svc->enabled = 1;   /* 1 = enabled */
         pthread_mutex_unlock(&svc->mutex);
     }
-
+	rumble_debug("svc", "Resumed service (%s) on port %s.", svc->settings.name, svc->settings.port);
     return (0);
 }
 
@@ -180,6 +183,7 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;
     svc->settings.stackSize = 2.5 * 1024 * 1024;
     cvector_add(master->services, svcp);
+	rumble_debug("svc", "Registered new service (%s) on port %s.", svcName, port ? port : "(null)");
     return (svc);
 }
 
@@ -224,5 +228,6 @@ int comm_startService(rumbleService *svc) {
     }
 
     svc->enabled = 1;
+	rumble_debug("svc", "Started service (%s) on port %s.", svc->settings.name, svc->settings.port);
     return (1);
 }

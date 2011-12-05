@@ -3,7 +3,7 @@
     This file is part of the Rumble Mail Server package.
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
-
+#include "rumble_version.h"
 #ifndef RUMBLE_H
 #   define _HUGE   - 1
 #   define RUMBLE_H
@@ -680,6 +680,8 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *recipient
                             );
 void                        statusLog(const char *msg, ...);
+void						rumble_debug(const char* svc, const char *msg, ...);
+void						rumble_vdebug(const char* svc, const char *msg, va_list args);
 
 /*$3
  =======================================================================================================================

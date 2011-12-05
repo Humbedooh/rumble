@@ -8,6 +8,7 @@
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
 extern FILE         *sysLog;
+extern dvector		*debugLog;
 #   define FOO "Rumble"
 #   ifndef __STDC__
 #      define __STDC__    1
@@ -74,6 +75,35 @@ static int rumble_lua_fileinfo(lua_State *L)
     return (1);
 }
 
+
+
+static int rumble_lua_debugLog(lua_State *L)
+{
+#   if R_WINDOWS
+#      define open    _open
+#   endif
+
+    /*~~~~~~~~~~~~~~~~~~*/
+	d_iterator diter;
+    const char  *entry;
+	int x = 0;
+    /*~~~~~~~~~~~~~~~~~~*/
+
+    
+    lua_settop(L, 0);
+    
+    lua_newtable(L);
+	dforeach((const char*), entry, debugLog, diter) {
+		if (strlen(entry)) {
+			x++;
+			lua_pushinteger(L, x);
+			lua_pushstring(L, entry);
+			lua_rawset(L, -3);
+		}
+	}
+
+    return (1);
+}
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -601,7 +631,7 @@ static int rumble_lua_getaccount(lua_State *L) {
         {
         case RUMBLE_MTYPE_ALIAS:    mtype = "alias"; break;
         case RUMBLE_MTYPE_FEED:     mtype = "feed"; break;
-        case RUMBLE_MTYPE_MBOX:     mtype = "mailbox"; break;
+        case RUMBLE_MTYPE_MBOX:     mtype = "mbox"; break;
         case RUMBLE_MTYPE_MOD:      mtype = "module"; break;
         case RUMBLE_MTYPE_RELAY:    mtype = "relay"; break;
         default:                    break;
@@ -1010,7 +1040,7 @@ static int rumble_lua_saveaccount(lua_State *L) {
     uid = luaL_optint(L, -1, 0);
     lua_settop(L, 0);
     if (rumble_domain_exists(domain)) {
-        x = rumble_account_exists_raw(user, domain);
+        x = uid ? uid : rumble_account_exists_raw(user, domain);
         if (uid && x) {
             radb_run_inject(rumble_database_master_handle->_core.db,
                             "UPDATE accounts SET user = %s, domain = %s, type = %s, password = %s, arg = %s WHERE id = %u", user, domain,
@@ -1873,6 +1903,7 @@ static const luaL_reg   Rumble_methods[] =
     { "dprint", rumble_lua_debug },
     { "reloadModules", rumble_lua_reloadmodules },
     { "reloadConfiguration", rumble_lua_reloadconfig },
+	{ "getLog", rumble_lua_debugLog },
     { 0, 0 }
 };
 static const luaL_reg   Mailman_methods[] =

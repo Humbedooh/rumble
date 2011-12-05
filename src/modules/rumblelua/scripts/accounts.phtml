@@ -1,111 +1,161 @@
 <?
 domain = session.section;
- printf("<h2>Accounts @ %s</h2>", domain);
-    
-    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
-    printf("<tr><th>Create a new account</th></tr>");
-    
-    if (http.form.d) then
-		local acc = Mailman.readAccount(tonumber(http.form.d));
-		if ( acc ) then
-			Mailman.deleteAccount(tonumber(http.form.d));
-			printf("<tr><td><b><font color='red'>Deleted account %s@%s.</font></b></td></tr>", acc.name, domain);
+acc = nil;
+update = "0";
+if (http.form.u) then
+	acc = Mailman.readAccount(tonumber(http.form.u));
+	if ( acc ) then
+		http.form.update = "1";
+	end
+end
+
+if (http.form.d) then
+	acc = Mailman.readAccount(tonumber(http.form.d));
+	if ( acc ) then
+		Mailman.deleteAccount(tonumber(http.form.d));
+		printf("<tr><td><b><font color='red'>Deleted account %s@%s.</font></b></td></tr>", acc.name, domain);
+	end
+end    
+
+if (http.form.user) then
+	if (http.form.update == "1") then
+
+		local bad = nil;
+		if (http.form.type ~= acc.type) then
+			bad = "You cannot change the type of an account, as it could cause a bad case of email backlogging. To change your email address to a new account type, first delete your old account and then create the new one.";
 		end
-	end    
-    if (http.form.user) then    
-        if (http.form.create) then
-            if (Mailman.accountExists(domain, http.form.user)) then
-                printf("<tr><td><b><font color='red'>Error: Account %s@%s already exists!</font></b></td></tr>", http.form.user, domain);
-            else
-                local acc = {};
-                acc.name = http.form.user;
-                acc.domain = domain;
-                acc.type = http.form.type or "mbox";
-                acc.password = (http.form.password or ""):SHA256();
-                acc.arguments = http.form.arguments or "";
-                Mailman.saveAccount(acc);
-                printf("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
-            end
-        end
-    end
-    
-    printf("<tr><td>");
-    printf([[
-    
-    <form action="/accounts:%s" method="post" id='create'>
-    <div>
-    <div class='form_el'>
-        <div class='form_key'>
-            Account type:
-        </div>
-        <div class='form_value'>
-            <select name="type" 
-            onChange="
-            document.getElementById('accname').style.display = 'inherit';
-            var type = this.options[this.selectedIndex].value;
-            document.getElementById('accsave').style.display = 'inherit';
-            if (type == '') {
-                document.getElementById('accarg').style.display = 'none';
-                document.getElementById('accname').style.display = 'none';
-                document.getElementById('accpass').style.display = 'none';
-                document.getElementById('accsave').style.display = 'none';
-                }
-            else if (type == 'mbox') { 
-                document.getElementById('accpass').style.display = 'inherit';
-                document.getElementById('accarg').style.display = 'none';
-            }
-            else {
-                document.getElementById('accpass').style.display = 'none';
-                document.getElementById('accarg').style.display = 'inherit';
-                }
-            "
-            >
-            <option value="">Select...</option>
-            <option value="mbox">Mailbox</option>
-            <option value="alias">Alias</option>
-            <option value="mod">Feed to module...</option>
-            <option value="feed">Feed to program...</option>
-            <option value="relay">Relay to other server</option>
-            </select>
-        </div>
+		
+		if (bad) then printf("<b>Error:</b> %s", bad);
+		else 
+			acc.name = http.form.user;
+			if (http.form.password) then acc.password = http.form.password:SHA256(); end
+			if (acc.type == "alias") then acc.arguments = http.form.alias; end
+			if (acc.type == "mod") then acc.arguments = http.form.mod; end
+			if (acc.type == "feed") then acc.arguments = http.form.feed; end
+			Mailman.saveAccount(acc);
+			printf("Account %s@%s successfully updated.", acc.name, acc.domain);
+			acc = nil;
+		end
+	else
+		if (Mailman.accountExists(domain, http.form.user)) then
+			printf("<tr><td><b><font color='red'>Error: Account %s@%s already exists!</font></b></td></tr>", http.form.user, domain);
+		else
+			local acc = {};
+			acc.name = http.form.user;
+			acc.domain = domain;
+			acc.type = http.form.type or "mbox";
+			acc.password = (http.form.password or ""):SHA256();
+			acc.arguments = http.form.arguments or "";
+			Mailman.saveAccount(acc);
+			printf("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
+		end
+	end
+end
+
+?><style type="text/css">
+.create_mailbox_tab {
+	background-color: #9297A3;
+	border: 1px dotted #333 !important;
+}
+.create_mailbox_tab:hover {
+	background-color: #9BA6BD;
+	border: 1px dotted #333;
+}
+.create_mailbox_tab_selected {
+	background-color: #C0B98D;
+	border: 1px dotted #333;
+}
+</style>
+
+<h2>Accounts @ <?=domain?></h2>
+<table class="elements" border='0' cellpadding='5' cellspacing='0'>
+<tr>
+<th>
+Create a new account:</th>
+<tr><td>
+<form id="crform" name="form1" method="post" action="">
+<input type="hidden" name="type" value="mbox"/>
+<input type="hidden" name="update" value="<?=http.form.update?>"/>
+<input type="hidden" name="u" value="<?=http.form.u?>"/>
+<table width="700" border="0" cellpadding="1" cellspacing="0">
+  <tr>
+    <td width="149" class="create_mailbox_tab" id="cr_mbox"><img src="..//icons/email.png" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mbox');">Email account</a></td>
+    <td width="150" class="create_mailbox_tab" id="cr_alias"><img src="../icons/email_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('alias');">Email alias</a></td>
+    <td width="173" class="create_mailbox_tab" id="cr_mod"><img src="../icons/plugin_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mod');">Feed to module</a></td>
+    <td colspan="2" class="create_mailbox_tab" id="cr_feed"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('feed');">Feed to program</a></td>
+  </tr>
+  <tr>
+    <td colspan="5" class="create_mailbox_tab_selected">
+    <div style="display:none;" id="cr_desc_mbox">Enter the desired username and password below to create a standard mailbox.<br />
+The new mailbox will be ready for use instantly.</div>
+    <div style="display:none;" id="cr_desc_alias">An alias is an email account that forwards all messages to a different account.<br />
+A popular choice is to create a <i>catch-all</i> account that forwards all emails sent to your domain. <br />
+You can create a catch-all alias by setting the username to "<strong>*</strong>".
     </div>
-    <div class='form_el' style='display: none;' id='accname'>
-        <div class='form_key'>
-            Account name:
-        </div>
-        <div class='form_value'>
-            <input type="text" name="user" autocomplete="off"/> <i>@%s</i>
-        </div>
+    <div style="display:none;" id="cr_desc_mod">
+    If you have installed a module that reads and processes letters, you can create an email address for it here.<br />
+ All mail sent to this address will then be passed on to the module.<br />
+This type of account is often used for mailing lists or CRM business.
     </div>
-    
-    <div class='form_el' style="display: none" id='accpass';>
-        <div class='form_key'>
-            Password:
-        </div>
-        <div class='form_value'>
-            <input type="password" name="password" autocomplete="off"/>
-        </div>
+    <div style="display:none;" id="cr_desc_feed">
+    This type of account will automatically feed any incoming mail to the program you specify.<br />
+When a letter is received, Rumble will then run the program and send the letter through STDIN.
     </div>
-    <div class='form_el' id='accarg' style='display: none;' >
-        <div class='form_key'>
-            Arguments: 
-        </div>
-        <div class='form_value'>
-            <input type="text" name="arguments"/>
-        </div>
+    <div style="display:none;" id="cr_desc_relay">
+    Albeit an outdated technique, this type of account will force the server to relay messages to another domain through your own domain. This is sometimes used to obfuscate mail paths or prevent spam.
     </div>
-    <input type="hidden" name="create" value="true"/>
-    <div class='form_el' id='accsave' style='display: none;' >
-            <input type="submit" value="Save account"/>
-    </div>
-    </div>
+    &nbsp;
+    </td>
+  </tr>
+  <tr>
+    <td class="create_mailbox_tab_selected">Account name:</td>
+    <td colspan="4" class="create_mailbox_tab_selected">
+      <label for="user"></label>
+      <input name="user" type="text" id="user" maxlength="92" autocomplete="off"/> @ <?=domain?>
+    </td>
+  </tr>
+  <tr  style="display:none;"id="cr_field_mbox">
+    <td class="create_mailbox_tab_selected">(new) Password:</td>
+    <td class="create_mailbox_tab_selected" colspan="4"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
+    </tr>
+  <tr  style="display:none;"id="cr_field_alias">
+    <td class="create_mailbox_tab_selected">Forwarding address:</td>
+    <td class="create_mailbox_tab_selected" colspan="3"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
+    <td width="211" class="create_mailbox_tab_selected">&nbsp;</td>
+  </tr>
+  <tr  style="display:none;"id="cr_field_mod">
+    <td class="create_mailbox_tab_selected">Module to feed:</td>
+    <td class="create_mailbox_tab_selected" colspan="2"><select name="module">
+            <?
+			for k,mod in pairs(Rumble.listModules()) do
+				printf("<option value=\"%s\">%s</option>", mod.file, mod.title);
+			end
+			?> 
+            </select>&nbsp;</td>
+    <td width="1" class="create_mailbox_tab_selected">&nbsp;</td>
+    <td class="create_mailbox_tab_selected">&nbsp;</td>
+  </tr>
+  <tr  style="display:none;"id="cr_field_feed">
+    <td class="create_mailbox_tab_selected">Program to feed:</td>
+    <td class="create_mailbox_tab_selected" colspan="3"><input name="feed" type="text" id="user4" size="48" maxlength="92" /></td>
+    <td class="create_mailbox_tab_selected">&nbsp;</td>
+  </tr>
+  <tr>
+    <td colspan="5" class="create_mailbox_tab_selected"><input type="submit" name="Save account" id="Save account" value="Save account" />
+      <input type="reset" name="Save account2" id="Save account2" value="Reset" 
+      onclick="this.form.u.value=''; this.form.update.value='0';"
+      /></td>
+
+  </tr>
+</table>
 </form>
-    ]], domain,domain);
-    printf("</td></tr>");
-    
-    
-    printf("</table>");
-    
+</td></tr>
+</table>
+<p>&nbsp;</p>
+
+<?
+
+
     printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
     printf("<tr><th>Account</th><th>Type</th><th>Actions</th></tr>");
     local t = Mailman.listAccounts(domain);
@@ -117,3 +167,44 @@ domain = session.section;
     end
     printf("</table>");
     ?>
+	
+   
+   <script type="application/javascript">
+function changeForm(what) {
+	var list = new Array('smurf','mbox','alias','mod','feed','moresmurf');
+	document.forms['crform'].type.value = what;
+	for (i in list) {
+		var obj = document.getElementById('cr_' + list[i]);
+		var desc = document.getElementById('cr_desc_'+list[i]);
+		var field = document.getElementById('cr_field_'+list[i]);
+
+		if (obj) {
+			if (list[i] == what) {
+				obj.className = 'create_mailbox_tab_selected';
+				if (desc) desc.style.display = 'inherit';
+				if (field) field.style.display = 'table-row';
+			}
+			else {
+				obj.className = 'create_mailbox_tab';
+				if (desc) desc.style.display = 'none';
+				if (field) field.style.display = 'none';
+			}
+		}
+	}
+}
+changeForm('mbox');
+<? 
+
+if (http.form.type) then printf("changeForm('%s');", http.form.type); end 
+
+if (acc and acc.type) then
+	printf("changeForm('%s');", acc.type);
+	printf([[
+	document.forms['crform'].user.value = "%s";
+	document.forms['crform'].alias.value = "%s";
+	document.forms['crform'].feed.value = "%s";
+	document.forms['crform'].mod.value = "%s";
+	]], acc.name, acc.arguments, acc.arguments, acc.arguments);
+end 
+?>
+</script>

@@ -26,11 +26,9 @@ void *rumble_pop3_init(void *T) {
     ssize_t         rc;
     char            *cmd,
                     *arg,
-                    *line,
-                    *tmp;
+                    *line;
     const char      *myName;
     int             x = 0;
-    time_t          now;
     sessionHandle   *s;
     accountSession  *pops;
     d_iterator      iter;
@@ -50,7 +48,6 @@ void *rumble_pop3_init(void *T) {
     session._tflags = RUMBLE_THREAD_POP3;   /* Identify the thread/session as POP3 */
     myName = rrdict(master->_core.conf, "servername");
     myName = myName ? myName : "??";
-    tmp = (char *) malloc(100);
     while (1) {
         comm_accept(svc->socket, session.client);
         pthread_mutex_lock(&svc->mutex);
@@ -61,10 +58,8 @@ void *rumble_pop3_init(void *T) {
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
         session._svc = svc;
-        now = time(0);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        strftime(tmp, 100, "%X", localtime(&now));
-        printf("<debug::comm> [%s] Accepted connection from %s on POP3\n", tmp, session.client->addr);
+        rumble_debug("pop3", "Accepted connection from %s on POP3", session.client->addr);
 #endif
 
         /* Check for hooks on accept() */
@@ -85,6 +80,7 @@ void *rumble_pop3_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
+				rumble_debug("pop3", "%s said: %s %s", session.client->addr, cmd, arg);
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
                     break;
@@ -104,9 +100,7 @@ void *rumble_pop3_init(void *T) {
 
         /* Cleanup */
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        now = time(0);
-        strftime(tmp, 100, "%X", localtime(&now));
-        printf("<debug::comm> [%s] Closing connection from %s on POP3\n", tmp, session.client->addr);
+        rumble_debug("pop3", "Closing connection from %s on POP3", session.client->addr);
 #endif
         if (rc == 421) rumble_comm_send(sessptr, rumble_pop3_reply_code(103));  /* timeout! */
         else rumble_comm_send(sessptr, rumble_pop3_reply_code(102));            /* bye! */

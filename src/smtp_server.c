@@ -22,11 +22,9 @@ void *rumble_smtp_init(void *T) {
     ssize_t         rc;
     char            *line;
     char            cmd[10],
-                    arg[1024],
-                    tmp[100];
+                    arg[1024];
     const char      *myName;
     int             x = 0;
-    time_t          now;
     sessionHandle   *s;
     d_iterator      iter;
     c_iterator      citer;
@@ -57,17 +55,15 @@ void *rumble_smtp_init(void *T) {
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
         session._svc = svc;
-        now = time(0);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        strftime(tmp, 100, "%X", localtime(&now));
-        printf("<debug::comm> [%s] Accepted connection from %s on SMTP\n", tmp, session.client->addr);
+		rumble_debug("smtp", "Accepted connection from %s on SMTP", session.client->addr);
 #endif
 
         /* Check for hooks on accept() */
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP);
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_smtp_reply_code(220), myName);   /* Hello! */
-        else printf("Session blocked by module\n");
+        else rumble_debug("smtp", "SMTP session was blocked by an external module!");
 
         /* Parse incoming commands */
         while (rc != RUMBLE_RETURN_FAILURE) {
@@ -80,7 +76,7 @@ void *rumble_smtp_init(void *T) {
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-                printf("Client said: %s %s\n", cmd, arg);
+                rumble_debug("smtp", "%s said: %s %s", session.client->addr, cmd, arg);
 #endif
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
@@ -100,9 +96,7 @@ void *rumble_smtp_init(void *T) {
 
         /* Cleanup */
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        now = time(0);
-        strftime(tmp, 100, "%X", localtime(&now));
-        printf("<debug::comm> [%s] Closing connection from %s on SMTP\n", tmp, session.client->addr);
+        rumble_debug("smtp", "Closing connection from %s on SMTP", session.client->addr);
 #endif
         if (rc == 421) rumble_comm_send(sessptr, rumble_smtp_reply_code(421422));   /* timeout! */
         else rumble_comm_send(sessptr, rumble_smtp_reply_code(221220)); /* bye! */
@@ -620,7 +614,9 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         line = rcread(session);
         if (!sscanf(line, "%s", digest)) pass = "";
         else pass = rumble_decode_base64(digest);
-        addr = rumble_parse_mail_address(user);
+        sprintf(digest, "<%s>", user);
+        addr = rumble_parse_mail_address(digest);
+		rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(user);
         strcpy(digest, pass);
@@ -633,21 +629,19 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         buffer = rumble_decode_base64(digest);
         user = buffer + 1;
         pass = buffer + 2 + strlen(user);
-        addr = rumble_parse_mail_address(user);
+		sprintf(digest, "<%s>", user);
+        addr = rumble_parse_mail_address(digest);
+		rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(buffer);
     }
 
     if (OK) {
-        if (rumble_account_data_auth(0, addr->user, addr->domain, pass)) {
-            session->flags |= RUMBLE_SMTP_CAN_RELAY;
-            rumble_free_account(OK);
-            return (250);
-        } else {
-            session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);
-            return (530);
-        }
-    }
-
-    return (501);
+        session->flags |= RUMBLE_SMTP_CAN_RELAY;
+        rumble_free_account(OK);
+        return (250);
+    } else {
+        session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);
+        return (530);
+	}
 }

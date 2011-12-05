@@ -12,11 +12,12 @@
   <span class="version">Version [%version%]</span></div>
   <div class="sidebar1">
     <ul class="nav">
-      <li><a href="/"><img src="icons/sidebar_status.png" alt="server status" width="22" height="22" align="absmiddle" />&nbsp;Server status</a></li>
-      <li><a href="/domains"><img src="icons/sidebar_domains.png" alt="domains" width="20" height="20" align="absmiddle" />&nbsp;Domains</a></li>
-      <li><a href="/users"><img src="icons/sidebar_users.png" alt="users" width="22" height="22" align="absmiddle" />&nbsp;RumbleLua users</a></li>
-      <li><a href="/settings"><img src="icons/sidebar_settings.png" alt="settings" width="22" height="22" align="absmiddle" />&nbsp;Server settings</a></li>
-      <li><a href="/modules"><img src="icons/sidebar_modules.png" alt="modules" width="22" height="22" align="absmiddle" />&nbsp;Set up modules</a></li>
+      <li><a href="/"><img src="icons/computer.png" alt="server status" width="16" height="16" align="absmiddle" />&nbsp;Server status</a></li>
+      <li><a href="/domains"><img src="icons/house.png" alt="domains" width="16" height="16" align="absmiddle" />&nbsp;Domains</a></li>
+      <li><a href="/users"><img src="icons/group.png" alt="users" width="16" height="16" align="absmiddle" />&nbsp;RumbleLua users</a></li>
+      <li><a href="/settings"><img src="icons/report_edit.png" alt="settings" width="16" height="16" align="absmiddle" />&nbsp;Server settings</a></li>
+      <li><a href="/modules"><img src="icons/plugin_edit.png" alt="modules" width="16" height="16" align="absmiddle" />&nbsp;Set up modules</a></li>
+      <li><a href="/systeminfo"><img src="icons/page_white_find.png" alt="modules" width="16" height="16" align="absmiddle" />&nbsp;Server log</a></li>
     </ul>
     <p>
     
@@ -27,40 +28,40 @@ if (session.credentials and session.credentials.admin) then
         
         local controls = "";
         local status = "Running";
-        local icon = "green";
+        local icon = "running";
         if (svcinfo) then
         	if ( svcinfo.enabled == 2 ) then
             	status = "Paused";
-                icon = "yellow";
+                icon = "paused";
             	controls = [[
-            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server (forcibly)"/></a>
-            <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
+            <a href="/services:]]..svc..[[?stop=true"><img src="icons/control_stop_blue.png" align="absmiddle" title="Stop server (forcibly)"/></a>
+            <a href="/services:]]..svc..[[?start=true"><img src="icons/control_play_blue.png" align="absmiddle" title="Start server"/></a>
             ]];
             elseif (svcinfo.enabled == 0) then
             	status = "Stopped";
-                icon = "red"
+                icon = "stopped"
             	controls = [[
-            <a href="/services:]]..svc..[[?start=true"><img src="icons/action_start.png" align="absmiddle" title="Start server"/></a>
+            <a href="/services:]]..svc..[[?start=true"><img src="icons/control_play_blue.png" align="absmiddle" title="Start server"/></a>
             ]];
             else
             controls = [[
-            <a href="/services:]]..svc..[[?stop=true"><img src="icons/action_stop.png" align="absmiddle" title="Stop server (forcibly)"/></a>
-            <a href="/services:]]..svc..[[?pause=true"><img src="icons/action_pause.png" align="absmiddle" title="Pause server (gracefully)"/></a>
+            <a href="/services:]]..svc..[[?stop=true"><img src="icons/control_stop_blue.png" align="absmiddle" title="Stop server (forcibly)"/></a>
+            <a href="/services:]]..svc..[[?pause=true"><img src="icons/control_pause_blue.png" align="absmiddle" title="Pause server (gracefully)"/></a>
             ]];
             end
         else
         	status = "<em>Disabled</em>";
-            icon = "grey";
+            icon = "disabled";
         	
         end
         controls = controls.. [[
-            <a href="/services:]]..svc..[["><img src="icons/action_info.png" align="absmiddle" title="Service information"/></a>
+            <a href="/services:]]..svc..[["><img src="icons/information.png" align="absmiddle" title="Service information"/></a>
             ]];
         printf(
         [[
         <div class="servicepanel">
         <div style="width:180px; float: left; height: 30px;">
-        <img src="/icons/%sbutton.png" align="absmiddle" width="24" height="24"/>&nbsp;<b>%s</b>: %s
+        <img src="/icons/service_%s.png" align="absmiddle" width="16" height="16"/>&nbsp;<b>%s</b>: %s
         </div>
         <div style="width:180px; text-align:right; float: right; height: 30px;">
         %s

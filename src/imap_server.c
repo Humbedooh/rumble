@@ -31,7 +31,6 @@ void *rumble_imap_init(void *T) {
                     *tmp;
     const char      *myName;
     int             x = 0;
-    time_t          now;
     sessionHandle   *s;
     accountSession  *pops;
     d_iterator      iter;
@@ -65,11 +64,9 @@ void *rumble_imap_init(void *T) {
         session.flags = 0;
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
-        now = time(0);
         pops->bag = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        strftime(tmp, 100, "%X", localtime(&now));
-        printf("<debug::comm> [%s] Accepted connection from %s on IMAP4\n", tmp, session.client->addr);
+        rumble_debug("imap4", "Accepted connection from %s on IMAP4", session.client->addr);
 #endif
 
         /* Check for hooks on accept() */
@@ -101,8 +98,7 @@ void *rumble_imap_init(void *T) {
                 cforeach((svcCommandHook *), hook, svc->commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, parameters, extra_data);
                 }
-
-                printf("Client said: <%s> %s %s\r\n", extra_data, cmd, parameters);
+				rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
                 printf("Selected folder is: %"PRId64 "\r\n", pops->folder);
             }
 
@@ -115,9 +111,7 @@ void *rumble_imap_init(void *T) {
 
         /* Cleanup */
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        now = time(0);
-        strftime(tmp, 100, "%X", localtime(&now));
-        printf("<debug::comm> [%s] Closing connection from %s on IMAP4\n", tmp, session.client->addr);
+        rumble_debug("imap4", "Closing connection to %s on IMAP4", session.client->addr);
 #endif
         if (rc == 421) rcprintf(&session, "%s BAD Session timed out!\r\n", extra_data); /* timeout! */
         else {
@@ -191,14 +185,16 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char            user[512],
-                    pass[512];
+                    pass[512],
+					digest[1024];
     address         *addr;
     accountSession  *imap = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_mailman_close_bag(imap->bag);
     if (sscanf(parameters, "%s %s", user, pass) == 2) {
-        addr = rumble_parse_mail_address(user);
+		sprintf(digest, "<%s>", user);
+        addr = rumble_parse_mail_address(digest);
         if (addr) {
             imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
             if (imap->account) {

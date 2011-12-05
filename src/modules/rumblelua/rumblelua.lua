@@ -226,7 +226,7 @@ function acceptHTTP(session)
                 return;
             end
             
-            session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or "meh"; end);
+            session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or x; end);
             session.pos = "<!-- -->"
             session.atend = nil;
             _G.my = {};
@@ -240,7 +240,7 @@ function acceptHTTP(session)
                     _G.stop = function() session.stop = true; session.atend = session.script:find("<?"..x.."?>",1,true) + output:len();end
                     _G.exit = function() session.killed = true; return; end
                     _G.printf = function(...) output = output .. string.format(...); end;
-                    if (not session.stop) then 
+                    if (not session.stop and x) then 
                         loadstring(x)();
                     end
                     _G.printf = _printf;
