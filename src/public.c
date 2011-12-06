@@ -451,7 +451,7 @@ void rumble_vdebug(const char* svc, const char *msg, va_list args) {
         strftime(txt, 128, "%Y/%m/%d %X", timeinfo);
         sprintf(dummy, "%s [%s]: \t %s\r\n", txt, (svc ? svc : "core"), msg);
         vsnprintf(dstring, 511, dummy, args);
-        printf("%s", dummy);
+        printf("%s", dstring);
     }
 }
 

@@ -160,7 +160,6 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     rumbleService           *svc;
     rumbleServicePointer    *svcp;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    rumble_debug("Got request for new service (%s).", svcName);
     svcp = (rumbleServicePointer *) malloc(sizeof(rumbleServicePointer));
     svc = (rumbleService *) malloc(sizeof(rumbleService));
     svcp->svc = svc;
