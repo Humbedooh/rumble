@@ -499,24 +499,30 @@ static int rumble_lua_getdomains(lua_State *L) {
 
     domains = rumble_domains_list();
     x = 0;
+    lua_settop(L, 0);
     lua_newtable(L);
     cforeach((rumble_domain *), domain, domains, iter) {
-        x++;        
+        x++;
+//        lua_pushinteger(L, x);
         lua_pushstring(L, domain->name);
         lua_newtable(L);
         
-        lua_pushstring(L, "path");
-        lua_pushstring(L, domain->path);
-        lua_rawset(L, -3);
+ //       lua_pushstring(L, "name");
+  //      lua_pushstring(L, domain->name);
+//        lua_rawset(L, -3);
         
-        lua_pushstring(L, "flags");
-        lua_pushinteger(L, domain->flags);
-        lua_rawset(L, -3);
+            lua_pushstring(L, "path");
+            lua_pushstring(L, domain->path);
+            lua_rawset(L, -3);
+
+            lua_pushstring(L, "flags");
+            lua_pushinteger(L, domain->flags);
+            lua_rawset(L, -3);
         
         lua_rawset(L, -3);
     }
 
-    return (x);
+    return (1);
 }
 
 /*

@@ -310,13 +310,25 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         /* If rec isn't local, check if client is allowed to relay */
         if (!isLocalDomain) {
             if (session->flags & RUMBLE_SMTP_CAN_RELAY) {
+                rumble_domain* dmn = rumble_domain_copy(session->sender->domain);
+                
                 if (rumble_config_int(master, "blockoutgoingmail")) rc = RUMBLE_RETURN_FAILURE;
-
-                /* Fire events scheduled for pre-processing run */
+                /* Check for domain-specific blocking */
                 else {
-                    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
-                                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
-                                                       parameters);
+                    rumble_debug("smtp", "checking domain options for %s", session->sender->domain);
+                    if (dmn) {
+                        rumble_debug("smtp", "Flags for %s are: %X", dmn->name, dmn->flags);
+                        if (dmn->flags && RUMBLE_DOMAIN_NORELAY) rc = RUMBLE_RETURN_FAILURE;
+                        rumble_domain_free(dmn);
+                    }
+
+                    /* Fire events scheduled for pre-processing run */
+                    else {
+                        rumble_debug("smtp", "domain %s wasn't found??!", session->sender->domain);
+                        rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
+                                                        parameters);
+                    }
                 }
 
                 if (rc != RUMBLE_RETURN_OKAY) {

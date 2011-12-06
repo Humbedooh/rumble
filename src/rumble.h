@@ -292,6 +292,10 @@
 #   define RUMBLE_LETTER_DRAFT     0x00100000
 #   define RUMBLE_LETTER_UPDATED   0x01000000
 
+
+/* Domain flags */
+# define RUMBLE_DOMAIN_NORELAY 0x00000001
+
 /*$5
  #######################################################################################################################
     TYPE DEFINITIONS
