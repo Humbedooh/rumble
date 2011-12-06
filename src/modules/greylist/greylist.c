@@ -90,6 +90,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
     /* If the check failed, we tell the client to hold off for 15 minutes. */
     if (n < GREYLIST_MIN_AGE) {
         rcprintf(session, "451 4.7.1 Grey-listed for %u seconds. See http://www.greylisting.org\r\n", GREYLIST_MIN_AGE - n);
+		rumble_debug("module", "Mail from %s for <%s@%s> greylisted for %u seconds.", session->client->addr, recipient->raw, GREYLIST_MIN_AGE - n);
         return (RUMBLE_RETURN_IGNORE);  /* Tell rumble to ignore the command quietly. */
     }
 
