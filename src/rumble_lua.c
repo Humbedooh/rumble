@@ -510,7 +510,7 @@ static int rumble_lua_getdomains(lua_State *L) {
         lua_rawset(L, -3);
         
         lua_pushstring(L, "flags");
-        lua_pushint(L, domain->flags);
+        lua_pushinteger(L, domain->flags);
         lua_rawset(L, -3);
         
         lua_rawset(L, -3);
