@@ -2,19 +2,20 @@
 <div class="content">
 <h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Server log:</h2>
 <br/><br/><br/><br/><br/><br/>
-<pre>
+<code>
 <?
-printf( ("gebbegoo"):SHA256());
 for i,entry in pairs(Rumble.getLog()) do
 	local color = "993333";
-	local date, svc, log = string.match(entry, "(%d+/%d+/%d+ %d+:%d+:%d+) %[(%w+)%]:%s+(.*)");
+	local date, svc, log = string.match(entry, "(%d+/%d+/%d+ %d+:%d+:%d+) %[([^%]]+)%]:%s+(.*)");
 	if ( svc == "core" ) then color = "339933"; end
 	if ( svc == "smtp" or svc == "pop3" or svc == "imap4" ) then color = "333399"; end
-	log = string.gsub(log, "(%d[%d%.]+)", "<span style='color: #996622;'>%1</span>");
-	printf("<div style='border: 1px dotted #522; margin: 3px; width: 700px;'>%s <b style='color: #%s;'>%-5s</b> %s</div>", date, color, svc, log);
+	log = log:gsub("<", "&lt;");
+	log = log:gsub("(%d[%d%.]+)", "<span style='color: #996622;'>%1</span>");
+	
+	printf("<div style='border: 1px dotted #522; margin: 3px; width: 700px;'>%s <b style='color: #%s;'>%-7s</b> %s</div>", date, color, svc, log);
 end
 ?>
-</pre>
+</code>
 </p>
 
 

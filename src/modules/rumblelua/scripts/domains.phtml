@@ -4,6 +4,13 @@
     	printf("Access denied! :o");
         return;
 	else
+		local blocked = "";
+		local t = Mailman.listDomains(); 
+		for k, v in pairs(t) do
+			if (k == session.section) then
+				if (v.flags == 1) then blocked = "checked"; end
+			end
+		end
 	    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
 		if ( session.section ~= "" ) then
 			local domain = session.section;
@@ -30,6 +37,15 @@
 				</div>
 			</div>
 			
+			<div>
+				<div class='form_key'>
+					Block outgoing mail:
+				</div>
+				<div class='form_value'>
+					<input type="checkbox" name="block" value="1" %s/>
+				</div>
+			</div>
+			
 	
 			<div class='form_el' id='domainsave' >
 				<div class='form_key'>
@@ -39,10 +55,12 @@
 					<input type="button" value="Cancel" onclick="location.href='/domains';"/>
 				</div>
 			</div>
-			<br/><br/><br/><br/><br />
+			<br/><br/><br/><br/><br /><br />
+<br />
+
 			</div>
 			</form>
-			]],domain,domain);
+			]],domain,blocked,domain);
 			printf("</td></tr>");
 			
 		else
@@ -58,7 +76,9 @@
 					Mailman.createDomain(http.form.domain, http.form.path or "");
 					printf("<tr><td><b><font color='darkgreen'>Domain %s has been created.</font></b></td></tr>", http.form.domain);
 				elseif (http.form.edit) then
-					Mailman.updateDomain(http.form.original, http.form.domain, http.form.path, http.form.type);
+					local flags = 0;
+					if (http.form.block) then flags = 1; end
+					Mailman.updateDomain(http.form.original, http.form.domain, http.form.path, flags);
 					printf("<tr><td><b><font color='darkgreen'>Domain %s has been updated.</font></b></td></tr>", http.form.domain);
 				end
 			end
@@ -105,10 +125,10 @@
     printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
     printf("<tr><th>Domain</th><th>Type</th><th>Actions</th></tr>");
     local t = Mailman.listDomains(); 
-    table.sort(t);
+--    table.sort(t);
     for k,v in pairs(t) do
         if (session.credentials.admin or session.credentials.domains[v]) then
-            printf("<tr><td><img src='/bullet.png' align='absmiddle'/>&nbsp;<a href='/accounts:%s'><strong>%s</strong></a></td><td>domain</td><td><a href=\"/domains:%s\"><img title='Edit domain' src='/icons/action_edit.png' align='absmiddle'/></a>  <a href=\"/domains?domain=%s&delete=true\"><img title='Delete domain' src='/icons/action_delete.png' align='absmiddle'/></a></td></tr>", v,v,v,v);
+            printf("<tr><td><img src='/icons/house.png' align='absmiddle'/>&nbsp;<a href='/accounts:%s'><strong>%s</strong></a></td><td>domain</td><td><a href=\"/domains:%s\"><img title='Edit domain' src='/icons/report_edit.png' align='absmiddle'/></a>  <a href=\"/domains?domain=%s&delete=true\"><img title='Delete domain' src='/icons/delete.png' align='absmiddle'/></a></td></tr>", k,k,k,k);
         end
     end
     if (#t == 0) then
