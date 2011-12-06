@@ -381,6 +381,7 @@ typedef struct
     char        *name;          /* Name (or glob) of domain */
     char        *path;          /* Optional storage path for letters */
     uint32_t    id;             /* Domain ID */
+    uint32_t    flags;          /* Domain flags */
 } rumble_domain;
 typedef struct
 {

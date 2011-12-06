@@ -501,13 +501,22 @@ static int rumble_lua_getdomains(lua_State *L) {
     x = 0;
     lua_newtable(L);
     cforeach((rumble_domain *), domain, domains, iter) {
-        x++;
-        lua_pushinteger(L, x);
+        x++;        
         lua_pushstring(L, domain->name);
+        lua_newtable(L);
+        
+        lua_pushstring(L, "path");
+        lua_pushstring(L, domain->path);
+        lua_rawset(L, -3);
+        
+        lua_pushstring(L, "flags");
+        lua_pushint(L, domain->flags);
+        lua_rawset(L, -3);
+        
         lua_rawset(L, -3);
     }
 
-    return (1);
+    return (x);
 }
 
 /*
@@ -579,8 +588,8 @@ static int rumble_lua_updatedomain(lua_State *L) {
     /*~~~~~~~~~~~~~~~~~~~~~*/
     const char      *domain,
                     *newname,
-                    *newpath,
-                    *newtype;
+                    *newpath;
+    uint32_t flags;
     rumble_domain   *dmn;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -589,11 +598,11 @@ static int rumble_lua_updatedomain(lua_State *L) {
     domain = lua_tostring(L, 1);
     newname = lua_tostring(L, 2);
     newpath = luaL_optstring(L, 3, "");
-    newtype = luaL_optstring(L, 4, "");
+    flags = luaL_optint(L, 4, 0);
     dmn = rumble_domain_copy(domain);
     if (dmn) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s WHERE id = %u", newname,
-                        newpath, dmn->id);
+        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s, flags = %u WHERE id = %u", newname,
+                        newpath, flags, dmn->id);
         rumble_database_update_domains();
         radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE accounts SET domain = %s WHERE domain = %s", newname, dmn->name);
         free(dmn->name);
@@ -1069,6 +1078,7 @@ static int rumble_lua_createdomain(lua_State *L) {
     /*~~~~~~~~~~~~~~~~*/
     const char  *domain,
                 *path;
+    uint32_t flags;
     /*~~~~~~~~~~~~~~~~*/
 
     /*$2
@@ -1080,9 +1090,10 @@ static int rumble_lua_createdomain(lua_State *L) {
     luaL_checktype(L, 1, LUA_TSTRING);
     domain = lua_tostring(L, 1);
     path = lua_tostring(L, 2);
+    flags = luaL_optint(L, 3, 0);
     lua_settop(L, 0);
     if (!rumble_domain_exists(domain)) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (domain,storagepath) VALUES (%s,%s)", domain, path);
+        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (domain,storagepath,flags) VALUES (%s,%s,%u)", domain, path,flags);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
     } else lua_pushboolean(L, 0);

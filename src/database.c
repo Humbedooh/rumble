@@ -22,6 +22,8 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
     char    mailpath[1024];
     int     rc;
     FILE    *ftmp;
+    radbObject* dbo;
+    radbResult* dbr;
     /*~~~~~~~~~~~~~~~~~~~*/
 
     printf("Checking for thread-safe environment: %s\n", sqlite3_threadsafe() == 0 ? "No" : "Yes");
@@ -67,7 +69,7 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
         printf("%-48s", "Setting up tables...");
         statusLog("New installation, creating DB");
         rc = radb_do(master->_core.db,
-                     "CREATE TABLE \"domains\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"storagepath\" VARCHAR);");
+                     "CREATE TABLE \"domains\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"storagepath\" VARCHAR, \"flags\" INTEGER NOT NULL  DEFAULT 0);");
         rc = radb_do(master->_core.db,
                      "CREATE TABLE \"accounts\" (\"id\" INTEGER PRIMARY KEY  AUTOINCREMENT  NOT NULL  UNIQUE , \"domain\" VARCHAR NOT NULL , \"user\" VARCHAR, \"password\" CHAR(64), \"type\" CHAR(5) NOT NULL  DEFAULT mbox, \"arg\" VARCHAR);");
         rc = radb_do(master->_core.db,
@@ -96,6 +98,22 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
             printf("[BAD]\r\n");
         }
     } else printf("[OK]\r\n");
+    
+    /* Check for the 'flags' column in the domain db */
+    statusLog("Checking for 0.35+ db structure\r\n");
+    
+    rc = 0;
+    dbo = radb_prepare(master->_core.db, "PRAGMA table_info (domains)");
+    while ((dbr = radb_step(dbo))) {
+           if (!strcmp(dbr->column[1].data.string, "flags")) { rc = 1; break; }
+    }
+    radb_free(dbr);
+    if (!rc) {
+        rumble_debug("core", "db structure is deprecated, updating\n");
+        rc = radb_do(master->_core.db, "ALTER TABLE \"domains\" ADD COLUMN \"flags\" INTEGER NOT NULL  DEFAULT 0");
+    }
+    else rumble_debug("core","db structure is up to date!\n");
+    
     statusLog("Database successfully initialized");
 }
 
@@ -137,7 +155,7 @@ void rumble_database_load_mysql(masterHandle *master, FILE *runlog) {
         printf("%-48s", "Setting up tables...");
         statusLog("New installation, creating DB");
         rc = radb_do(master->_core.db,
-                     "CREATE TABLE `domains` ( `id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY , `domain` VARCHAR( 128 ) NOT NULL , `storagepath` VARCHAR( 128 ) NOT NULL );");
+                     "CREATE TABLE `domains` ( `id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY , `domain` VARCHAR( 128 ) NOT NULL , `storagepath` VARCHAR( 128 ) NOT NULL , `flags` MEDIUMINT UNSIGNED NOT NULL DEFAULT 0);");
         rc = radb_do(master->_core.db,
                      "CREATE TABLE `accounts` ( `id` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY , `domain` VARCHAR( 128 ) NOT NULL , `user` VARCHAR( 128 ) NOT NULL , `password` CHAR( 64 ) NOT NULL , `type` ENUM( 'mbox', 'alias', 'mod', 'feed', 'relay', 'void' ) NOT NULL DEFAULT 'mbox', `arg` VARCHAR( 255 ) NOT NULL );");
         rc = radb_do(master->_core.db,
@@ -394,6 +412,7 @@ rumble_domain *rumble_domain_copy(const char *domain) {
             rc->path = (char *) calloc(1, strlen(dmn->path) + 1);
             strcpy(rc->name, dmn->name);
             strcpy(rc->path, dmn->path);
+            rc->flags = dmn->flags;
             rc->id = dmn->id;
             break;
         }
@@ -427,6 +446,7 @@ cvector *rumble_domains_list(void) {
         strcpy(rc->name, dmn->name);
         strcpy(rc->path, dmn->path);
         rc->id = dmn->id;
+        rc->flags = dmn->flags;
         cvector_add(cvec, rc);
     }
 
@@ -547,12 +567,15 @@ void rumble_database_update_domains(void) {
     }
 
     dvector_flush(rumble_database_master_handle->domains.list);
-    dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, domain, storagepath FROM domains WHERE 1");
+    dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, domain, storagepath, flags FROM domains WHERE 1");
     while ((dbr = radb_step(dbo))) {
         domain = (rumble_domain *) malloc(sizeof(rumble_domain));
 
         /* Domain ID */
         domain->id = dbr->column[0].data.int32;
+        
+        /* Domain flags */
+        domain->flags = dbr->column[3].data.int32;
 
         /* Domain name */
         domain->name = strclone(dbr->column[1].data.string);

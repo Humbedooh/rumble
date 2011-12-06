@@ -287,7 +287,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         isLocalDomain = rumble_domain_exists(recipient->domain);
         isLocalUser = isLocalDomain ? rumble_account_exists(session, recipient->user, recipient->domain) : 0;
         if (isLocalUser) {
-
+            rumble_debug("smtp", "Running local RCPT for %s@%s (%s)", recipient->user, recipient->domain, recipient->raw);
             /*
              * If everything went fine, set the RCPT flag and return with code 250. ;
              * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
