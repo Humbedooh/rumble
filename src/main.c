@@ -9,7 +9,8 @@ extern masterHandle *public_master_handle;
 extern masterHandle *comm_master_handle;
 extern int (*lua_callback) (lua_State *, void *, void *);
 extern FILE             *sysLog;
-extern dvector			*debugLog;
+extern dvector          *debugLog;
+extern char             shutUp;
 static dvector          *s_args;
 #ifdef RUMBLE_MSC
 SERVICE_STATUS          ServiceStatus;
@@ -65,6 +66,7 @@ void ServiceMain(int argc, char **argv) {
     int error;
     /*~~~~~~*/
 
+    shutUp = 1;
     statusLog("Running as a Windows Service");
     ServiceStatus.dwServiceType = SERVICE_WIN32;
     ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
@@ -228,6 +230,7 @@ int main(int argc, char **argv) {
     char    r_path[512];
     /*~~~~~~~~~~~~~~~~*/
 
+    shutUp = 0;
     fflush(stdout);
     s_args = dvector_init();
     memset(r_path, 0, 512);
@@ -271,15 +274,15 @@ int main(int argc, char **argv) {
 
         /*~~~~~~~~~~~~~~~~~~*/
         char    tmpfile[1024];
-		char	*dstring;
-		int x;
+        char    *dstring;
+        int     x;
         /*~~~~~~~~~~~~~~~~~~*/
 
-		debugLog = dvector_init();
-		for (x = 0; x < 200; x++) {
-			dstring = (char*) calloc(1,512);
-			dvector_add(debugLog, dstring);
-		}
+        debugLog = dvector_init();
+        for (x = 0; x < 200; x++) {
+            dstring = (char *) calloc(1, 512);
+            dvector_add(debugLog, dstring);
+        }
 
         sprintf(tmpfile, "%s/rumble_status.log", r_path);
         printf("opening %s\n", tmpfile);
@@ -297,6 +300,7 @@ int main(int argc, char **argv) {
     statusLog("Parsing exec arguments");
     if (rhdict(s_args, "--service")) {
         statusLog("--service detected, launching daemon process");
+        shutUp = 1;
 
         /*~~~~~~~~~~~~~*/
 #ifndef RUMBLE_MSC

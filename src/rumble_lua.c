@@ -8,7 +8,7 @@
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
 extern FILE         *sysLog;
-extern dvector		*debugLog;
+extern dvector      *debugLog;
 #   define FOO "Rumble"
 #   ifndef __STDC__
 #      define __STDC__    1
@@ -75,35 +75,36 @@ static int rumble_lua_fileinfo(lua_State *L)
     return (1);
 }
 
-
-
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static int rumble_lua_debugLog(lua_State *L)
 {
 #   if R_WINDOWS
 #      define open    _open
 #   endif
 
-    /*~~~~~~~~~~~~~~~~~~*/
-	d_iterator diter;
+    /*~~~~~~~~~~~~~~~*/
+    d_iterator  diter;
     const char  *entry;
-	int x = 0;
-    /*~~~~~~~~~~~~~~~~~~*/
+    int         x = 0;
+    /*~~~~~~~~~~~~~~~*/
 
-    
     lua_settop(L, 0);
-    
     lua_newtable(L);
-	dforeach((const char*), entry, debugLog, diter) {
-		if (strlen(entry)) {
-			x++;
-			lua_pushinteger(L, x);
-			lua_pushstring(L, entry);
-			lua_rawset(L, -3);
-		}
-	}
+    dforeach((const char *), entry, debugLog, diter) {
+        if (strlen(entry)) {
+            x++;
+            lua_pushinteger(L, x);
+            lua_pushstring(L, entry);
+            lua_rawset(L, -3);
+        }
+    }
 
     return (1);
 }
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -1903,7 +1904,7 @@ static const luaL_reg   Rumble_methods[] =
     { "dprint", rumble_lua_debug },
     { "reloadModules", rumble_lua_reloadmodules },
     { "reloadConfiguration", rumble_lua_reloadconfig },
-	{ "getLog", rumble_lua_debugLog },
+    { "getLog", rumble_lua_debugLog },
     { 0, 0 }
 };
 static const luaL_reg   Mailman_methods[] =

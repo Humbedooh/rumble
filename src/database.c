@@ -322,17 +322,20 @@ rumble_mailbox *rumble_account_data_auth(uint32_t uid, const char *user, const c
     rumble_mailbox  *acc;
     char            *hash;
     /*~~~~~~~~~~~~~~~~~~*/
+
     acc = rumble_account_data(0, user, domain);
     if (acc) {
         hash = rumble_sha256((const unsigned char *) pass);
         if (!strcmp(hash, acc->hash)) {
-			rumble_debug("core", "Account %s successfully logged in.", user);
-			return (acc);
-		}
+            rumble_debug("core", "Account %s successfully logged in.", user);
+            return (acc);
+        }
+
         rumble_free_account(acc);
         acc = 0;
     }
-	rumble_debug("core", "Account %s failed to log in (wrong pass?).", user);
+
+    rumble_debug("core", "Account %s failed to log in (wrong pass?).", user);
     return (acc);
 }
 

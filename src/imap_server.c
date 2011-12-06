@@ -98,7 +98,8 @@ void *rumble_imap_init(void *T) {
                 cforeach((svcCommandHook *), hook, svc->commands, citer) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, parameters, extra_data);
                 }
-				rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
+
+                rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
                 printf("Selected folder is: %"PRId64 "\r\n", pops->folder);
             }
 
@@ -186,14 +187,14 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char            user[512],
                     pass[512],
-					digest[1024];
+                    digest[1024];
     address         *addr;
     accountSession  *imap = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_mailman_close_bag(imap->bag);
     if (sscanf(parameters, "%s %s", user, pass) == 2) {
-		sprintf(digest, "<%s>", user);
+        sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
         if (addr) {
             imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);

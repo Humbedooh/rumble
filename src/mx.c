@@ -91,7 +91,7 @@ dvector *comm_mxLookup(const char *domain) {
             mx->host = calloc(1, 1024);
             if (ns_name_uncompress(ns_msg_base(query_parse_msg), ns_msg_end(query_parse_msg), (u_char *) ns_rr_rdata(query_parse_rr) + 2,
                 (char *) mx->host, 1024) < 0) {
-                free(mx->host);
+                free((char *) mx->host);
                 free(mx);
                 continue;
             } else dvector_add(vec, mx);

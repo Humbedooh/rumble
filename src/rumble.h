@@ -3,6 +3,7 @@
     This file is part of the Rumble Mail Server package.
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
+
 #include "rumble_version.h"
 #ifndef RUMBLE_H
 #   define _HUGE   - 1
@@ -487,10 +488,10 @@ typedef struct
     } traffic;
     struct
     {
-        const char  *port;
-        const char  *name;
-        int         threadCount;
-        unsigned int stackSize;
+        const char      *port;
+        const char      *name;
+        int             threadCount;
+        unsigned int    stackSize;
     } settings;
 } rumbleService;
 typedef struct
@@ -680,8 +681,8 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *recipient
                             );
 void                        statusLog(const char *msg, ...);
-void						rumble_debug(const char* svc, const char *msg, ...);
-void						rumble_vdebug(const char* svc, const char *msg, va_list args);
+void                        rumble_debug(const char *svc, const char *msg, ...);
+void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
 
 /*$3
  =======================================================================================================================

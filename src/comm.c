@@ -193,14 +193,14 @@ socketHandle comm_open(masterHandle *m, const char *host, unsigned short port) {
  */
 ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     va_list vl;
     char    *buffer;
     int     len;
 #if (R_ARCH > 32) && !defined(_CRTIMP)
     char    moo[1024];
 #endif
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     va_start(vl, d);
 #ifdef _CRTIMP      /* Windows CRT library has a nifty function for this */

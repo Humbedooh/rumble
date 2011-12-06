@@ -315,8 +315,16 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
                 rumble_release_state(L);
             }
 
-            if (rc == RUMBLE_RETURN_FAILURE) return (RUMBLE_RETURN_FAILURE);
-            if (rc == RUMBLE_RETURN_IGNORE) return (RUMBLE_RETURN_IGNORE);
+            if (rc == RUMBLE_RETURN_FAILURE) {
+                printf("this is where I fail? ;(\r\n");
+                rumble_debug("hook", "Module %s returned failure on \"%s\"", hook->module, line ? line :  "(null)");
+                return (RUMBLE_RETURN_FAILURE);
+            }
+            if (rc == RUMBLE_RETURN_IGNORE) {
+                printf("this is where I ign-fail? ;(\r\n");
+                rumble_debug("hook", "Module %s returned ignore on \"%s\"", hook->module, line ? line : "(null)");
+                return (RUMBLE_RETURN_IGNORE);
+            }
         }
     }
 
@@ -343,7 +351,6 @@ ssize_t rumble_service_schedule_hooks(rumbleService *svc, sessionHandle *session
     default:                    break;
     }
 
-    
     return (rumble_service_execute_hooks(hook, session, flags, line));
 }
 

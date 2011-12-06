@@ -14,7 +14,7 @@ void            *get_in_addr(struct sockaddr *sa);
 socketHandle    comm_init(masterHandle *m, const char *port);
 void            comm_accept(socketHandle sock, clientHandle *client);
 dvector         *comm_mxLookup(const char *domain);
-void comm_mxFree(dvector *list);
+void            comm_mxFree(dvector *list);
 socketHandle    comm_open(masterHandle *m, const char *host, unsigned short port);
 rumbleService   *comm_registerService(masterHandle *m, const char *svcName, void * (*init) (void *), const char *port, int threadCount);
 int             comm_setServiceStack(rumbleService *svc, unsigned int stacksize);

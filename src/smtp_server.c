@@ -56,7 +56,7 @@ void *rumble_smtp_init(void *T) {
         session.sender = 0;
         session._svc = svc;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-		rumble_debug("smtp", "Accepted connection from %s on SMTP", session.client->addr);
+        rumble_debug("smtp", "Accepted connection from %s on SMTP", session.client->addr);
 #endif
 
         /* Check for hooks on accept() */
@@ -88,10 +88,16 @@ void *rumble_smtp_init(void *T) {
             }
 
             free(line);
-            if (rc == RUMBLE_RETURN_IGNORE) continue;   /* Skip to next line. */
+            if (rc == RUMBLE_RETURN_IGNORE) {
+                rumble_debug("smtp", "Parser is ignoring request from %s", session.client->addr);
+                continue;   /* Skip to next line. */
+            }
             else if (rc == RUMBLE_RETURN_FAILURE)
                 break;  /* Abort! */
-            else rumble_comm_send(sessptr, rumble_smtp_reply_code(rc)); /* Bad command thing. */
+            else {
+                rumble_comm_send(sessptr, rumble_smtp_reply_code(rc));  /* Bad command thing. */
+                rumble_debug("smtp", "I said to %s: %s", session.client->addr, rumble_smtp_reply_code(rc));
+            }
         }
 
         /* Cleanup */
@@ -296,7 +302,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 rumble_free_address(recipient);         /* flush the memory */
                 return (rc);
             }
-
+            rumble_debug("smtp", "Message from %s can be delivered to <%s@%s>.", session->client->addr, recipient->user, recipient->domain);
             session->flags |= RUMBLE_SMTP_HAS_RCPT;
             return (250);
         }
@@ -320,6 +326,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 }
 
                 session->flags |= RUMBLE_SMTP_HAS_RCPT;
+                rumble_debug("smtp", "Message from %s can be delivered to <%s@%s> (relay).", session->client->addr, recipient->user, recipient->domain);
                 return (251);
             }
 
@@ -435,7 +442,6 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
 #ifdef RUMBLE_DEBUG_STORAGE
     printf("Writing to file %s...\n", filename);
 #endif
-    
     if (!fp)
     {
 #ifdef RUMBLE_DEBUG_STORAGE
@@ -479,16 +485,17 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
     }
 
     fclose(fp);
-    // Run hooks for data filtering prior to adding the message to the queue
+
+    /* Run hooks for data filtering prior to adding the message to the queue */
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_DATA, filename);
-    
     if (rc == RUMBLE_RETURN_OKAY) {
         foreach((address *), el, session->recipients, iter) {
             radb_run_inject(master->_core.mail, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
                             session->sender->raw, el->raw, session->sender->_flags);
         }
     }
+
     free(filename);
     free(fid);
     return (250);
@@ -563,7 +570,7 @@ ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, co
 
     /*
      * Do...nothing ;
-     * Fire post-processing hooks
+     * Fire post-processing hook
      */
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_NOOP, parameters);
@@ -616,7 +623,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         else pass = rumble_decode_base64(digest);
         sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
-		rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
+        rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(user);
         strcpy(digest, pass);
@@ -629,9 +636,9 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         buffer = rumble_decode_base64(digest);
         user = buffer + 1;
         pass = buffer + 2 + strlen(user);
-		sprintf(digest, "<%s>", user);
+        sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
-		rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
+        rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(buffer);
     }
@@ -643,5 +650,5 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
     } else {
         session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);
         return (530);
-	}
+    }
 }

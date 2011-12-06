@@ -157,10 +157,10 @@ int rumble_unbase64(unsigned char *dest, const unsigned char *src, size_t srclen
  */
 char *rumble_decode_base64(const char *src) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     size_t  ilen = strlen(src);
-    char    *output = (char*) malloc(ilen);
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char    *output = (char *) malloc(ilen);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_unbase64((unsigned char *) output, (const unsigned char *) src, ilen);
     return (output);

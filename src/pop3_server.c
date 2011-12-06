@@ -80,7 +80,7 @@ void *rumble_pop3_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
-				rumble_debug("pop3", "%s said: %s %s", session.client->addr, cmd, arg);
+                rumble_debug("pop3", "%s said: %s %s", session.client->addr, cmd, arg);
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
                     break;

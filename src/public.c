@@ -2,7 +2,8 @@
 #include "rumble.h"
 FILE            *sysLog = 0;
 masterHandle    *public_master_handle = 0;
-dvector			*debugLog = 0;
+dvector         *debugLog = 0;
+char            shutUp = 0;
 
 /*
  =======================================================================================================================
@@ -115,11 +116,13 @@ address *rumble_parse_mail_address(const char *addr) {
                 memset(usr->tag, 0, 128);
             }
         }
-	// Try plain old "mail from: user@domain" ?
+
+        /* Try plain old "mail from: user@domain" ? */
     } else if (strlen(addr)) {
-		if (strstr(addr, ": ")) addr = strstr(addr, ": ") + 2;
-		else if (strchr(addr, ':')) addr = strchr(addr, ':') + 1;
-		else addr = 0;
+        if (strstr(addr, ": ")) addr = strstr(addr, ": ") + 2;
+        else if (strchr(addr, ':'))
+            addr = strchr(addr, ':') + 1;
+        else addr = 0;
         if (addr) sscanf(addr, "%128[^@ ]@%128c", usr->user, usr->domain);
     }
 
@@ -419,47 +422,54 @@ void statusLog(const char *msg, ...) {
         vfprintf(sysLog, msg, vl);
         rc = fprintf(sysLog, "\r\n");
         fflush(sysLog);
-		va_end(vl);
-		va_start(vl, msg);
-		rumble_vdebug("core", msg, vl);
+        va_end(vl);
+        va_start(vl, msg);
+        rumble_vdebug("core", msg, vl);
     }
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_vdebug(const char *svc, const char *msg, va_list args) {
 
-void rumble_vdebug(const char* svc, const char *msg, va_list args) {
-
-    /*~~~~~~~~~~~~~~~~~~*/
-    time_t      rawtime;
-    struct tm   *timeinfo;
-	char		dummy[512], txt[130];
-	char		*dstring;
-	dvector_element* obj;
-    int         rc = 0;
-    /*~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+    time_t          rawtime;
+    struct tm       *timeinfo;
+    char            dummy[512],
+                    txt[130];
+    char            *dstring;
+    dvector_element *obj;
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (debugLog) {
-		dstring = (char*) debugLog->last->object;
-		obj = debugLog->last;
-		obj->next = debugLog->first;
-		obj->prev->next = 0;
-		debugLog->last = obj->prev;
-		debugLog->first->prev = obj;
-		debugLog->first = obj;
-		obj->prev = 0;
+        dstring = (char *) debugLog->last->object;
+        obj = debugLog->last;
+        obj->next = debugLog->first;
+        obj->prev->next = 0;
+        debugLog->last = obj->prev;
+        debugLog->first->prev = obj;
+        debugLog->first = obj;
+        obj->prev = 0;
         time(&rawtime);
         timeinfo = gmtime(&rawtime);
         strftime(txt, 128, "%Y/%m/%d %X", timeinfo);
         sprintf(dummy, "%s [%s]: \t %s\r\n", txt, (svc ? svc : "core"), msg);
         vsnprintf(dstring, 511, dummy, args);
-        printf("%s", dstring);
+        if (!shutUp) printf("%s", dstring);
     }
 }
 
-void rumble_debug(const char* svc, const char *msg, ...) {
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_debug(const char *svc, const char *msg, ...) {
 
-    /*~~~~~~~~~~~~~~~~~~*/
-    va_list     vl;
-    /*~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~*/
+    va_list vl;
+    /*~~~~~~~*/
 
     if (debugLog) {
         va_start(vl, msg);

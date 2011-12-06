@@ -321,7 +321,7 @@ void *rumble_worker_process(void *m) {
 
         /* Local delivery? */
         if (rumble_domain_exists(item->recipient->domain)) {
-            printf("%s is local domain, looking for user %s@%s\n", item->recipient->domain, item->recipient->user, item->recipient->domain);
+            rumble_debug("mailman", "Have mail for %s (local domain), looking for user %s@%s", item->recipient->domain, item->recipient->user, item->recipient->domain);
             user = rumble_account_data(0, item->recipient->user, item->recipient->domain);
             if (user) {
 
@@ -343,7 +343,7 @@ void *rumble_worker_process(void *m) {
                         const char  *path;
                         /*~~~~~~~~~~~~~~~~~~~*/
 
-                        printf("Delivering to mailbox %s @ %s...\n", user->user, user->domain->name);
+                        rumble_debug("mailman", "Delivering message %s to mailbox %s @ %s...", item->fid, user->user, user->domain->name);
 
                         /* Start by making a copy of the letter */
                         fsize = rumble_copy_mail(master, item->fid, user->user, user->domain->name, (char **) &item->fid);
@@ -359,7 +359,7 @@ void *rumble_worker_process(void *m) {
                         sprintf(ofilename, "%s/%s", path, item->fid);
                         sprintf(nfilename, "%s/%s.msg", path, item->fid);
 #ifdef RUMBLE_DEBUG_STORAGE
-                        printf("Moving %s to %s\n", ofilename, nfilename);
+                        rumble_debug("mailman", "Moving %s to %s", ofilename, nfilename);
 #endif
                         if (rename(ofilename, nfilename)) {
                             perror("Couldn't move file");
@@ -442,10 +442,10 @@ void *rumble_worker_process(void *m) {
             d_iterator                  iter;
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-            printf("%s@%s is a foreign user\n", item->recipient->user, item->recipient->domain);
+           rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host.", item->fid, item->recipient->user, item->recipient->domain);
             mx = comm_mxLookup(item->recipient->domain);
             if (!mx or!mx->size) {
-                printf("Couldn't look up domain %s, faking a SMTP 450 error.\n", item->recipient->domain);
+                rumble_debug("mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", item->recipient->domain);
                 delivered = 450;
             } else if (mx->size) {
                 filename = (char *) calloc(1, 256);
@@ -453,7 +453,7 @@ void *rumble_worker_process(void *m) {
                 sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
                 foreach((mxRecord *), mxr, mx, iter) {
                     if (rhdict(badmx, mxr->host)) continue; /* ignore bogus MX records */
-                    printf("Trying %s (%u)...\n", mxr->host, mxr->preference);
+                    rumble_debug("mailman", "Trying %s (%u)...\n", mxr->host, mxr->preference);
 
                     /* Anything below 300 would be good here :> */
                     res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient);
@@ -464,7 +464,7 @@ void *rumble_worker_process(void *m) {
                     free(res->replyMessage);
                     free(res);
                     if (delivered <= 299) break;            /* yay! */
-                    printf("MTA <%s> returned code %d (%s)\n", res->replyServer, delivered, res->replyMessage);
+                    rumble_debug("mailman", "MTA <%s> returned code %d (%s)", res->replyServer, delivered, res->replyMessage);
                 }
 
                 free(filename);
@@ -473,11 +473,11 @@ void *rumble_worker_process(void *m) {
             if (delivered >= 500) {
 
                 /* critical failure, giving up. */
-                printf("Critical failure, giving up for now.\n");
+                rumble_debug("mailman", "Critical failure, giving up for now.",0);
             } else if (delivered >= 400) {
 
                 /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
-                printf("MTA reported temporary error(%u), queuing mail for later\n", delivered);
+                rumble_debug("mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
                 sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
                 statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
                 if (master->_core.mail->dbType == RADB_MYSQL) {
@@ -485,10 +485,10 @@ void *rumble_worker_process(void *m) {
                 }
 
                 radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
-                printf("Queued\n");
+                rumble_debug("mailman", "Mail %s queued", item->fid);
                 memset(tmp, 0, 256);
             } else {
-                printf("Mail delivered.\r\n");
+                rumble_debug("mailman", "Mail %s delivered.", item->fid);
             }
 
             if (mx) comm_mxFree(mx);    /* Clean up DNS records. */
