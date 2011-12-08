@@ -273,7 +273,7 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
     rumble_mailman_commit: Commits any changes done to the folder, deleting deleted letters and updating any flags set
  =======================================================================================================================
  */
-uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_folder *folder) {
+uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_folder *folder, int expungedOnly) {
 
     /*~~~~~~~~~~~~~~~~~~~~~*/
     int             r;
@@ -289,10 +289,10 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
                                                                                             "storagefolder");
     r = 0;
     rumble_rw_start_write(session->bag->rrw);   /* Lock the bag */
-    printf("Running COMMIT on <%s>\n", folder->name);
+    rumble_debug("mailman", "Running COMMIT on <%s>\n", folder->name);
     dforeach((rumble_letter *), letter, folder->letters, iter) {
-        printf("parsing letter no. %"PRIu64 " with flags %08x\n", letter->id, letter->flags);
-        if ((letter->flags & RUMBLE_LETTER_DELETED))
+ //       printf("parsing letter no. %"PRIu64 " with flags %08x\n", letter->id, letter->flags);
+        if ( (!expungedOnly && (letter->flags & RUMBLE_LETTER_DELETED)) || (expungedOnly && (letter->flags & RUMBLE_LETTER_EXPUNGE)) ) 
         {
 
             /* Delete it? */
@@ -304,14 +304,14 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             dbo = radb_prepare(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
             radb_step(dbo);
             radb_cleanup(dbo);
-            printf("DELETE FROM mbox WHERE id = %"PRIu64 "\n", letter->id);
+//            printf("DELETE FROM mbox WHERE id = %"PRIu64 "\n", letter->id);
             r++;
             free(letter->fid);
             letter->fid = 0;
             free(letter);
-            printf("size of folder before deletion: %u", folder->letters->size);
+  //          printf("size of folder before deletion: %u", folder->letters->size);
             dvector_delete(&iter);
-            printf("size of folder after deletion: %u", folder->letters->size);
+   //         printf("size of folder after deletion: %u", folder->letters->size);
         } else if (letter->flags != letter->_flags)
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)

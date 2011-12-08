@@ -118,6 +118,7 @@ void *rumble_pop3_init(void *T) {
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
+        rumble_mailman_commit(pops, rumble_mailman_current_folder(pops),1); // Delete letters marked "expunged" to prevent IMAP mixup
         rumble_free_account(pops->account);
         rumble_mailman_close_bag(pops->bag);
 
@@ -358,7 +359,7 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     foreach((rumble_letter *), letter, folder->letters, iter) {
         j++;
         if (j == i) {
-            letter->flags |= RUMBLE_LETTER_DELETED;
+            letter->flags |= RUMBLE_LETTER_EXPUNGE; // Used to be _DELETED, but that was baaad.
             found = 1;
             break;
         }

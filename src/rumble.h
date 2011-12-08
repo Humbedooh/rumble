@@ -718,7 +718,7 @@ void                            rumble_mailman_close_bag(rumble_mailman_shared_b
 rumble_mailman_shared_folder    *rumble_mailman_current_folder(accountSession *sess);
 rumble_mailman_shared_bag       *rumble_letters_retrieve_shared(uint32_t uid);
 void                            rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);
-uint32_t                        rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder);
+uint32_t                        rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder, int expungedOnly);
 void                            rumble_mailman_free(rumble_mailman_shared_bag *bag);
 uint32_t                        rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
 size_t                          rumble_mailman_copy_letter
