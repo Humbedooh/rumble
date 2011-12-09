@@ -127,14 +127,14 @@ void sa_config_load(masterHandle *master) {
                     rumble_string_lower(key);
                     if (!strcmp(key, "comment")) {
                         printf("%s\r\n", value);
-                        statusLog("CFG: %s", value);
+                        rumble_debug("spamassassin", "CFG: %s", value);
                     } else rsdict(sa_config, key, value);
                 } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(sa_config, key, value);
                 }
             } else {
-                statusLog("ERROR: Could not read %s!", cfgfile);
+                rumble_debug("spamassassin", "ERROR: Could not read %s!", cfgfile);
                 fprintf(stderr, "<config> Error: Could not read %s!\n", cfgfile);
                 exit(EXIT_FAILURE);
             }
@@ -143,7 +143,7 @@ void sa_config_load(masterHandle *master) {
         free(buffer);
         fclose(config);
     } else {
-        statusLog("ERROR: Could not open %s!", cfgfile);
+        rumble_debug("spamassassin", "ERROR: Could not open %s!", cfgfile);
         fprintf(stderr, "<config> Error: Could not read %s!\n", cfgfile);
         exit(EXIT_FAILURE);
     }
@@ -157,8 +157,7 @@ ssize_t sa_check(sessionHandle *session, const char *filename) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    buffer[2001],
-            *line,
-            b;
+            *line;
     FILE    *fp;
     size_t  fsize,
             bread;
