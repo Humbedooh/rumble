@@ -4,14 +4,16 @@
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
+static void         cleanup(void);
 extern masterHandle *rumble_database_master_handle;
 extern masterHandle *public_master_handle;
 extern masterHandle *comm_master_handle;
 extern int (*lua_callback) (lua_State *, void *, void *);
-extern FILE             *sysLog;
+FILE                    *sysLog;
 extern dvector          *debugLog;
 extern char             shutUp;
 static dvector          *s_args;
+char                    *executable;
 #ifdef RUMBLE_MSC
 SERVICE_STATUS          ServiceStatus;
 SERVICE_STATUS_HANDLE   hStatus;
@@ -67,7 +69,7 @@ void ServiceMain(int argc, char **argv) {
     /*~~~~~~*/
 
     shutUp = 1;
-    statusLog("Running as a Windows Service");
+    rumble_debug("startup", "Running as a Windows Service");
     ServiceStatus.dwServiceType = SERVICE_WIN32;
     ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
     ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
@@ -79,17 +81,17 @@ void ServiceMain(int argc, char **argv) {
     if (hStatus == (SERVICE_STATUS_HANDLE) 0) {
 
         /* Registering Control Handler failed */
-        statusLog("ERROR: Couldn't register as a Windows service");
+        rumble_debug("startup", "ERROR: Couldn't register as a Windows service");
         return;
     }
 
-    statusLog("Successfully registered as service, running main processes");
+    rumble_debug("startup", "Successfully registered as service, running main processes");
 
     /* Initialize Service */
     error = InitService();
-    statusLog("Returned from main process");
+    rumble_debug("startup", "Returned from main process");
     if (error) {
-        statusLog("ERROR: rumbleStart() returned badly, shutting down.");
+        rumble_debug("startup", "ERROR: rumbleStart() returned badly, shutting down.");
 
         /* Initialization failed */
         ServiceStatus.dwCurrentState = SERVICE_STOPPED;
@@ -98,7 +100,7 @@ void ServiceMain(int argc, char **argv) {
         return;
     }
 
-    statusLog("Sending SERVICE_RUNNING status to Windows Services");
+    rumble_debug("startup", "Sending SERVICE_RUNNING status to Windows Services");
 
     /* We report the running status to SCM. */
     ServiceStatus.dwCurrentState = SERVICE_RUNNING;
@@ -109,10 +111,158 @@ void ServiceMain(int argc, char **argv) {
         Sleep(999);
     }
 
-    statusLog("EXIT: Program halted by services, shutting down.");
+    rumble_debug("startup", "EXIT: Program halted by services, shutting down.");
     exit(EXIT_SUCCESS);
     return;
 }
+
+#else
+#   include <signal.h>
+#   include <execinfo.h>
+#   include <signal.h>
+#   include <ucontext.h>
+#   include <unistd.h>
+
+/*
+ -----------------------------------------------------------------------------------------------------------------------
+    This structure mirrors the one found in /usr/include/asm/ucontext.h
+ -----------------------------------------------------------------------------------------------------------------------
+ */
+typedef struct _sig_ucontext
+{
+    unsigned long       uc_flags;
+    struct ucontext     *uc_link;
+    stack_t             uc_stack;
+    struct sigcontext   uc_mcontext;
+    sigset_t            uc_sigmask;
+} sig_ucontext_t;
+static void         signal_handler(int sig, siginfo_t *info, void *ucontext);
+void                init_signals(void);
+struct sigaction    sigact;
+uint32_t            lastClick = 0;
+int                 alreadyDead = 0;
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
+    if (sig == SIGHUP) printf("FATAL: Program hung up\n");
+    if (sig == SIGSEGV || sig == SIGBUS) {
+        if (!alreadyDead) {
+
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            void            *array[50];
+            void            *caller_address;
+            char            **messages;
+            int             size,
+                            i;
+            sig_ucontext_t  *uc;
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+            alreadyDead++;
+            uc = (sig_ucontext_t *) ucontext;
+
+            /*
+             * caller_address = (void *) uc->uc_mcontext.eip;
+             */
+            rumble_debug("debug", "Caught signal %d (%s), address is %p\n", sig, strsignal(sig), info->si_addr);
+            size = backtrace(array, 50);
+
+            /*
+             * overwrite sigaction with caller's address ;
+             * array[1] = caller_address;
+             */
+            messages = backtrace_symbols(array, size);
+
+            /* skip first stack frame (points here) */
+            for (i = 1; i < size && messages != NULL; ++i) {
+                rumble_debug("debug", "[backtrace]: (%d) %s\n", i, messages[i]);
+            }
+
+            cleanup();
+        } else exit(0);
+    }
+
+    if (sig == SIGQUIT) {
+        printf("User ended the program - bye bye!\r\n");
+        cleanup();
+    }
+
+    if (sig == SIGKILL) {
+        printf("Rumble got killed :(\r\n");
+        cleanup();
+    }
+
+    if (sig == SIGTERM) {
+        printf("Rumble got killed :(\r\n");
+        cleanup();
+    }
+
+    if (sig == SIGINT) {
+        if (time(0) - lastClick < 2) exit(0);
+        printf("Ctrl+C detected. Press it again to exit rumble.\r\n");
+        lastClick = time(0);
+    }
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void init_signals(void) {
+    sigact.sa_sigaction = signal_handler;
+    sigemptyset(&sigact.sa_mask);
+    sigact.sa_flags = SA_RESTART | SA_SIGINFO;
+    if (sigaction(SIGKILL, &sigact, 0) < 0) printf("Couldn't lock onto SIGKILL\n");
+    sigaction(SIGINT, &sigact, 0);
+
+    /*
+     * sigaddset(&sigact.sa_mask, SIGSEGV);
+     */
+    sigaction(SIGSEGV, &sigact, 0);
+
+    /*
+     * sigaddset(&sigact.sa_mask, SIGBUS);
+     */
+    sigaction(SIGBUS, &sigact, 0);
+
+    /*
+     * sigaddset(&sigact.sa_mask, SIGQUIT);
+     */
+    sigaction(SIGQUIT, &sigact, 0);
+
+    /*
+     * sigaddset(&sigact.sa_mask, SIGHUP);
+     */
+    sigaction(SIGHUP, &sigact, 0);
+
+    /*
+     * sigaddset(&sigact.sa_mask, SIGKILL);
+     * *sigaddset(&sigact.sa_mask, SIGTERM);
+     */
+    sigaction(SIGKILL, &sigact, (struct sigaction *) NULL);
+}
+
+#   ifdef DUMPSTACK
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static void dumpstack(void) {
+
+    /*~~~~~~~~~~~~~*/
+    char    gdb[160];
+    /*~~~~~~~~~~~~~*/
+
+    sprintf(gdb, "echo 'where\ndetach' | gdb --quiet %s %d > %s_dump.log", executable, getpid(), executable);
+
+    /* Change the dbx to gdb */
+    system(gdb);
+    return;
+}
+#   endif
 #endif
 
 /*
@@ -134,8 +284,7 @@ int rumbleStart(void) {
     rumble_database_master_handle = master;
     public_master_handle = master;
     comm_master_handle = master;
-    printf("Starting Rumble Mail Server (v/%u.%02u.%04u)\r\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
-    statusLog("Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    rumble_debug("startup", "Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     master->_core.uptime = time(0);
     lua_callback = rumble_lua_callback;
     master->_core.modules = dvector_init();
@@ -157,35 +306,28 @@ int rumbleStart(void) {
     rumble_database_load(master, 0);
     rumble_database_update_domains();
     printf("%-48s", "Launching core service...");
-    statusLog("Launching core service");
+    rumble_debug("startup", "Launching core service");
     svc = comm_registerService(master, "mailman", rumble_worker_init, 0, 1);
     comm_setServiceStack(svc, 1024 * 1024);
     rc = comm_startService(svc);
-    printf("[OK]\n");
     svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 128kb (should be enough) */
     if (rumble_config_int(master, "enablesmtp")) {
-        printf("%-48s", "Launching SMTP service...");
-        statusLog("Launching SMTP service");
+        rumble_debug("core", "Launching SMTP service");
         rc = comm_startService(svc);
         if (!rc) {
-            printf("[BAD]\r\n");
-            fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
+            rumble_debug("core", "ABORT: Couldn't create socket for service!");
             exit(EXIT_SUCCESS);
         }
-
-        printf("[OK]\n");
     }
 
     svc = comm_registerService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 256kb (should be enough) */
     if (rumble_config_int(master, "enablepop3")) {
-        printf("%-48s", "Launching POP3 service...");
-        statusLog("Launching POP3 service...");
+        rumble_debug("core", "Launching POP3 service...");
         rc = comm_startService(svc);
         if (!rc) {
-            printf("[BAD]\r\n");
-            fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
+            rumble_debug("core", "ABORT: Couldn't create socket for service!");
             exit(EXIT_SUCCESS);
         }
 
@@ -195,26 +337,22 @@ int rumbleStart(void) {
     svc = comm_registerService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 1024 * 1024); /* Set stack size for service to 1MB (should be enough) */
     if (rumble_config_int(master, "enableimap4")) {
-        printf("%-48s", "Launching IMAP4 service...");
-        statusLog("Launching IMAP4 service...");
+        rumble_debug("core", "Launching IMAP4 service...");
         rc = comm_startService(svc);
         if (!rc) {
-            printf("[BAD]\r\n");
-            fprintf(stderr, "ABORT: Couldn't create socket for service!\r\n");
+            rumble_debug("startup", "ABORT: Couldn't create socket for service!");
             exit(EXIT_SUCCESS);
         }
-
-        printf("[OK]\n");
     }
 
     rumble_master_init(master);
     rumble_modules_load(master);
     if (rhdict(s_args, "--service")) {
-        statusLog("Core: --service enabled, Listening for demands");
+        rumble_debug("startup", "--service enabled, going stealth.");
         return (EXIT_SUCCESS);
     }
 
-    statusLog("Rumble is up and running, listening for incoming calls!");
+    rumble_debug("startup", "Rumble is up and running, listening for incoming calls!");
     sleep(999999);
     return (EXIT_SUCCESS);
 }
@@ -228,8 +366,10 @@ int main(int argc, char **argv) {
     /*~~~~~~~~~~~~~~~~*/
     int     x;
     char    r_path[512];
+    char    *dstring;
     /*~~~~~~~~~~~~~~~~*/
 
+    executable = *(argv);
     shutUp = 0;
     fflush(stdout);
     s_args = dvector_init();
@@ -270,36 +410,43 @@ int main(int argc, char **argv) {
         rsdict(s_args, argv[x], "true");
     }
 
+    debugLog = dvector_init();
+    for (x = 0; x < 500; x++) {
+        dstring = (char *) calloc(1, 512);
+        dvector_add(debugLog, dstring);
+    }
+
     if (strlen(r_path)) {
 
         /*~~~~~~~~~~~~~~~~~~*/
         char    tmpfile[1024];
-        char    *dstring;
-        int     x;
         /*~~~~~~~~~~~~~~~~~~*/
-
-        debugLog = dvector_init();
-        for (x = 0; x < 200; x++) {
-            dstring = (char *) calloc(1, 512);
-            dvector_add(debugLog, dstring);
-        }
 
         sprintf(tmpfile, "%s/rumble_status.log", r_path);
         printf("opening %s\n", tmpfile);
-        sysLog = fopen(tmpfile, "a");
-    } else sysLog = fopen("rumble_status.log", "a");
-    fprintf(sysLog, "\r\n------------------------------------------------------\r\n");
-    statusLog("New instance of Rumble started");
-    fprintf(sysLog, "------------------------------------------------------\r\n");
+        sysLog = fopen(tmpfile, "w");
+    } else sysLog = fopen("rumble_status.log", "w");
+    if (!sysLog) {
+        printf("Error: Couldn't open rumble_status.log for writing.\r\nEither rumble is already running, or I don't have access to write to this folder.\r\n");
+        exit(0);
+    }
+
+    fprintf(sysLog, "---------------------------------------------------\r\n");
+    fprintf(sysLog, "New instance of Rumble started, clearing log file.\r\n");
+    fprintf(sysLog, "---------------------------------------------------\r\n");
     if (strlen(r_path)) {
-        printf("Entering %s\r\n", r_path);
-        statusLog("Entering directory: %s", r_path);
+        rumble_debug("startup", "Entering directory: %s", r_path);
         rsdict(s_args, "execpath", r_path);
     }
 
-    statusLog("Parsing exec arguments");
+    rumble_debug("startup", "Parsing exec arguments");
+#ifndef RUMBLE_MSC
+    init_signals();
+#else
+    atexit(&cleanup);
+#endif
     if (rhdict(s_args, "--service")) {
-        statusLog("--service detected, launching daemon process");
+        rumble_debug("startup", "--service detected, launching daemon process");
         shutUp = 1;
 
         /*~~~~~~~~~~~~~*/
@@ -326,4 +473,34 @@ int main(int argc, char **argv) {
         rumbleStart();
         return (0);
     }
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void cleanup(void) {
+
+    /*~~~~~~~~~~~~~~~~~~~*/
+    /* Do stuff later... */
+    dvector_element *obj;
+    const char      *entry;
+    /*~~~~~~~~~~~~~~~~~~~*/
+
+    rumble_debug("exit", "Cleaning up and writing log file.");
+    if (sysLog) {
+        obj = debugLog->last;
+        while (obj) {
+            entry = (char *) obj->object;
+            if (entry && strlen(entry)) {
+                fprintf(sysLog, "%s\r\n", entry);
+            }
+
+            obj = obj->prev;
+        }
+    }
+
+    /*
+     * fclose(sysLog);
+     */
 }

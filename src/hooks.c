@@ -39,7 +39,7 @@ void rumble_hook_function(void *handle, uint32_t flags, ssize_t (*func) (session
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS)
     printf("<debug :: hooks> Adding hook of type %#x from %s\n", hook->flags, hook->module);
 #endif
-    statusLog("Adding hook of type %#x from %s", hook->flags, hook->module);
+    rumble_debug("hook", "Adding hook of type %#x from %s", hook->flags, hook->module);
     switch (flags & RUMBLE_HOOK_STATE_MASK)
     {
     case RUMBLE_HOOK_ACCEPT:
@@ -179,6 +179,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
                 printf("<debug :: hooks> Hook %p claimed failure, aborting connection!\n", (void *) hookFunc);
 #endif
+                rumble_debug("module", "Module \"%s\" aborted the session with %s!", hook->module, session->client->addr);
                 return (RUMBLE_RETURN_FAILURE);
             }
 
@@ -187,6 +188,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
                 printf("<debug :: hooks> Hook %p took over, skipping to next command.\n", (void *) hookFunc);
 #endif
+                rumble_debug("module", "Module \"%s\" denied a request from %s", hook->module, session->client->addr);
                 return (RUMBLE_RETURN_IGNORE);
             }
         }
@@ -316,9 +318,10 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
             }
 
             if (rc == RUMBLE_RETURN_FAILURE) {
-                rumble_debug("hook", "Module %s returned failure on \"%s\"", hook->module, line ? line :  "(null)");
+                rumble_debug("hook", "Module %s returned failure on \"%s\"", hook->module, line ? line : "(null)");
                 return (RUMBLE_RETURN_FAILURE);
             }
+
             if (rc == RUMBLE_RETURN_IGNORE) {
                 rumble_debug("hook", "Module %s returned ignore on \"%s\"", hook->module, line ? line : "(null)");
                 return (RUMBLE_RETURN_IGNORE);

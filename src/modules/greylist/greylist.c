@@ -1,10 +1,15 @@
+/*$I0
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ */
 
-/* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
+
+   /* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
 #include "../../rumble.h"
 #include <string.h>
 #define GREYLIST_MAX_AGE    432000  /* Grey-list records will linger for 5 days. */
 #define GREYLIST_MIN_AGE    599     /* Put new triplets on hold for 10 minutes */
-cvector* rumble_greyList;
+cvector * rumble_greyList;
 typedef struct
 {
     char    *what;
@@ -93,7 +98,8 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
         rcprintf(session, "451 4.7.1 Grey-listed for %u seconds. See http://www.greylisting.org\r\n", GREYLIST_MIN_AGE - n);
         rumble_debug("module", "Mail from %s for %s greylisted for %u seconds.\r\n", session->client->addr, junk, GREYLIST_MIN_AGE - n);
         return (RUMBLE_RETURN_IGNORE);  /* Tell rumble to ignore the command quietly. */
-    } 
+    }
+
     /* Otherwise, we just return with EXIT_SUCCESS and let the server continue. */
     return (RUMBLE_RETURN_OKAY);
 }
@@ -106,6 +112,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "Greylisting module";
     modinfo->description = "Standard greylisting module for rumble.\nAdds a 10 minute quarantine on unknown from-to combinations to prevent spam.";
     rumble_greyList = cvector_init();
+
     /* Hook the module to the DATA command on the SMTP server. */
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT, rumble_greylist);
     return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */

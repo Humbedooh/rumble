@@ -1,6 +1,6 @@
 /*
  * File: private.h Author: Administrator Private functions for rumble Created on January 9, 2011, 6:53
- * PM
+ * P
  */
 #ifndef PRIVATE_H
 #   define PRIVATE_H

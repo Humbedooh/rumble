@@ -289,9 +289,16 @@ static int rumble_lua_deleteaccount(lua_State *L) {
     }
 
     if (acc and acc->uid) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM accounts WHERE id = %u", acc->uid);
+
+        /*~~~~~~~~~~~~~~*/
+        char    stmt[512];
+        /*~~~~~~~~~~~~~~*/
+
+        sprintf(stmt, "DELETE FROM accounts WHERE id = %u", acc->uid);
+        radb_run(rumble_database_master_handle->_core.db, stmt);
         path = strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
         bag = rumble_mailman_open_bag(acc->uid);
+        rumble_debug("Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
             dforeach(rmsf, folder, bag->folders, diter) {
                 dforeach((rumble_letter *), letter, folder->letters, liter) {
@@ -503,22 +510,24 @@ static int rumble_lua_getdomains(lua_State *L) {
     lua_newtable(L);
     cforeach((rumble_domain *), domain, domains, iter) {
         x++;
-//        lua_pushinteger(L, x);
+
+        /*
+         * lua_pushinteger(L, x);
+         */
         lua_pushstring(L, domain->name);
         lua_newtable(L);
-        
- //       lua_pushstring(L, "name");
-  //      lua_pushstring(L, domain->name);
-//        lua_rawset(L, -3);
-        
-            lua_pushstring(L, "path");
-            lua_pushstring(L, domain->path);
-            lua_rawset(L, -3);
 
-            lua_pushstring(L, "flags");
-            lua_pushinteger(L, domain->flags);
-            lua_rawset(L, -3);
-        
+        /*
+         * lua_pushstring(L, "name");
+         * * lua_pushstring(L, domain->name);
+         * * lua_rawset(L, -3);
+         */
+        lua_pushstring(L, "path");
+        lua_pushstring(L, domain->path);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "flags");
+        lua_pushinteger(L, domain->flags);
+        lua_rawset(L, -3);
         lua_rawset(L, -3);
     }
 
@@ -595,7 +604,7 @@ static int rumble_lua_updatedomain(lua_State *L) {
     const char      *domain,
                     *newname,
                     *newpath;
-    uint32_t flags;
+    uint32_t        flags;
     rumble_domain   *dmn;
     /*~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -607,8 +616,8 @@ static int rumble_lua_updatedomain(lua_State *L) {
     flags = luaL_optint(L, 4, 0);
     dmn = rumble_domain_copy(domain);
     if (dmn) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE domains SET domain = %s, storagepath = %s, flags = %u WHERE id = %u", newname,
-                        newpath, flags, dmn->id);
+        radb_run_inject(rumble_database_master_handle->_core.db,
+                        "UPDATE domains SET domain = %s, storagepath = %s, flags = %u WHERE id = %u", newname, newpath, flags, dmn->id);
         rumble_database_update_domains();
         radb_run_inject(rumble_database_master_handle->_core.db, "UPDATE accounts SET domain = %s WHERE domain = %s", newname, dmn->name);
         free(dmn->name);
@@ -1064,9 +1073,10 @@ static int rumble_lua_saveaccount(lua_State *L) {
             lua_pushboolean(L, 1);
         } else if (!x) {
             radb_run_inject(rumble_database_master_handle->_core.db,
-                            "INSERT INTO ACCOUNTS (user,domain,type,password,arg) VALUES (%s,%s,%s,%s,%s)", user, domain, mtype, password,
-                            arguments);
+                            "INSERT INTO ACCOUNTS (id,user,domain,type,password,arg) VALUES (NULL,%s,%s,%s,%s,%s)", user, domain, mtype,
+                            password, arguments);
             lua_pushboolean(L, 1);
+            rumble_debug("Lua", "Created new account: <%s@%s>", user, domain);
         } else lua_pushboolean(L, 0);
     } else {
         lua_pushboolean(L, 0);
@@ -1084,7 +1094,7 @@ static int rumble_lua_createdomain(lua_State *L) {
     /*~~~~~~~~~~~~~~~~*/
     const char  *domain,
                 *path;
-    uint32_t flags;
+    uint32_t    flags;
     /*~~~~~~~~~~~~~~~~*/
 
     /*$2
@@ -1099,9 +1109,11 @@ static int rumble_lua_createdomain(lua_State *L) {
     flags = luaL_optint(L, 3, 0);
     lua_settop(L, 0);
     if (!rumble_domain_exists(domain)) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (domain,storagepath,flags) VALUES (%s,%s,%u)", domain, path,flags);
+        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (id,domain,storagepath,flags) VALUES (NULL,%s,%s,%u)",
+                        domain, path, flags);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
+        rumble_debug("Lua", "Created new domain: %s", domain);
     } else lua_pushboolean(L, 0);
     return (1);
 }
@@ -1129,6 +1141,7 @@ static int rumble_lua_deletedomain(lua_State *L) {
         radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM domains WHERE domain = %s", domain);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
+        rumble_debug("Lua", "Deleted domain: %s", domain);
     } else lua_pushboolean(L, 0);
     return (1);
 }

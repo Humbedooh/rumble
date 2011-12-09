@@ -289,10 +289,13 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
                                                                                             "storagefolder");
     r = 0;
     rumble_rw_start_write(session->bag->rrw);   /* Lock the bag */
-    rumble_debug("mailman", "Running COMMIT on <%s>\n", folder->name);
+    rumble_debug("mailman", "Cleaning up %s@%s's folder <%s>\n", session->account->user, session->account->domain->name, folder->name);
     dforeach((rumble_letter *), letter, folder->letters, iter) {
- //       printf("parsing letter no. %"PRIu64 " with flags %08x\n", letter->id, letter->flags);
-        if ( (!expungedOnly && (letter->flags & RUMBLE_LETTER_DELETED)) || (expungedOnly && (letter->flags & RUMBLE_LETTER_EXPUNGE)) ) 
+
+        /*
+         * printf("parsing letter no. %"PRIu64 " with flags %08x\n", letter->id, letter->flags);
+         */
+        if ((!expungedOnly && (letter->flags & RUMBLE_LETTER_DELETED)) || (expungedOnly && (letter->flags & RUMBLE_LETTER_EXPUNGE)))
         {
 
             /* Delete it? */
@@ -304,14 +307,23 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             dbo = radb_prepare(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
             radb_step(dbo);
             radb_cleanup(dbo);
-//            printf("DELETE FROM mbox WHERE id = %"PRIu64 "\n", letter->id);
+
+            /*
+             * printf("DELETE FROM mbox WHERE id = %"PRIu64 "\n", letter->id);
+             */
             r++;
             free(letter->fid);
             letter->fid = 0;
             free(letter);
-  //          printf("size of folder before deletion: %u", folder->letters->size);
+
+            /*
+             * printf("size of folder before deletion: %u", folder->letters->size);
+             */
             dvector_delete(&iter);
-   //         printf("size of folder after deletion: %u", folder->letters->size);
+
+            /*
+             * printf("size of folder after deletion: %u", folder->letters->size);
+             */
         } else if (letter->flags != letter->_flags)
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
@@ -468,8 +480,8 @@ size_t rumble_mailman_copy_letter(rumble_mailbox *account, rumble_letter *letter
         fclose(in);
         fclose(out);
         radb_run_inject(rumble_database_master_handle->_core.mail,
-                        "INSERT INTO mbox (uid, fid, folder, size, flags) VALUES (%u, %s, %l, %u, %u)", account->uid, filename, folder->id,
-                        letter->size, letter->flags | RUMBLE_LETTER_RECENT);
+                        "INSERT INTO mbox (id,uid, fid, folder, size, flags) VALUES (NULL,%u, %s, %l, %u, %u)", account->uid, filename,
+                        folder->id, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
         free(filename);
     }
 
@@ -708,7 +720,7 @@ rumble_parsed_letter *rumble_mailman_readmail_private(FILE *fp, const char *boun
 
                     /*
                      * printf(".");
-                     * New body, malloc it.
+                     * New body, malloc it
                      */
                     if (!letter->body) {
                         letter->body = (char *) calloc(1, llen + 1);

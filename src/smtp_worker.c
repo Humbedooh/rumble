@@ -321,7 +321,8 @@ void *rumble_worker_process(void *m) {
 
         /* Local delivery? */
         if (rumble_domain_exists(item->recipient->domain)) {
-            rumble_debug("mailman", "Have mail for %s (local domain), looking for user %s@%s", item->recipient->domain, item->recipient->user, item->recipient->domain);
+            rumble_debug("mailman", "Have mail for %s (local domain), looking for user %s@%s", item->recipient->domain,
+                         item->recipient->user, item->recipient->domain);
             user = rumble_account_data(0, item->recipient->user, item->recipient->domain);
             if (user) {
 
@@ -367,7 +368,7 @@ void *rumble_worker_process(void *m) {
 
                         free(ofilename);
                         free(nfilename);
-                        radb_run_inject(master->_core.mail, "INSERT INTO mbox (uid, fid, size, flags) VALUES (%u, %s, %u,0)",
+                        radb_run_inject(master->_core.mail, "INSERT INTO mbox (id,uid, fid, size, flags) VALUES (NULL,%u, %s, %u,0)",
                                         item->account->uid, item->fid, fsize);
 
                         /* done here! */
@@ -395,7 +396,7 @@ void *rumble_worker_process(void *m) {
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
                                         radb_run_inject(master->_core.mail,
-                                                        "INSERT INTO queue (loops, fid, sender, recipient, flags) VALUES (%s,%s,%s,%s,%s)",
+                                                        "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%s,%s,%s,%s,%s)",
                                                         loops, item->fid, item->sender->raw, email, item->flags);
                                     }
                                 }
@@ -442,7 +443,8 @@ void *rumble_worker_process(void *m) {
             d_iterator                  iter;
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-           rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host.", item->fid, item->recipient->user, item->recipient->domain);
+            rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host.", item->fid, item->recipient->user,
+                         item->recipient->domain);
             mx = comm_mxLookup(item->recipient->domain);
             if (!mx or!mx->size) {
                 rumble_debug("mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", item->recipient->domain);
@@ -473,15 +475,15 @@ void *rumble_worker_process(void *m) {
             if (delivered >= 500) {
 
                 /* critical failure, giving up. */
-                rumble_debug("mailman", "Critical failure, giving up for now.",0);
+                rumble_debug("mailman", "Critical failure, giving up for now.", 0);
             } else if (delivered >= 400) {
 
                 /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
                 rumble_debug("mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
                 sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
-                statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
+                statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
                 if (master->_core.mail->dbType == RADB_MYSQL) {
-                    statement = "INSERT INTO queue (time, loops, fid, sender, recipient, flags) VALUES (NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s)";
+                    statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s)";
                 }
 
                 radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
@@ -604,7 +606,7 @@ void *rumble_worker_init(void *T) {
             }
         } else {
             radb_cleanup(dbo);
-            sleep(1);   /* sleep for 1 seconds if there's nothing to do right now. */
+            sleep(2);   /* sleep for 2 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }
     }

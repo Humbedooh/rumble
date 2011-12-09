@@ -72,7 +72,7 @@ void *rumble_smtp_init(void *T) {
             line = rumble_comm_read(sessptr);
             rc = 421;
             if (!line) break;
-            rc = 500;   /* default return code is "500 unknown command thing" */
+            rc = 500;       /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
@@ -91,9 +91,7 @@ void *rumble_smtp_init(void *T) {
             if (rc == RUMBLE_RETURN_IGNORE) {
                 rumble_debug("smtp", "Parser is ignoring request from %s", session.client->addr);
                 continue;   /* Skip to next line. */
-            }
-            else if (rc == RUMBLE_RETURN_FAILURE)
-                break;  /* Abort! */
+            } else if (rc == RUMBLE_RETURN_FAILURE) break;  /* Abort! */
             else {
                 rumble_comm_send(sessptr, rumble_smtp_reply_code(rc));  /* Bad command thing. */
                 rumble_debug("smtp", "I said to %s: %s", session.client->addr, rumble_smtp_reply_code(rc));
@@ -288,6 +286,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         isLocalUser = isLocalDomain ? rumble_account_exists(session, recipient->user, recipient->domain) : 0;
         if (isLocalUser) {
             rumble_debug("smtp", "Running local RCPT for %s@%s (%s)", recipient->user, recipient->domain, recipient->raw);
+
             /*
              * If everything went fine, set the RCPT flag and return with code 250. ;
              * >>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ;
@@ -302,6 +301,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 rumble_free_address(recipient);         /* flush the memory */
                 return (rc);
             }
+
             rumble_debug("smtp", "Message from %s can be delivered to <%s@%s>.", session->client->addr, recipient->user, recipient->domain);
             session->flags |= RUMBLE_SMTP_HAS_RCPT;
             return (250);
@@ -310,9 +310,13 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         /* If rec isn't local, check if client is allowed to relay */
         if (!isLocalDomain) {
             if (session->flags & RUMBLE_SMTP_CAN_RELAY) {
-                rumble_domain* dmn = rumble_domain_copy(session->sender->domain);
-                
+
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                rumble_domain   *dmn = rumble_domain_copy(session->sender->domain);
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
                 if (rumble_config_int(master, "blockoutgoingmail")) rc = RUMBLE_RETURN_FAILURE;
+
                 /* Check for domain-specific blocking */
                 else {
                     rumble_debug("smtp", "checking domain options for %s", session->sender->domain);
@@ -320,14 +324,11 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                         rumble_debug("smtp", "Flags for %s are: %X", dmn->name, dmn->flags);
                         if (dmn->flags && RUMBLE_DOMAIN_NORELAY) rc = RUMBLE_RETURN_FAILURE;
                         rumble_domain_free(dmn);
-                    }
-
-                    /* Fire events scheduled for pre-processing run */
-                    else {
-                        rumble_debug("smtp", "domain %s wasn't found??!", session->sender->domain);
+                    } /* Fire events scheduled for pre-processing run */ else {
+                        rumble_debug("smtp", "domain %s wasn't found?!", session->sender->domain);
                         rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
-                                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
-                                                        parameters);
+                                                           RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT,
+                                                           parameters);
                     }
                 }
 
@@ -338,7 +339,8 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 }
 
                 session->flags |= RUMBLE_SMTP_HAS_RCPT;
-                rumble_debug("smtp", "Message from %s can be delivered to <%s@%s> (relay).", session->client->addr, recipient->user, recipient->domain);
+                rumble_debug("smtp", "Message from %s can be delivered to <%s@%s> (relay).", session->client->addr, recipient->user,
+                             recipient->domain);
                 return (251);
             }
 
@@ -503,7 +505,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_DATA, filename);
     if (rc == RUMBLE_RETURN_OKAY) {
         foreach((address *), el, session->recipients, iter) {
-            radb_run_inject(master->_core.mail, "INSERT INTO queue (fid, sender, recipient, flags) VALUES (%s,%s,%s,%s)", fid,
+            radb_run_inject(master->_core.mail, "INSERT INTO queue (id,fid, sender, recipient, flags) VALUES (NULL,%s,%s,%s,%s)", fid,
                             session->sender->raw, el->raw, session->sender->_flags);
         }
     }

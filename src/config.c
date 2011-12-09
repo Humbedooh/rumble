@@ -160,15 +160,14 @@ void rumble_config_load(masterHandle *master, dvector *args) {
                     rumble_string_lower(key);
                     if (!strcmp(key, "comment")) {
                         printf("%s\r\n", value);
-                        statusLog("CFG: %s", value);
+                        rumble_debug("config", "%s", value);
                     } else rsdict(master->_core.conf, key, value);
                 } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(master->_core.conf, key, value);
                 }
             } else {
-                statusLog("ERROR: Could not read %s!", cfgfile);
-                fprintf(stderr, "<config> Error: Could not read %s!\n", cfgfile);
+                rumble_debug("config", "ERROR: Could not read %s!", cfgfile);
                 exit(EXIT_FAILURE);
             }
         }
@@ -176,8 +175,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         free(buffer);
         fclose(config);
     } else {
-        statusLog("ERROR: Could not open %s!", cfgfile);
-        fprintf(stderr, "<config> Error: Could not read %s!\n", cfgfile);
+        rumble_debug("config", "ERROR: Could not open %s!", cfgfile);
         exit(EXIT_FAILURE);
     }
 }

@@ -1,6 +1,5 @@
 /* File: public.c Author: Humbedooh Created on January 7, 2011, 11:27 PM */
 #include "rumble.h"
-FILE            *sysLog = 0;
 masterHandle    *public_master_handle = 0;
 dvector         *debugLog = 0;
 char            shutUp = 0;
@@ -403,35 +402,6 @@ size_t rumble_file_exists(const char *filename)
  =======================================================================================================================
  =======================================================================================================================
  */
-void statusLog(const char *msg, ...) {
-
-    /*~~~~~~~~~~~~~~~~~~*/
-    time_t      rawtime;
-    struct tm   *timeinfo;
-    char        txt[130];
-    va_list     vl;
-    int         rc = 0;
-    /*~~~~~~~~~~~~~~~~~~*/
-
-    if (sysLog) {
-        va_start(vl, msg);
-        time(&rawtime);
-        timeinfo = gmtime(&rawtime);
-        strftime(txt, 128, "%Y/%m/%d %X", timeinfo);
-        fprintf(sysLog, "%s: \t", txt);
-        vfprintf(sysLog, msg, vl);
-        rc = fprintf(sysLog, "\r\n");
-        fflush(sysLog);
-        va_end(vl);
-        va_start(vl, msg);
-        rumble_vdebug("core", msg, vl);
-    }
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
 void rumble_vdebug(const char *svc, const char *msg, va_list args) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -457,7 +427,9 @@ void rumble_vdebug(const char *svc, const char *msg, va_list args) {
         strftime(txt, 128, "%Y/%m/%d %X", timeinfo);
         sprintf(dummy, "%s [%s]: \t %s\r\n", txt, (svc ? svc : "core"), msg);
         vsnprintf(dstring, 511, dummy, args);
-        if (!shutUp) printf("%s", dstring);
+        printf("%s", dstring);
+    } else {
+        printf("rumble_debug called, but no debugLog exists!\r\n");
     }
 }
 

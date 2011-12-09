@@ -292,9 +292,8 @@
 #   define RUMBLE_LETTER_DRAFT     0x00100000
 #   define RUMBLE_LETTER_UPDATED   0x01000000
 
-
 /* Domain flags */
-# define RUMBLE_DOMAIN_NORELAY 0x00000001
+#   define RUMBLE_DOMAIN_NORELAY   0x00000001
 
 /*$5
  #######################################################################################################################
@@ -685,7 +684,6 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *sender,
                                 address         *recipient
                             );
-void                        statusLog(const char *msg, ...);
 void                        rumble_debug(const char *svc, const char *msg, ...);
 void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
 
@@ -746,7 +744,7 @@ void                            rumble_mailman_free_parsed_letter(rumble_parsed_
 #   define rcread      rumble_comm_read
 #   define merror() { \
         fprintf(stderr, "Memory allocation failed, this is bad!\n"); \
-        statusLog("Memory allocation failed at %s, aborting!\n", rumble_mtime()); \
+        rumble_debug("core", "Memory allocation failed at %s, aborting!\n", rumble_mtime()); \
         exit(1); \
     }
 #   define and     &&

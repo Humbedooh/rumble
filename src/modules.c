@@ -46,18 +46,18 @@ void rumble_modules_load(masterHandle *master) {
 
     master->_core.feed_hooks = cvector_init();
     master->_core.parser_hooks = cvector_init();
-    statusLog("Preparing to load modules");
+    rumble_debug("core", "Preparing to load modules");
     for (x = 0; services[x]; x++) {
         svc = comm_serviceHandle(services[x]);
         if (svc) {
-            statusLog("Flushing hook structs for %s", services[x]);
+            rumble_debug("core", "Flushing hook structs for %s", services[x]);
             svc->cue_hooks = cvector_init();
             svc->init_hooks = cvector_init();
             svc->exit_hooks = cvector_init();
         }
     }
 
-    statusLog("Loading modules");
+    rumble_debug("core", "Loading modules");
     for (line = master->_core.conf->first; line != NULL; line = line->next) {
         el = (rumbleKeyValuePair *) line->object;
         if (!strcmp(el->key, "loadmodule"))
@@ -71,12 +71,12 @@ void rumble_modules_load(masterHandle *master) {
             if (!handle) {
                 error = error ? error : "(no such file?)";
                 fprintf(stderr, "\nError loading %s: %s\n", el->value, error);
-                statusLog("MOD: Error loading %s: %s", el->value, error);
+                rumble_debug("core", "Error loading %s: %s", el->value, error);
                 exit(1);
             }
 
             if (error) {
-                printf("Warning: %s\n", error);
+                rumble_debug("core", "Warning: %s\n", error);
             }
 
             modinfo = (rumble_module_info *) calloc(1, sizeof(rumble_module_info));
@@ -88,9 +88,7 @@ void rumble_modules_load(masterHandle *master) {
             mcheck = (rumbleVerCheck) dlsym(handle, "rumble_module_check");
             error = (init == 0 || mcheck == 0) ? "no errors" : 0;
             if (error != NULL) {
-                fprintf(stderr, "\nWarning: %s does not contain required module functions (init = %p, mcheck = %p).\n", el->value, init,
-                        mcheck);
-                statusLog("Warning: %s does not contain required module functions.\n", el->value);
+                rumble_debug("core", "Warning: %s does not contain required module functions.\n", el->value);
             }
 
             if (init && mcheck) {
@@ -101,29 +99,24 @@ void rumble_modules_load(masterHandle *master) {
                 x = EXIT_SUCCESS;
                 if (ver != RUMBLE_VERSION) {
                     if (ver > RUMBLE_VERSION) {
-                        fprintf(stderr,
-                                "\nError: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
-                            el->value, ver, RUMBLE_VERSION);
-                        statusLog("Error: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
-                              el->value, ver, RUMBLE_VERSION);
+                        rumble_debug("module",
+                                     "Error: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
+                                 el->value, ver, RUMBLE_VERSION);
                     } else {
-                        fprintf(stderr,
-                                "\nError: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
-                            el->value, ver, RUMBLE_VERSION);
-                        statusLog("Error: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
-                              el->value, ver, RUMBLE_VERSION);
+                        rumble_debug("module",
+                                     "Error: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
+                                 el->value, ver, RUMBLE_VERSION);
                     }
                 } else x = init(master, modinfo);
                 if (x != EXIT_SUCCESS) {
-                    fprintf(stderr, "\nError: %s failed to load!\n", el->value);
-                    statusLog("Error: %s failed to load!\n", el->value);
+                    rumble_debug("module", "Error: %s failed to load!", el->value);
                     dlclose(handle);
                 }
 
                 if (x == EXIT_SUCCESS) {
-                    if (modinfo->title) printf("Loaded extension: %-30s[OK]\n", modinfo->title);
-                    else printf("%48s[OK]\n", el->value);
-                } else printf("[BAD]\n");
+                    if (modinfo->title) rumble_debug("module", "Loaded extension: %-30s", modinfo->title);
+                    else rumble_debug("module", "Loaded %48s", el->value);
+                } else rumble_debug("module", "%s exited prematurely!", el->value);
             }
 
             modinfo->file = el->value;
@@ -159,12 +152,10 @@ void rumble_modules_load(masterHandle *master) {
             for (x = 0; x < RUMBLE_LSTATES; x++) {
                 L = (lua_State *) master->lua.states[x].state;
                 if (luaL_loadfile(L, el->value)) {
-                    fprintf(stderr, "Couldn't load file: %s\n", lua_tostring(L, -1));
-                    statusLog("Couldn't load file: %s\n", lua_tostring(L, -1));
+                    rumble_debug("lua", "Couldn't load script: %s", lua_tostring(L, -1));
                     break;
                 } else if (lua_pcall(L, 0, LUA_MULTRET, 0)) {
-                    fprintf(stderr, "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
-                    statusLog("Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
+                    rumble_debug("lua", "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
                     break;
                 }
             }

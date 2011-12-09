@@ -80,7 +80,10 @@ void *rumble_pop3_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
-                rumble_debug("pop3", "%s said: %s %s", session.client->addr, cmd, arg);
+
+                /*
+                 * rumble_debug("pop3", "%s said: %s %s", session.client->addr, cmd, arg);
+                 */
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
                     break;
@@ -118,7 +121,7 @@ void *rumble_pop3_init(void *T) {
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
-        rumble_mailman_commit(pops, rumble_mailman_current_folder(pops),1); // Delete letters marked "expunged" to prevent IMAP mixup
+        rumble_mailman_commit(pops, rumble_mailman_current_folder(pops), 1);    /* Delete letters marked "expunged" to prevent IMAP mixup */
         rumble_free_account(pops->account);
         rumble_mailman_close_bag(pops->bag);
 
@@ -213,20 +216,19 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
     memset(usr, 0, 128);
     memset(dmn, 0, 128);
     if (sscanf(rrdict(session->dict, "user"), "%127[^@]@%127c", usr, dmn) == 2) {
-        printf("POP3 auth: Searching for user <%s> @ <%s>\n", usr, dmn);
+        rumble_debug("pop3", "%s requested access to %s@%s\n", session->client->addr, usr, dmn);
         if ((pops->account = rumble_account_data(0, usr, dmn))) {
-            printf("Found account, matching password\n");
             tmp = rumble_sha256((const unsigned char *) parameters);
             n = strcmp(tmp, pops->account->hash);
             free(tmp);
             if (n) {
-                printf("wrong pass!\n");
+                rumble_debug("pop3", "%s's request for %s@%s was denied (wrong password)\n", session->client->addr, usr, dmn);
                 rumble_free_account(pops->account);
                 free(pops->account);
                 pops->account = 0;
                 return (106);
             } else {
-                printf("Correct pass, fetching mail bag.\n");
+                rumble_debug("pop3", "%s's request for %s@%s was granted\n", session->client->addr, usr, dmn);
                 session->flags |= RUMBLE_POP3_HAS_AUTH;
                 pops->bag = rumble_mailman_open_bag(pops->account->uid);
                 pops->folder = 0;   /* 0 = INBOX */
@@ -359,7 +361,7 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     foreach((rumble_letter *), letter, folder->letters, iter) {
         j++;
         if (j == i) {
-            letter->flags |= RUMBLE_LETTER_EXPUNGE; // Used to be _DELETED, but that was baaad.
+            letter->flags |= RUMBLE_LETTER_EXPUNGE; /* Used to be _DELETED, but that was baaad. */
             found = 1;
             break;
         }

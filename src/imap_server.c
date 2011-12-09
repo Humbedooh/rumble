@@ -779,7 +779,7 @@ ssize_t rumble_server_imap_close(masterHandle *master, sessionHandle *session, c
     }
 
     if (imap->account && (session->flags & rumble_mailman_HAS_SELECT)) {
-        rumble_mailman_commit(imap, folder,0);
+        rumble_mailman_commit(imap, folder, 0);
         session->flags -= rumble_mailman_HAS_SELECT;    /* clear select flag. */
         imap->folder = -1;
         rcprintf(session, "%s OK Expunged and closed the mailbox.\r\n", extra_data);
@@ -800,7 +800,7 @@ ssize_t rumble_server_imap_expunge(masterHandle *master, sessionHandle *session,
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (imap->account && (session->flags & rumble_mailman_HAS_SELECT)) {
-        rumble_mailman_commit(imap, folder,0);
+        rumble_mailman_commit(imap, folder, 0);
         rcprintf(session, "%s OK Expunged them letters.\r\n", extra_data);
     } else rcprintf(session, "%s NO EXPUNGE: No mailbox selected for expunging!\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);

@@ -77,25 +77,25 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-        statusLog("ERROR: getaddrinfo: %s\n", gai_strerror(rv));
+        rumble_debug("comm.c", "ERROR: getaddrinfo: %s\n", gai_strerror(rv));
         return (0);
     }
 
     /* Loop through all the results and bind to the first we can */
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {
-            statusLog("ERROR: Couldn't create basic socket with protocol %#X!", p->ai_family);
+            rumble_debug("comm.c", "ERROR: Couldn't create basic socket with protocol %#X!", p->ai_family);
             continue;
         }
 
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-            statusLog("ERROR: setsockopt failed!");
+            rumble_debug("comm.c", "ERROR: setsockopt failed!");
             exit(0);
         }
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             disconnect(sockfd);
-            statusLog("ERROR: Couldn't bind to socket (protocol %#X) on port %s!", p->ai_family, port);
+            rumble_debug("comm.c", "ERROR: Couldn't bind to socket (protocol %#X) on port %s!", p->ai_family, port);
             continue;
         }
         break;
@@ -108,7 +108,7 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     freeaddrinfo(servinfo);         /* all done with this structure */
 #endif
     if (listen(sockfd, 10) == SOCKET_ERROR) {
-        statusLog("ERROR: Couldn't listen on socket on port %s!", port);
+        rumble_debug("comm.c", "ERROR: Couldn't listen on socket on port %s!", port);
         exit(0);
     }
 
