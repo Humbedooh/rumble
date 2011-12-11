@@ -1,5 +1,37 @@
 <h2>Set up modules</h2>
+<table width="700" border="0">
+  <tr>
+    <th width="186">filename</th>
+    <th width="315">Module info</th>
+    <th width="100">Status</th>
+    <th width="81">Actions</th>
+  </tr>
+  <tr>
 <?
+for k,mod in pairs(Rumble.listModules()) do
+	local hascfg = Rumble.getmoduleconfig(mod.file);
+	local rawfile = mod.file:match("modules/(.*)") or "";
+	local modlink = rawfile;
+	local editlink = "";
+	mod.description = (mod.description:len() > 0 and mod.description) or "<font color='#944'>(Disabled)</font>";
+	if (mod.author) then 
+		mod.author = mod.author:gsub("([a-zA-Z0-9\.\_\-]+@[a-zA-Z0-9\.\_\-]+)", "<a href='mailto:%1'>%1</a>");
+		mod.description = mod.description .. "<br/>Author: " .. mod.author;
+	end
+	if (hascfg) then
+		modlink = "<a href=\"/modules:"..rawfile.."\">"..rawfile.."</a>";
+		editlink = "<a href='/modules:"..rawfile.."'><img src='/icons/report_edit.png' border='0' align='absmiddle' hspace='4'>Edit</a>";
+	end
+	printf("<tr><td colspan='4'><hr/></td></tr>");
+	printf("<tr><td valign='top'><img src='/icons/plugin.png' align='absmiddle'/> %s</td><td><b>%s</b><br/><small>%s</small></td><td>%s</td><td>%s</td></tr>", modlink, mod.title or mod.file, mod.description or "", (hascfg and "<font color='#272'>Configurable</font>") or "<font color='#732'>N/A</font>", editlink);
+end
+?>
+
+</table>
+<hr/>
+
+<p>
+  <?
 
 if (session.section == "reload" and session.credentials.admin) then
 	printf(Rumble.readConfig("config-dir") .. "/rumble.conf");
@@ -45,7 +77,7 @@ if (cfg) then
 	printf("<form action='/modules:%s' method='post'><input type='hidden' name='saveConfig' value='yes'/><table border='0'>", rawfile);
 	for k, entry in pairs(cfg) do
 		if (entry.type == "string" or entry.type == "number") then
-			printf("<tr><td valign='top'><b>%s:</b></td><td><input type='text' name='%s' value=\"%s\" length='%s'/><br/><i>%s</i><hr/></td></tr>", entry.key, entry.key, entry.value, entry.length, entry.description or "(no description)");
+			printf("<tr><td valign='top'><b>%s:</b></td><td><input  type='text' name='%s' value=\"%s\" style='width:%upx;'/><br/><i>%s</i><hr/></td></tr>", entry.key, entry.key, entry.value, entry.length*10, entry.description or "(no description)");
 			else
 			printf("<input type=\"hidden\" name=\"%s\" value=\"0\" />", entry.key);
 			printf("<tr><td valign='top'><b>%s:</b></td><td><input type='checkbox' name=\"%s\" %s value=\"1\" /><br/><i>%s</i><hr/></td></tr>", entry.key, entry.key, (entry.value and "checked") or "", entry.description or "(no description)");
@@ -53,16 +85,8 @@ if (cfg) then
 			end
 	end
 	printf("<tr><td colspan='2'><input type='submit' value='Save configuration'/></table></form>");
-	printf("<hr/><h4><a href='/modules'>Back to modules list</h4>");
-else
-	for k,mod in pairs(Rumble.listModules()) do
-		local hascfg = Rumble.getmoduleconfig(mod.file);
-		local rawfile = mod.file:match("modules/(.*)") or "";
-		if (hascfg) then
-			printf("<a href=\"/modules:%s\">%s</a><br/>", rawfile, mod.title or mod.file);
-		else
-			printf("<i>%s</i><br/>", (mod.title:len() > 1 and mod.title) or rawfile);
-		end
-	end
 end
 ?>
+</p>
+<p>&nbsp;</p>
+
