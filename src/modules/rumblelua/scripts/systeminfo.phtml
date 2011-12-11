@@ -4,11 +4,25 @@
 <br/><br/><br/><br/><br/><br/>
 <code>
 <?
+local colors = {
+	core = 282,
+	smtp = 228,
+	pop3 = 228,
+	imap4 = 228,
+	startup = 882,
+	db = 828,
+	module = 852
+};
+
 for i,entry in pairs(Rumble.getLog()) do
 	local color = "993333";
 	local date, svc, log = string.match(entry, "(%d+/%d+/%d+ %d+:%d+:%d+) %[([^%]]+)%]:%s+(.*)");
-	if ( svc == "core" ) then color = "339933"; end
-	if ( svc == "smtp" or svc == "pop3" or svc == "imap4" ) then color = "333399"; end
+	for k,c in pairs(colors) do
+		if (svc == k) then
+			color = c;
+			break;
+		end
+	end
 	log = log:gsub("<", "&lt;");
 	log = log:gsub("(%d[%d%.]+)", "<span style='color: #996622;'>%1</span>");
 	

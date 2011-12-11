@@ -16,5 +16,53 @@ if (session.section == "reload" and session.credentials.admin) then
 --	Rumble.reloadModules();
     printf("<div class='notification'>Service notification:<br/>Modules have been reloaded!</div>");
 end
+
+
+local module;
+for k,mod in pairs(Rumble.listModules()) do
+	if (mod.file == "modules/"..session.section) then
+		module = mod;
+		break;
+	end
+end
+local cfg = Rumble.getmoduleconfig("modules/"..session.section);
+
+if (http.form.saveConfig and module) then
+		for k, v in pairs(http.form) do
+			if (k ~= "saveConfig") then
+				if (type(v) == "table") then v = v[#v]; end
+				Rumble.setmoduleconfig("modules/"..session.section, k, v);
+			end
+		end
+		cfg = nil;
+		printf("<div class='notification'>Service notification:<br/>Configuration for '%s' saved.</div>", module.title or module.file);
+	end
+	
+	
+if (cfg) then
+	local rawfile = module.file:match("modules/(.*)") or "";
+	printf("<h3>Configuration for '%s':</h3>", module.title or module.file);
+	printf("<form action='/modules:%s' method='post'><input type='hidden' name='saveConfig' value='yes'/><table border='0'>", rawfile);
+	for k, entry in pairs(cfg) do
+		if (entry.type == "string" or entry.type == "number") then
+			printf("<tr><td valign='top'><b>%s:</b></td><td><input type='text' name='%s' value=\"%s\" length='%s'/><br/><i>%s</i><hr/></td></tr>", entry.key, entry.key, entry.value, entry.length, entry.description or "(no description)");
+			else
+			printf("<input type=\"hidden\" name=\"%s\" value=\"0\" />", entry.key);
+			printf("<tr><td valign='top'><b>%s:</b></td><td><input type='checkbox' name=\"%s\" %s value=\"1\" /><br/><i>%s</i><hr/></td></tr>", entry.key, entry.key, (entry.value and "checked") or "", entry.description or "(no description)");
+
+			end
+	end
+	printf("<tr><td colspan='2'><input type='submit' value='Save configuration'/></table></form>");
+	printf("<hr/><h4><a href='/modules'>Back to modules list</h4>");
+else
+	for k,mod in pairs(Rumble.listModules()) do
+		local hascfg = Rumble.getmoduleconfig(mod.file);
+		local rawfile = mod.file:match("modules/(.*)") or "";
+		if (hascfg) then
+			printf("<a href=\"/modules:%s\">%s</a><br/>", rawfile, mod.title or mod.file);
+		else
+			printf("<i>%s</i><br/>", (mod.title:len() > 1 and mod.title) or rawfile);
+		end
+	end
+end
 ?>
-Coming soon!

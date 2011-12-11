@@ -45,14 +45,18 @@ end
 <?
 for k,mod in pairs(Rumble.listModules()) do
         local file = mod.file;
+		local filepath = file;
         if not (file:match("^/") or file:match(":")) then
-            file = session.info.path .. "/" ..file;
+            filepath = session.info.path .. "/" ..file;
         end
         printf("<table class=\"elements\" border='0' cellspacing='1' cellpadding='5'>");
         printf("<tr><th colspan='2'>%s</th></tr>", mod.title);
-        printf("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", (mod.description:len() >0 and mod.description) or "<span style='color: #930;'><i>Disabled?</i></span>");
+        printf("<tr><td>Description:</td><td class='plain_text'>%s</td></tr>", (mod.description:len() >0 and mod.description) or "<span style='color: #930;'><i>Disabled due to incompatibility with this version of rumble.</i></span>");
         if (mod.author ~= "Unknown") then printf("<tr><td>Author:</td><td class='plain_text'>%s</td></tr>", mod.author); end
-        printf("<tr><td>File:</td><td class='plain_text'>%s</td></tr>", file);
+        printf("<tr><td>File:</td><td class='plain_text'>%s</td></tr>", filepath);
+		printf("<tr><td>Options:</td><td>");
+		
+		printf("</td></tr>");
         printf("</table>");
     end
 	
