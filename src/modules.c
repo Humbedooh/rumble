@@ -18,6 +18,7 @@
 #endif
 typedef int (*rumbleModInit) (void *master, rumble_module_info *modinfo);
 typedef uint32_t (*rumbleVerCheck) (void);
+typedef rumblemodule_config_struct* (*rumbleModConfig) (const char* key, const char* value);
 extern FILE *sysLog;
 
 /*
@@ -86,6 +87,7 @@ void rumble_modules_load(masterHandle *master) {
             modinfo->title = 0;
             init = (rumbleModInit) dlsym(handle, "rumble_module_init");
             mcheck = (rumbleVerCheck) dlsym(handle, "rumble_module_check");
+			modinfo->config = (rumbleModConfig) dlsym(handle, "rumble_module_config");
             error = (init == 0 || mcheck == 0) ? "no errors" : 0;
             if (error != NULL) {
                 rumble_debug("core", "Warning: %s does not contain required module functions.\n", el->value);

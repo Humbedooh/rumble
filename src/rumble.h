@@ -301,8 +301,23 @@
  #######################################################################################################################
  */
 
+typedef struct rumblemodule_config_struct {
+	const char* key;
+	signed int length;
+	const char* description;
+	char		type;
+	void* value;
+} rumblemodule_config_struct;
+
+#define RCS_STRING  1
+#define RCS_NUMBER  2
+#define RCS_BOOLEAN 3
+
+
+
 #   ifdef RUMBLE_MSC
 #      define rumblemodule    int __declspec(dllexport)
+#define rumbleconfig    rumblemodule_config_struct __declspec(dllexport)*
 #      ifndef uint32_t
 typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
@@ -321,7 +336,9 @@ typedef long long           int64_t;
 #      endif
 #   else
 #      define rumblemodule    int
+#define rumbleconfig rumblemodule_config_struct*
 #   endif
+
 
 /*$3
  =======================================================================================================================
@@ -422,6 +439,7 @@ typedef struct
     const char  *description;
     const char  *author;
     const char  *file;
+	rumblemodule_config_struct* (*config) (const char* key, const char* value);
 } rumble_module_info;
 typedef struct
 {
@@ -686,6 +704,7 @@ rumble_sendmail_response    *rumble_send_email
                             );
 void                        rumble_debug(const char *svc, const char *msg, ...);
 void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
+dvector* rumble_readconfig(const char* filename);
 
 /*$3
  =======================================================================================================================

@@ -7,8 +7,20 @@
    /* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
 #include "../../rumble.h"
 #include <string.h>
-#define GREYLIST_MAX_AGE    432000  /* Grey-list records will linger for 5 days. */
-#define GREYLIST_MIN_AGE    599     /* Put new triplets on hold for 10 minutes */
+
+dvector* configuration;
+int GREYLIST_MAX_AGE = 432000;  /* Grey-list records will linger for 5 days. */
+int GREYLIST_MIN_AGE = 599;     /* Put new triplets on hold for 10 minutes */
+int GREYLIST_ENABLED = 1; // 1 = yes, 0 = no
+masterHandle* myMaster = 0;
+rumblemodule_config_struct myConfig[] = {
+		{"quarantine", 3, "How long are new email triplets held back (seconds)", RCS_NUMBER, &GREYLIST_MIN_AGE},
+		{"linger", 6, "How long should I keep triplets stored? (seconds)", RCS_NUMBER, &GREYLIST_MAX_AGE},
+		{"enabled", 1, "Enable mod_greylist?", RCS_BOOLEAN, &GREYLIST_ENABLED},
+		{0,0,0,0}
+	};
+
+
 cvector * rumble_greyList;
 typedef struct
 {
@@ -21,7 +33,7 @@ typedef struct
  =======================================================================================================================
  */
 ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
-
+	
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
     address         *recipient;
     char            *block,
@@ -32,6 +44,8 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
     rumble_triplet  *item;
     c_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
+
+	if (!GREYLIST_ENABLED) return (RUMBLE_RETURN_OKAY);
 
     /* First, check if the client has been given permission to skip this check by any other modu */
     if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
@@ -112,8 +126,40 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "Greylisting module";
     modinfo->description = "Standard greylisting module for rumble.\nAdds a 10 minute quarantine on unknown from-to combinations to prevent spam.";
     rumble_greyList = cvector_init();
+	printf("Reading config...\r\n");
+	configuration = rumble_readconfig("greylist.conf");
+	printf("done!\r\n");
+	GREYLIST_MIN_AGE = atoi(rrdict(configuration, "quarantine"));
+	GREYLIST_MAX_AGE = atoi(rrdict(configuration, "linger"));
+	GREYLIST_ENABLED = atoi(rrdict(configuration, "enabled"));
+	myMaster = (masterHandle*) master;
 
     /* Hook the module to the DATA command on the SMTP server. */
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_RCPT, rumble_greylist);
     return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */
+}
+
+/*
+rumble_module_config: Sets a config value or retrieves a list of config values.
+*/
+rumbleconfig rumble_module_config(const char* key, const char* value) {
+	char filename[1024];
+	const char* cfgpath;
+	FILE* cfgfile;
+	
+	if (!key) {
+		return myConfig;
+	}
+	value = value ? value : "(null)";
+	if (!strcmp(key, "quarantine")) GREYLIST_MIN_AGE = atoi(value);
+	if (!strcmp(key, "linger")) GREYLIST_MAX_AGE = atoi(value);
+	if (!strcmp(key, "enabled")) GREYLIST_ENABLED = atoi(value);
+	cfgpath = rumble_config_str(myMaster, "config-dir");
+	sprintf(filename, "%s/greylist.conf", cfgpath);
+	cfgfile = fopen(filename, "w");
+	if (cfgfile) {
+		fprintf(cfgfile, "# Greylisting configuration. Please use RumbleLua to change these settings.\nQuarantine 	%u\nLinger 		%u\nEnabled 	%u\n", GREYLIST_MIN_AGE,GREYLIST_MAX_AGE,GREYLIST_ENABLED);
+		fclose(cfgfile);
+	}
+	return 0;
 }
