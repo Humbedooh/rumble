@@ -5,12 +5,52 @@
 #include "../../rumble.h"
 
 /* include <Ws2tcpip.h> */
+masterHandle* myMaster = 0;
 dvector         *blacklist_baddomains;
 dvector         *blacklist_badhosts;
 dvector         *blacklist_dnsbl;
+dvector			*myConfig;
 unsigned int    blacklist_spf = 0;
 const char      *blacklist_logfile = 0;
+char			str_badhosts[2048];
+char			str_baddomains[2048];
+char			str_dnsbl[2048];
+char			str_logfile[512];
 
+
+rumblemodule_config_struct luaConfig[] = {
+	{"BlacklistByHost", 40, "List of servers that are blacklisted from contacting our SMTP server", RCS_STRING, ""},
+	{"BlacklistByMail", 40, "List of email domains that are by default invalid as sender addresses", RCS_STRING, ""},
+	{"DNSBL", 40, "A list of DNSBL providers to use for querying", RCS_STRING, ""},
+	{"EnableSPF", 1, "Should SPF records be checked?", RCS_BOOLEAN, &blacklist_spf},
+	{"Logfile", 24, "Optional location of a logfile for blacklist encounters", RCS_STRING, ""},
+	{0,0,0,0}
+};
+
+static void dvector_splitstring(dvector* vec, const char* string) {
+	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char    *pch;
+	char *str;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+	if (!string) return;
+	str = (char*) calloc(1, strlen(string));
+	strncpy(str, string, strlen(string));
+	pch	= strtok((char *) str, " ");
+    while (pch != NULL) {
+        if (strlen(pch) >= 3) {
+
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            char    *entry = (char *) calloc(1, strlen(pch) + 1);
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+            strncpy(entry, pch, strlen(pch));
+            rumble_string_lower(entry);
+			dvector_add(vec, entry);
+        }
+		pch = strtok(NULL, " ");
+    }
+	free(str);
+}
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -213,113 +253,49 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char    *cfgfile = (char *) calloc(1, 1024);
-    FILE    *config;
+	const char* entry;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+	myMaster = (masterHandle*) master;
     modinfo->title = "Blacklisting module";
     modinfo->description = "Standard blacklisting module for rumble.";
-    modinfo->author = "Humbedooh (humbedooh@users.sf.net)";
+    modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
     blacklist_badhosts = dvector_init();
     blacklist_baddomains = dvector_init();
     blacklist_dnsbl = dvector_init();
-    sprintf(cfgfile, "%s/blacklist.conf", ((masterHandle *) master)->cfgdir);
-    config = fopen(cfgfile, "r");
-    if (config) {
+    blacklist_spf = 0;
+	myConfig = rumble_readconfig("blacklist.conf");
+	if (myConfig) {
+		memset(str_badhosts, 0, 2048);
+		memset(str_baddomains, 0, 2048);
+		memset(str_dnsbl, 0, 2048);
+		memset(str_logfile, 0, 512);
+		// Log file
+		blacklist_logfile = rrdict(myConfig, "logfile");
+		if (!strcmp(blacklist_logfile, "0")) blacklist_logfile = 0;
+		strcpy(str_logfile, blacklist_logfile);
+		luaConfig[4].value = (void*) rrdict(myConfig, "logfile");
 
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-        char    *buffer = (char *) malloc(4096);
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+		// Blacklisted hosts
+		entry = rrdict(myConfig, "blacklistbyhost");
+		dvector_splitstring(blacklist_badhosts, entry);
+		strcpy(str_badhosts, entry);
+		luaConfig[0].value = (void*) str_badhosts;
 
-        while (!feof(config)) {
-            memset(buffer, 0, 4096);
-            if (!fgets(buffer, 4096, config)) continue;
-            if (!ferror(config)) {
+		// Blacklisted domain names
+		entry = rrdict(myConfig, "blacklistbymail");
+		dvector_splitstring(blacklist_baddomains, entry);
+		strcpy(str_baddomains, entry);
+		luaConfig[1].value = (void*) str_baddomains;
+		
+		// DNSBL providers
 
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                char    *key = (char *) calloc(1, 100);
-                char    *val = (char *) calloc(1, 3900);
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                sscanf(buffer, "%100[^# \t\r\n] %3900[^\r\n]", key, val);
-                rumble_string_lower(key);
-                if (!strcmp(key, "dnsbl")) {
-
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                    char    *pch = strtok((char *) val, " ");
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                    while (pch != NULL) {
-                        if (strlen(pch) >= 4) {
-
-                            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                            char    *entry = (char *) calloc(1, strlen(pch) + 1);
-                            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                            strncpy(entry, pch, strlen(pch));
-                            dvector_add(blacklist_dnsbl, entry);
-                            pch = strtok(NULL, " ");
-                        }
-                    }
-                }
-
-                if (!strcmp(key, "enablespf")) blacklist_spf = atoi(val);
-                if (!strcmp(key, "blacklistbyhost")) {
-
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                    char    *pch = strtok((char *) val, " ");
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                    while (pch != NULL) {
-                        if (strlen(pch) >= 4) {
-
-                            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                            char    *entry = (char *) calloc(1, strlen(pch) + 1);
-                            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                            strncpy(entry, pch, strlen(pch));
-                            rumble_string_lower(entry);
-                            dvector_add(blacklist_badhosts, entry);
-                            pch = strtok(NULL, " ");
-                        }
-                    }
-                }
-
-                if (!strcmp(key, "blacklistbymail")) {
-
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                    char    *pch = strtok((char *) val, " ");
-                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                    while (pch != NULL) {
-                        if (strlen(pch) >= 4) {
-
-                            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                            char    *entry = (char *) calloc(1, strlen(pch) + 1);
-                            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                            strncpy(entry, pch, strlen(pch));
-                            dvector_add(blacklist_baddomains, entry);
-                            pch = strtok(NULL, " ");
-                        }
-                    }
-                }
-
-                if (!strcmp(key, "logfile")) {
-                    blacklist_logfile = calloc(1, strlen(val) + 1);
-                    strcpy((char *) blacklist_logfile, val);
-                }
-            } else {
-                fprintf(stderr, "<blacklist> Error: Could not read %s!\n", cfgfile);
-                return (EXIT_FAILURE);
-            }
-        }
-
-        free(buffer);
-        fclose(config);
-    } else {
-        fprintf(stderr, "<blacklist> Error: Could not read %s!\n", cfgfile);
-        return (EXIT_SUCCESS);
-    }
+		entry = rrdict(myConfig, "dnsbl");
+		dvector_splitstring(blacklist_dnsbl, entry);
+		strcpy(str_dnsbl, entry);
+		luaConfig[2].value = (void*) str_dnsbl;
+		
+		blacklist_spf = atoi(rrdict(myConfig, "enablespf"));
+	}
 
     /* Hook the module to new connections. */
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, rumble_blacklist);
@@ -331,3 +307,61 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
     return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */
 }
+
+rumbleconfig rumble_module_config(const char* key, const char* value) {
+	char filename[1024];
+	const char* cfgpath;
+	FILE* cfgfile;
+	
+	if (!key) {
+		return luaConfig;
+	}
+	if (!strcmp(key, "BlacklistByHost") && value) {
+		strcpy(str_badhosts, value);
+		dvector_splitstring(blacklist_badhosts, value);
+	}
+	if (!strcmp(key, "BlacklistByMail") && value) {
+		strcpy(str_baddomains, value);
+		dvector_splitstring(blacklist_badhosts, value);
+	}
+	if (!strcmp(key, "DNSBL") && value) {
+		strcpy(str_dnsbl, value);
+		dvector_splitstring(blacklist_dnsbl, value);
+	}
+	if (!strcmp(key, "EnableSPF")) {
+		blacklist_spf = atoi(value);
+	}
+
+	if (!strcmp(key, "Logfile") && value) {
+		strcpy(str_logfile, value);
+		if (!strlen(value)) blacklist_logfile = 0;
+		else blacklist_logfile = str_logfile;
+	}
+	
+	cfgpath = rumble_config_str(myMaster, "config-dir");
+	sprintf(filename, "%s/blacklist.conf", cfgpath);
+	cfgfile = fopen(filename, "w");
+	if (cfgfile) {
+		fprintf(cfgfile, "# Blacklisting configuration for rumble\n\
+\n\
+# BlacklistByHost: Contains a list of host addresses commonly used by spammers.\n\
+BlacklistByHost     %s\n\
+\n\
+# BlacklistByMail: Contains a list of fake domains commonly used as senders of spam.\n\
+BlacklistByMail     %s\n\
+\n\
+# EnableSPF: Set to 1 to enable checking SPF records for received email or 0 to disable this feature.\n\
+EnableSPF           %u\n\
+\n\
+# DNSBL: Contains a list of DNS BlackList operators to query for information on the client connecting to the service.\n\
+DNSBL               %s\n\
+\n\
+# Logfile: If set, all blacklisting activity will be written to this log file.\n\
+Logfile %s\n", str_badhosts, str_baddomains,blacklist_spf, str_dnsbl, str_logfile);
+		fclose(cfgfile);
+	}
+
+	return 0;
+}
+
+

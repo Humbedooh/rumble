@@ -45,7 +45,8 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     modinfo->title = "Whitelisting module";
-    modinfo->description = "Standard whitelisting module for rumble.";
+    modinfo->description = "Standard whitelisting module for rumble. Allows SMTP traffic from pre-defined known email servers to pass through without having to go through greylisting first.";
+	modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
     rumble_whiteList = cvector_init();
     sprintf(cfgfile, "%s/whitelist.conf", ((masterHandle *) master)->cfgdir);
     config = fopen(cfgfile, "r");

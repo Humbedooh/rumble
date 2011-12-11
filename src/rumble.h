@@ -681,6 +681,8 @@ void                        rumble_scan_flags(dvector *dict, const char *flags);
 void                        rumble_flush_dictionary(dvector *dict);
 const char                  *rumble_get_dictionary_value(dvector *dict, const char *flag);
 void                        rumble_add_dictionary_value(dvector *dict, const char *key, const char *value);
+void rumble_edit_dictionary_value(dvector *dict, const char *key, const char *value);
+void rumble_delete_dictionary_value(dvector *dict, const char *key);
 uint32_t                    rumble_has_dictionary_value(dvector *dict, const char *flag);
 void                        rumble_free_address(address *a);
 void                        rumble_free_account(rumble_mailbox *user);
@@ -756,6 +758,8 @@ void                            rumble_mailman_free_parsed_letter(rumble_parsed_
 
 #   define rrdict      rumble_get_dictionary_value  /* read dict */
 #   define rsdict      rumble_add_dictionary_value  /* set dict */
+#define redict rumble_edit_dictionary_value /* edit dict (danger danger!) */
+#define rmdict rumble_delete_dictionary_value /* edit dict (danger danger!) */
 #   define rfdict      rumble_flush_dictionary      /* flush dict */
 #   define rhdict      rumble_has_dictionary_value  /* returns 1 if value exists, 0 otherwise */
 #   define rcsend      rumble_comm_send

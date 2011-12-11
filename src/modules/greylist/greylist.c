@@ -125,6 +125,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
 rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "Greylisting module";
     modinfo->description = "Standard greylisting module for rumble.\nAdds a 10 minute quarantine on unknown from-to combinations to prevent spam.";
+	modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
     rumble_greyList = cvector_init();
 	printf("Reading config...\r\n");
 	configuration = rumble_readconfig("greylist.conf");
