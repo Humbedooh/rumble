@@ -109,7 +109,10 @@ void rumble_modules_load(masterHandle *master) {
                                      "Error: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
                                  el->value, ver, RUMBLE_VERSION);
                     }
-                } else x = init(master, modinfo);
+                } else {
+                    modinfo->file = el->value;
+                    x = init(master, modinfo);
+                }
                 if (x != EXIT_SUCCESS) {
                     rumble_debug("module", "Error: %s failed to load!", el->value);
                     dlclose(handle);
@@ -121,7 +124,7 @@ void rumble_modules_load(masterHandle *master) {
                 } else rumble_debug("module", "%s exited prematurely!", el->value);
             }
 
-            modinfo->file = el->value;
+            
 
             /*
              * dlclose(handle);

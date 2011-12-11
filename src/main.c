@@ -200,7 +200,7 @@ static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
     }
 
     if (sig == SIGINT) {
-        if (time(0) - lastClick < 2) exit(0);
+        if (time(0) - lastClick < 2) { cleanup(); exit(0); }
         printf("Ctrl+C detected. Press it again to exit rumble.\r\n");
         lastClick = time(0);
     }

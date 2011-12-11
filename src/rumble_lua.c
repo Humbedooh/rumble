@@ -550,60 +550,63 @@ static int rumble_lua_getmoduleconfig(lua_State *L) {
 
 	d_iterator	iter;
     /*~~~~~~~~~~~~~~~~~~~~~*/
-
-	luaL_checktype(L, 1, LUA_TSTRING);
+        
+    luaL_checktype(L, 1, LUA_TSTRING);
     modName = lua_tostring(L, 1);
+    if (!modName or !strlen(modName)) return 0;
     lua_settop(L, 0);
-	dforeach((rumble_module_info*), entry, rumble_database_master_handle->_core.modules, iter) {
-		if (!strcmp(entry->file, modName)) {
-			modInfo = entry;
-			break;
-		}
-	}
+    dforeach((rumble_module_info*), entry, rumble_database_master_handle->_core.modules, iter) {
+        if (entry->file && !strcmp(entry->file, modName)) {
+                modInfo = entry;
+                break;
+        }
+    }
 
-	if (modInfo && modInfo->config) {
-		x = 0;
-		lua_newtable(L);
-		config = modInfo->config(0,0);
-		if (config) {
-			for (x = 0; config[x].key != 0; x++) {
+    if (modInfo && modInfo->config) {
+            x = 0;
+            lua_newtable(L);
+            config = modInfo->config(0,0);
+            if (config) {
+                    for (x = 0; config[x].key != 0; x++) {
 
-				lua_pushinteger(L, x);
-		
-				lua_newtable(L);
-			
-				lua_pushstring(L, "key");
-				lua_pushstring(L, config[x].key);
-				lua_rawset(L, -3);
+                            lua_pushinteger(L, x);
 
-				lua_pushstring(L, "description");
-				lua_pushstring(L, config[x].description);
-				lua_rawset(L, -3);
+                            lua_newtable(L);
 
-				lua_pushstring(L, "length");
-				lua_pushinteger(L, config[x].length);
-				lua_rawset(L, -3);
+                            lua_pushstring(L, "key");
+                            lua_pushstring(L, config[x].key);
+                            lua_rawset(L, -3);
 
-				lua_pushstring(L, "type");
-				if (config[x].type == RCS_STRING) lua_pushliteral(L, "string");
-				if (config[x].type == RCS_BOOLEAN) lua_pushliteral(L, "boolean");
-				if (config[x].type == RCS_NUMBER) lua_pushliteral(L, "number");
-				lua_rawset(L, -3);
+                            lua_pushstring(L, "description");
+                            lua_pushstring(L, config[x].description);
+                            lua_rawset(L, -3);
 
-				lua_pushstring(L, "value");
-				if (config[x].type == RCS_STRING) lua_pushstring(L, (const char*) config[x].value);
-				if (config[x].type == RCS_BOOLEAN) lua_pushboolean(L, (int32_t) *((int32_t*) config[x].value));
-				if (config[x].type == RCS_NUMBER) lua_pushinteger(L, (int32_t) *((int32_t*) config[x].value));
-				lua_rawset(L, -3);
+                            lua_pushstring(L, "length");
+                            lua_pushinteger(L, config[x].length);
+                            lua_rawset(L, -3);
 
-				lua_rawset(L, -3);
-			}
+                            lua_pushstring(L, "type");
+                            if (config[x].type == RCS_STRING) lua_pushliteral(L, "string");
+                            if (config[x].type == RCS_BOOLEAN) lua_pushliteral(L, "boolean");
+                            if (config[x].type == RCS_NUMBER) lua_pushliteral(L, "number");
+                            lua_rawset(L, -3);
 
-			return (1);
-		}
-		else return 0;
-	}
-	else return 0;
+                            lua_pushstring(L, "value");
+                            if (config[x].type == RCS_STRING) lua_pushstring(L, (const char*) config[x].value);
+                            if (config[x].type == RCS_BOOLEAN) lua_pushboolean(L, (int32_t) *((int32_t*) config[x].value));
+                            if (config[x].type == RCS_NUMBER) lua_pushinteger(L, (int32_t) *((int32_t*) config[x].value));
+                            lua_rawset(L, -3);
+
+                            lua_rawset(L, -3);
+                    }
+
+                    return (1);
+            }
+            else return 0;
+    }
+    else {
+        return 0;
+    }
 }
 
 static int rumble_lua_setmoduleconfig(lua_State *L) {
@@ -623,9 +626,10 @@ static int rumble_lua_setmoduleconfig(lua_State *L) {
 	key = lua_tostring(L, 2);
 	value = lua_tostring(L, 3);
     lua_settop(L, 0);
+    if (!modName or !strlen(modName)) return 0;
 
 	dforeach((rumble_module_info*), entry, rumble_database_master_handle->_core.modules, iter) {
-		if (!strcmp(entry->file, modName)) {
+		if (entry->file && !strcmp(entry->file,modName)) {
 			modInfo = entry;
 			break;
 		}
