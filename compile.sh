@@ -1,3 +1,4 @@
+#!/bin/bash
 add=""
 echo "----------------------------------------"
 echo "Initializing build process"
