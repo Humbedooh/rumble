@@ -93,7 +93,7 @@ void *rumble_smtp_init(void *T) {
 
             free(line);
             if (rc == RUMBLE_RETURN_IGNORE) {
-                rumble_debug("smtp", "Parser is ignoring request from %s", session.client->addr);
+                rumble_debug("smtp", "a module replied to %s instead of me", session.client->addr);
                 continue;   /* Skip to next line. */
             } 
             else if (rc == RUMBLE_RETURN_FAILURE) {
