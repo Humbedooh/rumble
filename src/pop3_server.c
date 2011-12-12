@@ -421,6 +421,20 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         rcsend(session, "\r\n.\r\n");
     } else {
         rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n", i);
+        /* Might as well delete the letter if it doesn't exist :( */
+        rumble_rw_start_write(pops->bag->rrw);
+        folder = rumble_mailman_current_folder(pops);
+        j = 0;
+        foreach((rumble_letter *), letter, folder->letters, iter) {
+            j++;
+            if (j == i) {
+                letter->flags |= RUMBLE_LETTER_EXPUNGE; /* Used to be _DELETED, but that was baaad. */
+                found = 1;
+                break;
+            }
+        }
+
+        rumble_rw_stop_write(pops->bag->rrw);
     }
 
     return (RUMBLE_RETURN_IGNORE);
