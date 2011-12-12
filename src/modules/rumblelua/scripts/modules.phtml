@@ -1,3 +1,9 @@
+<?
+if (not session.credentials.admin) then
+	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
+	stop();
+end
+?>
 <h2>Set up modules</h2>
 <table width="700" border="0" class="elements">
   <tr>

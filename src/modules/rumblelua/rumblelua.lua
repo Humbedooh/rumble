@@ -277,6 +277,10 @@ function acceptHTTP(session)
                 local output = "";
                 local _printf = printf;
                 local xit = _G.exit;
+				if (string.sub(x, 1, 1) == "=") then
+					x = x:sub(2);
+					local ret, val = pcall(loadstring("return ("..x..")")); return val or x;
+				end
                 _G.stop = function() session.stop = true; session.atend = session.output:find("<?"..x.."?>",1,true) + output:len();end
                 _G.exit = function() session.killed = true; return; end
                 _G.printf = function(...) output = output .. string.format(...); end;

@@ -1,6 +1,10 @@
 <h1>Server settings</h1>
 
 <?
+if (not session.credentials.admin) then
+	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
+	stop();
+end
 if (session.section and http.form.save and session.credentials.admin) then
 	printf("Saving " .. Rumble.readConfig("config-dir") .. "/rumble.conf");
 	local f = io.open(Rumble.readConfig("config-dir") .. "/rumble.conf", "r");
@@ -34,6 +38,7 @@ end
 if (session.section ~= "") then
 	printf("<div class='notification'>Settings saved!</div>");
 end
+
 ?>
 <form id="form1" name="form1" method="post" action="/settings:save">
 <input type="hidden" name="save" value="true"/>

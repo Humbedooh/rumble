@@ -1,9 +1,6 @@
 <h2>Domains</h2>
 <?
-    if (not session.credentials.admin) then
-    	printf("Access denied! :o");
-        return;
-	else
+	if (session.credentials.admin) then
 		local blocked = "";
 		local t = Mailman.listDomains(); 
 		for k, v in pairs(t) do
@@ -127,7 +124,7 @@
     local t = Mailman.listDomains(); 
 --    table.sort(t);
     for k,v in pairs(t) do
-        if (session.credentials.admin or session.credentials.domains[v]) then
+        if (session.credentials.admin or session.credentials.domains[k]) then
             printf("<tr><td><img src='/icons/house.png' align='absmiddle'/>&nbsp;<a href='/accounts:%s'><strong>%s</strong></a></td><td>domain</td><td><a href=\"/domains:%s\"><img title='Edit domain' src='/icons/report_edit.png' align='absmiddle'/></a>  <a href=\"/domains?domain=%s&delete=true\"><img title='Delete domain' src='/icons/delete.png' align='absmiddle'/></a></td></tr>", k,k,k,k);
         end
     end

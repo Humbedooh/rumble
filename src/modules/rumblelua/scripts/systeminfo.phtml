@@ -2,8 +2,15 @@
 <div class="content">
 <h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Server log:</h2>
 <br/><br/><br/><br/><br/><br/>
+<?
+if (not session.credentials.admin) then
+	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
+	stop();
+end
+?>
 <code>
 <?
+
 local colors = {
 	core = 282,
 	smtp = 228,

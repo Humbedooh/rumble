@@ -1,5 +1,9 @@
 <h2>Service information: <?=string.upper(session.section or "")?></h2>
 <?
+if (not session.credentials.admin) then
+	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
+	stop();
+end
 local svc = session.section;
 my.svcinfo = Rumble.serviceInfo(svc);
 if ( session.section and session.credentials.admin ) then
@@ -31,24 +35,31 @@ if ( session.section and session.credentials.admin ) then
 end
 my.stuff = {moo = 1};
 my.stuff.sent, my.stuff.recv, my.stuff.total =  math.comma(my.svcinfo.sent), math.comma(my.svcinfo.received),math.comma(my.svcinfo.sent + my.svcinfo.received);
-my.stuff.jobs, my.stuff.workers, my.stuff.busy, my.stuff.idle, my.stuff.per = math.comma(my.svcinfo.sessions), math.comma(my.svcinfo.workers), math.comma(my.svcinfo.busy), math.comma(my.svcinfo.idle), my.svcinfo.sessions/my.svcinfo.workers;
+my.stuff.jobs, my.stuff.workers, my.stuff.busy, my.stuff.idle, my.stuff.per = math.comma(my.svcinfo.sessions), math.comma(my.svcinfo.workers), math.comma(my.svcinfo.busy), math.comma(my.svcinfo.idle), my.svcinfo.sessions/( (my.svcinfo.workers>0 and my.svcinfo.workers) or 1);
 my.stuff.rejected, my.stuff.accepted = math.comma(my.svcinfo.rejected or 0), math.comma(my.svcinfo.sessions - (my.svcinfo.rejected or 0));
+my.stuff.ratio =  math.floor((my.svcinfo.rejected / ((my.svcinfo.sessions > 0 and my.svcinfo.sessions) or 1)) * 100);
 
 ?>
-<table border="0" cellspacing="1" class="elements" width="700">
+<table border="0" cellspacing="1" class="elements" width="680">
 <tr><th colspan="2">Traffic</th><th colspan="2">Workers</th><th colspan="2">Sessions</tr>
-<tr><td><b>Sessions:</b></td>
-  <td align="right"> <?=my.stuff.jobs?> handled</td><td><strong>Busy workers:</strong></td><td align="right"><?=my.stuff.busy?> </td>
-<td><strong>Session accepted:</strong></td>
-<td align="right"><?=my.stuff.accepted?></td></tr>
-<tr><td><b>Sent:</b></td><td align="right"> <?=my.stuff.sent?>  bytes</td><td><strong>Idle workers:</strong></td><td align="right"><?=my.stuff.idle?> </td>
+<tr>
+  <td><b>Sent:</b></td>
+  <td align="right"><?=my.stuff.sent?>
+bytes</td><td><strong>Busy workers:</strong></td><td align="right"><?=my.stuff.busy?> </td>
+<td><b>Sessions handled:</b></td>
+<td align="right"><?=my.stuff.jobs?></td></tr>
+<tr><td><b>Received:</b></td><td align="right"><?=my.stuff.recv?>
+bytes</td><td><strong>Idle workers:</strong></td><td align="right"><?=my.stuff.idle?> </td>
+<td><strong>Sessions accepted:</strong></td>
+<td align="right"> <?=my.stuff.accepted?></td></tr>
+<tr><td><b>Total:</b></td><td align="right"><?=my.stuff.total?>
+bytes</td><td><strong>Total workers:</strong></td><td align="right"><?=my.stuff.workers?> </td>
 <td><strong>Sessions rejected:</strong></td>
-<td align="right"><?=my.stuff.rejected?></td></tr>
-<tr><td><b>Received:</b></td><td align="right"> <?=my.stuff.recv?>  bytes</td><td><strong>Total workers:</strong></td><td align="right"><?=my.stuff.workers?> </td><td></td>
-  <td align="right"></td></tr>
-<tr ><td><b>Total:</b></td><td align="right"> <?=my.stuff.total?>  bytes</td>
-<td><strong>Jobs per worker:</strong></td><td align="right"><?=my.stuff.per?> </td><td></td>
-<td align="right"></td></tr>
+  <td align="right"><?=my.stuff.rejected?></td></tr>
+<tr ><td>&nbsp;</td><td align="right">&nbsp;</td>
+<td><strong>Jobs per worker:</strong></td><td align="right"><?=string.format("%.2f",my.stuff.per)?> </td><td><strong>Rejection ratio:</strong></td>
+<td align="right"><?=my.stuff.ratio?>
+  %%</td></tr>
 </table>
 
 <br />
@@ -82,7 +93,7 @@ for i,entry in pairs(Rumble.getLog()) do
 	if (svc == service) then
 		log = log:gsub("<", "&lt;");
 		log = log:gsub("(%d[%d%.]+)", "<span style='color: #996622;'>%1</span>");
-		table.insert(svclog, "<div style='border: 1px dotted #522; margin: 3px; width: 700px;'>"..date.." <b style='color: #"..color..";'>"..svc..": </b> "..log.."</div>");
+		table.insert(svclog, "<div style='border: 1px dotted #522; margin: 3px; width: 720px;'>"..date.." <b style='color: #"..color..";'>"..svc..": </b> "..log.."</div>");
 	end
 end
 
@@ -91,6 +102,6 @@ if (#svclog > 0) then
 		printf("%s", v);
 	end
 else 
-	printf("No entries matching "..svc.."found in the latest system messages\n");
+	printf("No entries matching "..svc:upper().." found in the latest system messages\n");
 end
 ?>
