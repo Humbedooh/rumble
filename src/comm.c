@@ -219,6 +219,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     vsprintf(buffer, d, vl);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
+    session->client->bsent += strlen(buffer);
     free(buffer);
     va_end(vl);
     return (len);
@@ -241,6 +242,8 @@ void comm_accept(socketHandle sock, clientHandle *client) {
         client->tls = 0;
         client->send = 0;
         client->recv = 0;
+        client->brecv = 0;
+        client->bsent = 0;
         if (client->socket == SOCKET_ERROR) {
             perror("Error while attempting accept()");
             break;
@@ -305,6 +308,7 @@ char *rumble_comm_read(sessionHandle *session) {
     }
 
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.received += strlen(ret);
+    session->client->brecv += strlen(ret);
     return (ret);
 }
 
@@ -336,6 +340,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
         }
 
         if (session->_svc) ((rumbleService *) session->_svc)->traffic.received += len;
+        session->client->brecv += len;
         return (buffer);
     }
 
@@ -348,6 +353,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
  */
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += strlen(message);
+    session->client->bsent += strlen(message);
     if (session->client->send) return ((session->client->send) (session->client->tls, message, strlen(message), 0));
     return (send(session->client->socket, message, (int) strlen(message), 0));
 }
@@ -358,6 +364,7 @@ ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
  */
 ssize_t rumble_comm_send_bytes(sessionHandle *session, const char *message, size_t len) {
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += len;
+    session->client->bsent += len;
     if (session->client->send) return ((session->client->send) (session->client->tls, message, len, 0));
     return (send(session->client->socket, message, (int) len, 0));
 }

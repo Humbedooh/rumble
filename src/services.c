@@ -76,6 +76,7 @@ int comm_suspendService(rumbleService *svc) {
 
         svc->threads->size = 0;
         svc->enabled = 2;   /* 2 = suspended */
+        pthread_mutex_unlock(&svc->mutex);
     }
 
     rumble_debug("svc", "Suspended service (%s) on port %s.", svc->settings.name, svc->settings.port);
@@ -162,6 +163,8 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService           *svc;
     rumbleServicePointer    *svcp;
+    int x = 0;
+    traffic_entry* tentry = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     svcp = (rumbleServicePointer *) malloc(sizeof(rumbleServicePointer));
@@ -187,8 +190,32 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;
     svc->settings.stackSize = 2.5 * 1024 * 1024;
     cvector_add(master->services, svcp);
+    svc->trafficlog = dvector_init();
+    for (x = 0; x < 10000; x++) {
+         tentry = (traffic_entry *) malloc(sizeof(traffic_entry));
+         tentry->bytes = 0;
+         tentry->date = 0;
+        dvector_add(svc->trafficlog, tentry);
+    }
     rumble_debug("svc", "Registered new service (%s) on port %s.", svcName, port ? port : "(null)");
     return (svc);
+}
+
+void comm_addEntry(rumbleService* svc, uint32_t bytes) {
+    traffic_entry* entry = 0;
+    dvector_element* obj;
+    if (svc) {
+        entry = (traffic_entry *) svc->trafficlog->last->object;
+        obj = svc->trafficlog->last;
+        obj->next = svc->trafficlog->first;
+        obj->prev->next = 0;
+        svc->trafficlog->last = obj->prev;
+        svc->trafficlog->first->prev = obj;
+        svc->trafficlog->first = obj;
+        obj->prev = 0;
+        entry->bytes = bytes;
+        entry->date = time(NULL);
+    }
 }
 
 /*

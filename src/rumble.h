@@ -387,6 +387,8 @@ typedef struct
     void                    *tls;
     dummySocketOp           recv;   /* Dummy operator for GNUTLS */
     dummySocketOp           send;   /* Dummy operator for GNUTLS */
+    uint32_t                bsent;
+    uint32_t                brecv;
 } clientHandle;
 typedef struct
 {
@@ -436,6 +438,7 @@ typedef struct
     clientHandle    *client;
     uint32_t        flags;
     uint32_t        _tflags;
+    uint32_t        bytes;
     void            *_master;
     void            *_svcHandle;
     void            *_svc;
@@ -493,6 +496,11 @@ typedef struct
         pthread_mutex_t mutex;
     } lua;
 } masterHandle;
+
+typedef struct {
+    time_t      date;
+    uint32_t    bytes;
+} traffic_entry;
 typedef struct
 {
     masterHandle    *master;
@@ -506,6 +514,7 @@ typedef struct
     pthread_mutex_t mutex;
     pthread_cond_t  cond;
     dvector         *handles;
+    dvector         *trafficlog;
     int             lua_handle;
     void * (*init) (void *);
     int enabled;
@@ -715,6 +724,7 @@ rumble_sendmail_response    *rumble_send_email
 void                        rumble_debug(const char *svc, const char *msg, ...);
 void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
 dvector* rumble_readconfig(const char* filename);
+void comm_addEntry(rumbleService* svc, uint32_t bytes);
 
 /*$3
  =======================================================================================================================

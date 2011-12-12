@@ -120,6 +120,9 @@ void *rumble_smtp_init(void *T) {
          */
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_SMTP);
+        pthread_mutex_lock(&(svc->mutex));
+        comm_addEntry(svc, session.client->brecv + session.client->bsent);
+        pthread_mutex_unlock(&(svc->mutex));
         disconnect(session.client->socket);
 
         /*$2

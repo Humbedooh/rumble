@@ -1606,6 +1606,51 @@ static int rumble_lua_serviceinfo(lua_State *L) {
     return (1);
 }
 
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static int rumble_lua_trafficinfo(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+    int x = 0;
+    rumbleService   *svc = 0;
+    const char      *svcName;
+    d_iterator      iter;
+    traffic_entry*  tentry;
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    luaL_checktype(L, 1, LUA_TSTRING);
+    svcName = lua_tostring(L, 1);
+    svc = comm_serviceHandle(svcName);
+    if (svc) {
+//        pthread_mutex_lock(&(svc->mutex));
+  //      pthread_mutex_unlock(&(svc->mutex));
+        printf("Creating traffic table for %s\n", svcName);
+        lua_newtable(L);
+        dforeach ((traffic_entry*), tentry, svc->trafficlog, iter) {
+            if (tentry && tentry->date) {
+                printf("Got an entry\n");
+                x++;
+                lua_pushinteger(L, x);
+                lua_newtable(L);
+                    lua_pushinteger(L, tentry->date);
+                    lua_pushinteger(L, tentry->bytes);
+                    lua_rawset(L, -3);
+                lua_rawset(L, -3);
+            }
+        }
+        printf("Done, sending table\n");
+        //lua_rawset(L, -3);
+        printf("moo\n");
+        return (1);
+    }
+
+    lua_pushnil(L);
+    return (1);
+}
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -2039,6 +2084,7 @@ static const luaL_reg   Rumble_methods[] =
     { "setHook", rumble_lua_sethook },
     { "serverInfo", rumble_lua_serverinfo },
     { "serviceInfo", rumble_lua_serviceinfo },
+    { "trafficInfo", rumble_lua_trafficinfo },
     { "listModules", rumble_lua_listmodules },
     { "dprint", rumble_lua_debug },
     { "reloadModules", rumble_lua_reloadmodules },
