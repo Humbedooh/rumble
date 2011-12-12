@@ -246,7 +246,6 @@ dvector* rumble_readconfig(const char* filename) {
     configFile = dvector_init();
     cfgpath = 0;
 
-	if (!cfgfile) merror();
     for (x = 0; x < 3; x++) {
         sprintf(cfgfile, "%s/%s", paths[x], filename);
         config = fopen(cfgfile, "r");

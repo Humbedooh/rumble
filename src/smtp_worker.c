@@ -166,6 +166,7 @@ rumble_sendmail_response *rumble_send_email(
             chunk = fread(buffer, 1, 2000, fp);
             send(c.socket, buffer, (int) chunk, 0);
             if (s._svc) ((rumbleService*) s._svc)->traffic.sent += chunk;
+            else printf("..");
         }
         rcsend(&s, ".\r\n");
         get_smtp_response(&s, res);
