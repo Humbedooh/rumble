@@ -17,21 +17,31 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 </p>
 
 <p>&nbsp;</p>
-<p>&nbsp;</p>
 
-<table class=\"elements\" border='0' cellspacing='1' cellpadding='5 style='max-width:300 px;'>
-<tr>
+<table width="700" class="elements" border="0">
+  <tr>
+    <th width="109">Service</th>
+    <th width="200">Status</th>
+    <th width="147">Busy/Idle workers</th>
+    <th width="112">Jobs handled</th>
+    <th width="140">Traffic</th>
+  </tr>
 <?
-    for k,v in pairs({"smtp", "imap4", "pop3"}) do
+	local total = 0;
+    for k,v in pairs({"smtp", "imap4", "pop3", "mailman"}) do
         local svc = Rumble.serviceInfo(v);
-        if (svc.enabled == 1) then
-			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/greenbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>Running<br/>Traffic: %s bytes</td>", v:upper(), math.comma(svc.received + svc.sent));
-		else
-			printf("<td width='300'><h3 align='center'>%s</h3><img src='/icons/redbutton.png'/ align='left' hspace='8' width='42' height='42'><b>Status: </b>Disabled</td>", v:upper());
-        end
+		local status = (svc.enabled == 1 and "Running") or (svc.enabled == 0 and "Stopped") or "Paused";
+		local icon = "<img src='/icons/service_" .. status:lower() .. ".png' align='absmiddle' />";
+		local traffic = math.comma(svc.received + svc.sent);
+		total = total + svc.received + svc.sent;
+		printf("<tr><td><a href='/services:%s'>%s</a></td><td>%s %s</td><td align='right'>%u / %u</td><td align='right'>%u</td><td align='right'>%s bytes</td></tr>", v, v:upper(), icon, status, svc.busy, svc.idle, svc.sessions, traffic);
     end
+
+	printf("<tr><td colspan='4' align='right'>Total:</td><td align='right'>%s bytes</td></tr>", math.comma(total) or "0");
 ?>
-</tr>
+
+
+
 </table>
 <p>&nbsp;</p>
 <?

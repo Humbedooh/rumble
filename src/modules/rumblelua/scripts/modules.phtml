@@ -1,12 +1,12 @@
 <h2>Set up modules</h2>
-<table width="700" border="0">
+<table width="700" border="0" class="elements">
   <tr>
     <th width="186">filename</th>
     <th width="315">Module info</th>
     <th width="100">Status</th>
     <th width="81">Actions</th>
   </tr>
-  <tr>
+
 <?
 for k,mod in pairs(Rumble.listModules()) do
 	local hascfg = Rumble.getmoduleconfig(mod.file);
@@ -22,7 +22,7 @@ for k,mod in pairs(Rumble.listModules()) do
 		modlink = "<a href=\"/modules:"..rawfile.."\">"..rawfile.."</a>";
 		editlink = "<a href='/modules:"..rawfile.."'><img src='/icons/report_edit.png' border='0' align='absmiddle' hspace='4'>Edit</a>";
 	end
-	printf("<tr><td colspan='4'><hr/></td></tr>");
+--	printf("<tr><td colspan='4'><hr/></td></tr>");
 	printf("<tr><td valign='top'><img src='/icons/plugin.png' align='absmiddle'/> %s</td><td><b>%s</b><br/><small>%s</small></td><td>%s</td><td>%s</td></tr>", modlink, mod.title or mod.file, mod.description or "", (hascfg and "<font color='#272'>Configurable</font>") or "<font color='#732'>N/A</font>", editlink);
 end
 ?>

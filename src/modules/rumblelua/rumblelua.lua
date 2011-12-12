@@ -226,7 +226,7 @@ function acceptHTTP(session)
                 return;
             end
             
-            session.script = session.script:gsub("<%?=(.-)%?>", function(x) _G.session = session; local ret, val = pcall(loadstring("return ("..x..")")); return val or x; end);
+            
             session.pos = "<!-- -->"
             session.atend = nil;
             _G.my = {};
@@ -234,6 +234,10 @@ function acceptHTTP(session)
             session.script = session.script:gsub("<%?(.-)%?>", 
                 function(x) 
                     _G.session = session;
+					if (string.sub(x, 1, 1) == "=") then
+						x = x:sub(2);
+						local ret, val = pcall(loadstring("return ("..x..")")); return val or x;
+					end
                     local output = "";
                     local _printf = printf;
                     local xit = _G.exit;
@@ -308,7 +312,7 @@ end
 --[[ Initialize the service ]]--
 
 do
-    if (Rumble.createService(acceptHTTP, portNum, 20) == true) then
+    if (Rumble.createService(acceptHTTP, portNum, 10) == true) then
         print(string.format("%-48s[%s]", "Launching RumbleLua service on port " .. portNum .. "...", "OK"));
     end
     
