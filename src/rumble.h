@@ -76,6 +76,13 @@
 #      ifndef __MINGW32__
 #         pragma warning(disable : 5)
 #         pragma warning(disable : 996)
+#         pragma warning(disable : 4127)
+#         pragma warning(disable : 4706)
+#         pragma warning(disable : 4214)
+#         pragma warning(disable : 4204)
+#         pragma warning(disable : 4211)
+#         pragma warning(disable : 4053)
+#         pragma warning(disable : 4100)
 #      endif
 #      include <Ws2tcpip.h>
 #      include <WinSock2.h>
@@ -507,6 +514,7 @@ typedef struct
         size_t  sent;
         size_t  received;
         size_t  sessions;
+        size_t  rejections;
     } traffic;
     struct
     {

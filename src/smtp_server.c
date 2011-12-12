@@ -63,7 +63,10 @@ void *rumble_smtp_init(void *T) {
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_SMTP);
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_smtp_reply_code(220), myName);   /* Hello! */
-        else rumble_debug("smtp", "SMTP session was blocked by an external module!");
+        else {
+            else svc->traffic.rejections++;
+            rumble_debug("smtp", "SMTP session was blocked by an external module!");
+        }
 
         /* Parse incoming commands */
         while (rc != RUMBLE_RETURN_FAILURE) {
@@ -91,7 +94,11 @@ void *rumble_smtp_init(void *T) {
             if (rc == RUMBLE_RETURN_IGNORE) {
                 rumble_debug("smtp", "Parser is ignoring request from %s", session.client->addr);
                 continue;   /* Skip to next line. */
-            } else if (rc == RUMBLE_RETURN_FAILURE) break;  /* Abort! */
+            } 
+            else if (rc == RUMBLE_RETURN_FAILURE) {
+                svc->traffic.rejections++;
+                break;  /* Abort! */
+            }
             else {
                 rumble_comm_send(sessptr, rumble_smtp_reply_code(rc));  /* Bad command thing. */
                 rumble_debug("smtp", "I said to %s: %s", session.client->addr, rumble_smtp_reply_code(rc));
@@ -169,7 +176,6 @@ void *rumble_smtp_init(void *T) {
     }
 
     pthread_exit(0);
-    return (0);
 }
 
 /*

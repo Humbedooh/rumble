@@ -339,7 +339,7 @@ static int rumble_lua_recv(lua_State *L) {
         if (line[len - 1] == '\n') line[len - 1] = 0;
         if (line[len - 2] == '\r') line[len - 2] = 0;
         len = strlen(line);
-    } else len = -1;
+    } else len = 0;
     lua_settop(L, 0);
     lua_pushstring(L, line);
     lua_pushinteger(L, len);
@@ -1545,7 +1545,7 @@ static int rumble_lua_serviceinfo(lua_State *L) {
                     idle,
                     sessions,
                     out,
-                    in;
+                    in, rej;
     rumbleService   *svc = 0;
     char            capa[1024];
     const char      *svcName;
@@ -1564,6 +1564,7 @@ static int rumble_lua_serviceinfo(lua_State *L) {
         sessions = svc->traffic.sessions;
         out = svc->traffic.sent;
         in = svc->traffic.received;
+        rej = svc->traffic.rejections;
         pthread_mutex_unlock(&(svc->mutex));
         lua_newtable(L);
         lua_pushliteral(L, "workers");
@@ -1586,6 +1587,9 @@ static int rumble_lua_serviceinfo(lua_State *L) {
         lua_rawset(L, -3);
         lua_pushliteral(L, "received");
         lua_pushinteger(L, in);
+        lua_rawset(L, -3);
+        lua_pushliteral(L, "rejected");
+        lua_pushinteger(L, rej);
         lua_rawset(L, -3);
         memset(capa, 0, 1024);
         cforeach((char *), c, svc->capabilities, iter) {
@@ -1836,7 +1840,7 @@ static int rumble_lua_createservice(lua_State *L) {
     const char      *port;
     int             threads,
                     n;
-    socketHandle    sock;
+    socketHandle    sock = 0;
     int             isFirstCaller = 0;
     pthread_attr_t  attr;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

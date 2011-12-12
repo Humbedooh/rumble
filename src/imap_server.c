@@ -73,6 +73,7 @@ void *rumble_imap_init(void *T) {
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_IMAP);
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, "* OK <%s> IMAP4rev1 Service Ready\r\n", myName);   /* Hello! */
+        else svc->traffic.rejections++;
 
         /* Parse incoming commands */
         extra_data = (char *) malloc(32);
@@ -105,8 +106,10 @@ void *rumble_imap_init(void *T) {
 
             free(line);
             if (rc == RUMBLE_RETURN_IGNORE) continue;   /* Skip to next line. */
-            else if (rc == RUMBLE_RETURN_FAILURE)
+            else if (rc == RUMBLE_RETURN_FAILURE) {
+                svc->traffic.rejections++;
                 break;  /* Abort! */
+            }
             else rcprintf(&session, "%s BAD Invalid command!\r\n", extra_data);         /* Bad command thing. */
         }
 
@@ -175,7 +178,6 @@ void *rumble_imap_init(void *T) {
     }
 
     pthread_exit(0);
-    return (0);
 }
 
 /*

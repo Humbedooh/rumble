@@ -181,6 +181,7 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->traffic.received = 0;
     svc->traffic.sent = 0;
     svc->traffic.sessions = 0;
+    svc->traffic.rejections = 0;
     svc->settings.port = port;
     svc->settings.name = svcp->svcName;
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;

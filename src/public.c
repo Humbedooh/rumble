@@ -440,7 +440,6 @@ size_t rumble_file_exists(const char *filename)
     if (access(filename, 0) == 0) return (1);
 #endif
     else return (0);
-    return (1);
 }
 
 /*
@@ -504,7 +503,7 @@ lua_State *rumble_acquire_state(void) {
     int             x;
     int             found = 0;
     masterHandle    *master = public_master_handle;
-    lua_State       *L;
+    lua_State       *L = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     pthread_mutex_lock(&master->lua.mutex);

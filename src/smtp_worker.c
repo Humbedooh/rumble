@@ -56,6 +56,7 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
             free(line);
         }
     }
+    if (res->replyCode == 500) ((rumbleService*) session->_svc)->traffic.rejections++;
 }
 
 /*
@@ -81,7 +82,7 @@ rumble_sendmail_response *rumble_send_email(
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     s.client = &c;
-    s._svc = 0;
+    s._svc = comm_serviceHandleExtern(master, "mailman");
     res = (rumble_sendmail_response *) malloc(sizeof(rumble_sendmail_response));
     if (!res) merror();
     res->flags = dvector_init();
@@ -164,8 +165,8 @@ rumble_sendmail_response *rumble_send_email(
             memset(buffer, 0, 2000);
             chunk = fread(buffer, 1, 2000, fp);
             send(c.socket, buffer, (int) chunk, 0);
+            if (s._svc) ((rumbleService*) s._svc)->traffic.sent += chunk;
         }
-
         rcsend(&s, ".\r\n");
         get_smtp_response(&s, res);
         break;
@@ -292,6 +293,7 @@ void *rumble_worker_process(void *m) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sess->client = &c;
+	sess->_svc = svc;
     if (!sess) merror();
     sess->_master = (masterHandle *) svc->master;
     tmp = (char *) calloc(1, 256);
