@@ -202,7 +202,7 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     return (svc);
 }
 
-void comm_addEntry(rumbleService* svc, uint32_t bytes) {
+void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected) {
     time_t now;
     traffic_entry* entry = 0;
     dvector_element* obj;
