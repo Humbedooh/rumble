@@ -206,6 +206,7 @@ function acceptHTTP(session)
             
             if ( http.URL:match("%.png")) then session:send("Content-Type: image/png\r\n");
             elseif ( http.URL:match("%.jpg")) then session:send("Content-Type: image/jpeg\r\n");
+			elseif ( http.URL:match("%.svg")) then session:send("Content-Type: image/svg+xml\r\n");
             elseif ( http.URL:match("%.css")) then session:send("Content-Type: text/css\r\n");
             else session:send("Content-Type: binary/octet-stream\r\n");
             end

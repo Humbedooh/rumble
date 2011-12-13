@@ -65,6 +65,7 @@ bytes</td><td><strong>Total workers:</strong></td><td align="right"><?=my.stuff.
 <br />
 
 <h3>Latest log entries:</h3>
+<code>
 <?
 
 local svc = session.section;
@@ -105,3 +106,4 @@ else
 	printf("No entries matching "..svc:upper().." found in the latest system messages\n");
 end
 ?>
+</code>

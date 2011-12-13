@@ -122,13 +122,15 @@
     printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
     printf("<tr><th>Domain</th><th>Type</th><th>Actions</th></tr>");
     local t = Mailman.listDomains(); 
---    table.sort(t);
+	local d = false;
+    table.sort(t);
     for k,v in pairs(t) do
+		d = true;
         if (session.credentials.admin or session.credentials.domains[k]) then
             printf("<tr><td><img src='/icons/house.png' align='absmiddle'/>&nbsp;<a href='/accounts:%s'><strong>%s</strong></a></td><td>domain</td><td><a href=\"/domains:%s\"><img title='Edit domain' src='/icons/report_edit.png' align='absmiddle'/></a>  <a href=\"/domains?domain=%s&delete=true\"><img title='Delete domain' src='/icons/delete.png' align='absmiddle'/></a></td></tr>", k,k,k,k);
         end
     end
-    if (#t == 0) then
+    if (not d) then
         printf("<tr><td colspan='3'><i>No domains are configured for this server yet.</i></td></tr>");
     end
     printf("</table>");

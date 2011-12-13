@@ -1,3 +1,4 @@
+<link href="../rumblelua2.css" rel="stylesheet" type="text/css" />
 <?
 domain = session.section;
 acc = nil;
@@ -58,22 +59,25 @@ end
 
 ?><style type="text/css">
 .create_mailbox_tab {
-	background-color: #9297A3;
+	background-color: #8AAFCE;
+!important;
 	border: 1px dotted #333 !important;
 }
 .create_mailbox_tab:hover {
-	background-color: #AFBCD3;
-	border: 1px dotted #333;
+	background-color: #AFBCD3;!important;
+	border: 1px dotted #333;!important;
 }
 .create_mailbox_tab_selected {
-	background-color: #DDD39B;
+	background-color: #E8EABF;
+!important;
 	border: 1px dotted #333;
+!important;
 }
 </style>
 
 <h2>Accounts @ <?=domain?></h2>
-<table class="elements" border='0' cellpadding='5' cellspacing='0'>
-<tr>
+<table class="" style="margin:0px auto;" border='0' cellpadding='5' cellspacing='0'>
+<tr class="elements">
 <th>
 Create a new account:</th>
 <tr><td>

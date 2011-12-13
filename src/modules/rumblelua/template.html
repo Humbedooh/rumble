@@ -3,83 +3,31 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>RumbleLua</title>
-<link href="rumblelua.css" rel="stylesheet" type="text/css" />
+<link href="rumblelua2.css" rel="stylesheet" type="text/css" />
 </head>
+<body>
+<div class="header_top">
+  <div class="header_stuff">
+    [%header%]<br />
+    <span class="fineprint">Rumble Mail Server v/[%version%] <br />
+    </span>
 
-<body class="background">
-<div class="container">
-  <div class="header"><!-- end .header -->[%header%]<br />
-  <span class="version">Version [%version%]</span></div>
-  <div class="sidebar1">
-    <ul class="nav">
-      <li><a href="/"><img src="icons/computer.png" alt="server status" width="16" height="16" align="absmiddle" />&nbsp;Server status</a></li>
-      <li><a href="/domains"><img src="icons/house.png" alt="domains" width="16" height="16" align="absmiddle" />&nbsp;Domains</a></li>
-      <li><a href="/users"><img src="icons/group.png" alt="users" width="16" height="16" align="absmiddle" />&nbsp;RumbleLua users</a></li>
-      <li><a href="/settings"><img src="icons/report_edit.png" alt="settings" width="16" height="16" align="absmiddle" />&nbsp;Server settings</a></li>
-      <li><a href="/modules"><img src="icons/plugin_edit.png" alt="modules" width="16" height="16" align="absmiddle" />&nbsp;Set up modules</a></li>
-      <li><a href="/systeminfo"><img src="icons/page_white_find.png" alt="modules" width="16" height="16" align="absmiddle" />&nbsp;Server log</a></li>
-    </ul>
-    <p>
-    
+<a href="/"><img src="/icons/computer.png" align="absmiddle" /> Server status</a>
+<a href="/domains"><img src="/icons/house.png" align="absmiddle" /> Domains</a>
+
 <?
-if (session.credentials and session.credentials.admin) then
-    for k, svc in pairs({"smtp", "pop3", "imap4"}) do
-        local svcinfo = Rumble.serviceInfo(svc);
-        
-        local controls = "";
-        local status = "Running";
-        local icon = "running";
-        if (svcinfo) then
-        	if ( svcinfo.enabled == 2 ) then
-            	status = "Paused";
-                icon = "paused";
-            	controls = [[
-            <a href="/services:]]..svc..[[?stop=true"><img src="icons/control_stop_blue.png" align="absmiddle" title="Stop server (forcibly)"/></a>
-            <a href="/services:]]..svc..[[?start=true"><img src="icons/control_play_blue.png" align="absmiddle" title="Start server"/></a>
-            ]];
-            elseif (svcinfo.enabled == 0) then
-            	status = "Stopped";
-                icon = "stopped"
-            	controls = [[
-            <a href="/services:]]..svc..[[?start=true"><img src="icons/control_play_blue.png" align="absmiddle" title="Start server"/></a>
-            ]];
-            else
-            controls = [[
-            <a href="/services:]]..svc..[[?stop=true"><img src="icons/control_stop_blue.png" align="absmiddle" title="Stop server (forcibly)"/></a>
-            <a href="/services:]]..svc..[[?pause=true"><img src="icons/control_pause_blue.png" align="absmiddle" title="Pause server (gracefully)"/></a>
-            ]];
-            end
-        else
-        	status = "<em>Disabled</em>";
-            icon = "disabled";
-        	
-        end
-        controls = controls.. [[
-            <a href="/services:]]..svc..[["><img src="icons/information.png" align="absmiddle" title="Service information"/></a>
-            ]];
-        printf(
-        [[
-        <div class="servicepanel">
-        <div style="width:180px; float: left; height: 30px;">
-        <img src="/icons/service_%s.png" align="absmiddle" width="16" height="16"/>&nbsp;<b>%s</b>: %s
-        </div>
-        <div style="width:180px; text-align:right; float: right; height: 30px;">
-        %s
-        </div>
-
-</div>
-        ]], icon, svc:upper(), status, controls);
-
-    end
+if (session.credentials and session.credentials.admin) then printf("%s", [[
+<a href="/users"><img src="/icons/group.png" align="absmiddle" /> RumbleLua users</a>
+<a href="/settings"><img src="/icons/report_edit.png" align="absmiddle" /> Server settings</a>
+<a href="/modules"><img src="/icons/plugin_edit.png" align="absmiddle" /> Set up modules</a>
+<a href="/systeminfo"><img src="/icons/page_white_find.png" align="absmiddle" /> System logs</a>
+]]);
 end
 ?>
-</p>
-    <!-- end .sidebar1 --></div>
-  <div class="content" style="padding-left: 10px;"> [%contents%]    <!-- end .content --></div>
-  <div class="footer">
-    <p align="center">[%footer%]</p>
-    <!-- end .footer -->
-  </div>
-  <!-- end .container --></div>
+</div>
+</div>
+<div id="contents">
+[%contents%]
+</div>
 </body>
 </html>

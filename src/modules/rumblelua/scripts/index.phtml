@@ -1,5 +1,3 @@
-<link href="../rumblelua.css" rel="stylesheet" type="text/css" />
-<div class="content">
 <h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Server info:</h2>
 <p><strong>Operating environment: </strong>
   <?=session.info.os?> (<?=session.info.arch?> bit)<br>
@@ -34,7 +32,24 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 		local icon = "<img src='/icons/service_" .. status:lower() .. ".png' align='absmiddle' />";
 		local traffic = math.comma(svc.received + svc.sent);
 		total = total + svc.received + svc.sent;
-		printf("<tr><td><a href='/services:%s'>%s</a></td><td>%s %s</td><td align='right'>%u / %u</td><td align='right'>%u</td><td align='right'>%s bytes</td></tr>", v, v:upper(), icon, status, svc.busy, svc.idle, svc.sessions, traffic);
+		local actions = "";
+		if (session.credentials and session.credentials.admin) then
+			if (svc.enabled == 0) then actions = string.format([[
+				<a href='/services:%s?start=true'><img hspace='10' src="/icons/control_play_blue.png"></a>
+				]], v);
+			end
+			if (svc.enabled == 1) then actions = string.format([[
+				<a href='/services:%s?stop=true'><img src="/icons/control_stop_blue.png"></a>
+				<a href='/services:%s?pause=true'><img src="/icons/control_pause_blue.png"></a>
+				]], v,v);
+			end
+			if (svc.enabled == 2) then actions = string.format([[
+				<a href='/services:%s?stop=true'><img src="/icons/control_stop_blue.png"></a>
+				<a href='/services:%s?start=true'><img src="/icons/control_play_blue.png"></a>
+				]], v,v);
+			end
+		end
+		printf("<tr><td>%s <a href='/services:%s'>%s</a></td><td>%s %s</td><td align='right'>%u / %u</td><td align='right'>%u</td><td align='right'>%s bytes</td></tr>", actions, v, v:upper(), icon, status, svc.busy, svc.idle, svc.sessions, traffic);
     end
 
 	printf("<tr><td colspan='4' align='right'>Total:</td><td align='right'>%s bytes</td></tr>", math.comma(total) or "0");
@@ -48,6 +63,146 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 if (Rumble.readConfig("servername") == "mydomain.tld") then
 	printf("<div class='notification'>Note: Your hostname (mydomain.tld) is <font color='#a30'>incorrect</font>.<br/>Please go to the <a href='/settings'>Server settings</a> page and correct this.</div>");
 end
-?>
 
-</div>
+local poplog = {};
+local smtplog = {};
+local now = os.time();
+for i=1,12,1 do
+	poplog[i] = {0,0};
+	smtplog[i] = {0,0};
+--	poplog[i] = {math.random(1,20),math.random(1,500000)};
+--	smtplog[i] = {math.random(1,10),math.random(1,1500000)};
+end
+
+local i = 0;
+local t = Rumble.trafficInfo("pop3");
+if (t) then
+	for k,v in pairs(t) do
+		i = math.floor(k/3)+1;
+		poplog[i][1] = poplog[i][1] + v[1];
+		poplog[i][2] = poplog[i][2] + v[2];
+	end
+end
+
+t = Rumble.trafficInfo("imap4");
+if (t) then
+	for k,v in pairs(t) do
+		i = math.floor(k/3)+1;
+		poplog[i][1] = poplog[i][1] + v[1];
+		poplog[i][2] = poplog[i][2] + v[2];
+	end
+end
+
+t = Rumble.trafficInfo("smtp");
+if (t) then
+	for k,v in pairs(t) do
+		i = math.floor(k/3)+1;
+		smtplog[i][1] = smtplog[i][1] + v[1];
+		smtplog[i][2] = smtplog[i][2] + v[2];
+	end
+end
+
+local maxHits = 1;
+local maxBytes = 1;
+for i=1,12,1 do
+	if (smtplog[i][1] > maxHits) then maxHits = smtplog[i][1]; end
+	if (smtplog[i][2] > maxBytes) then maxBytes = smtplog[i][2]; end
+	if (poplog[i][1] > maxHits) then maxHits = poplog[i][1]; end
+	if (poplog[i][2] > maxBytes) then maxBytes = poplog[i][2]; end
+end
+local p = 0;
+for k, v in pairs({10,50,100,500,1000,5000,10000,50000,100000,300000,500000,1000000,3000000,5000000,10000000,50000000,100000000,1000000000,10000000000}) do
+	if (maxHits > p and maxHits < v) then maxHits = v; end
+	if (maxBytes > p and maxBytes < v) then maxBytes = v; end
+	p = v;
+end
+local abbr = {1, "bytes"};
+if (maxBytes > 1000) then abbr = {1000, "KB"}; end
+if (maxBytes > 1000000) then abbr = {1000000, "MB"}; end
+if (maxBytes > 1000000000) then abbr = {1000*1000*1000, "GB"}; end
+local units = [[
+<text class="units" x="0" y="209"> 0 hits</text>
+<text class="units" x="795" y="209" text-anchor="end">      0 ]]..abbr[2]..[[ -</text>
+<polyline fill="none" style="opacity:0.5;" stroke="grey" stroke-width="1" points="0,209 800,209"/>  
+]];
+for i=1,4,1 do
+	local y = 209-(i*42.5)
+	units = units .. string.format([[
+	<polyline fill="none" style="opacity:0.5;" stroke="grey" stroke-width="1" points="0,%u 800,%u"/>  
+	<text class="units" x="0" y="%u"> %s hits</text>
+	<text class="units" style='text-align:left; width: 100px;' x="795" text-anchor="end" y="%u">%5s %s -</text>
+	]], y,y,y, math.comma(maxHits*(i/4)), y, math.comma((maxBytes/abbr[1])*(i/4)), abbr[2]);
+end
+
+local pixelPerByte = 170/maxBytes;
+local pixelPerHit = 170/maxHits;
+
+local popboxes = "";
+local popcoords = "";
+
+local smtpboxes = "";
+local smtpcoords = "";
+
+for i=12,1,-1 do
+	local bytes,hits,x = poplog[i][2], poplog[i][1], ((740/12)*(12-i))+40;
+	popcoords = popcoords .. x+10 .. "," .. 205-(hits*pixelPerHit) .. " ";
+	popboxes = popboxes .. string.format(
+	'<rect x="%u" y="%u" width="24px" height="%upx" style="fill:rgb(42,107,166);fill-opacity:0.75;" stroke="blue"/>',
+	x-12, 209-(bytes*pixelPerByte), 2+(bytes*pixelPerByte));
+end
+
+for i=12,1,-1 do
+	local bytes,hits,x = smtplog[i][2], smtplog[i][1], ((740/12)*(12-i))+40;
+	smtpcoords = smtpcoords .. x+10 .. "," .. 205-(hits*pixelPerHit) .. " ";
+    smtpboxes = smtpboxes .. string.format(
+	'<rect x="%u" y="%u" width="24px" height="%upx" style="fill:rgb(107,166,42);fill-opacity:0.75;" stroke="green"/>',
+	x+12, 209-(bytes*pixelPerByte), 2+(bytes*pixelPerByte));
+end
+
+
+local f = io.open(session.path .. "/traffic_snapshot2.svg", "w");
+if (f) then
+	f:write([=[
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="800" height="220" version="1.1" xmlns="http://www.w3.org/2000/svg">
+	<defs>
+		<linearGradient id="backgroundGradient" gradientTransform="rotate(90)">
+			<stop offset="10%" stop-color="#e1e9a0" />
+			<stop offset="90%" stop-color="#eff4be" />
+		</linearGradient>
+		<style type="text/css">
+			<![CDATA[
+				 .caption {font-weight:bold;font-size:15px;font-family:Arial}
+				 .units {font-weight:normal;font-size:10px;font-family:Arial}
+			]]>
+		</style>
+		
+		<symbol id="crossingPoint" overflow="visible">
+			<circle cx="0" cy="0" r="3000" style="fill:rgb(12,166,107);fill-opacity:0.8;
+				stroke:rgb(0,0,0);stroke-width:300" />
+  		 </symbol>
+	</defs>
+	<g id="background" fill="url(#backgroundGradient)" >
+		<rect x="0" y="0" width="800px" height="220px" stroke="black"/>
+	</g>
+	
+	
+	<g id="drawing">
+		]=]..popboxes.. smtpboxes..[=[
+		<polyline fill="none" stroke="blue" stroke-width="2" points="]=]..popcoords..[=["/>  
+		<polyline fill="none" stroke="green" stroke-width="2" points="]=]..smtpcoords..[=["/>  
+	</g>
+	<g id="units">
+	]=]..units..[=[
+	</g>
+	
+</svg>
+]=]);
+	f:close();
+	
+end
+?>
+<p align="center">
+	<img src="../traffic_stats.png" width="800" height="24" /><br/>
+	<object data="/traffic_snapshot2.svg" type="image/svg+xml"/>
+</p>

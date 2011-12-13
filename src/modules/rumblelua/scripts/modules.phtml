@@ -79,8 +79,8 @@ if (http.form.saveConfig and module) then
 	
 if (cfg) then
 	local rawfile = module.file:match("modules/(.*)") or "";
-	printf("<h3>Configuration for '%s':</h3>", module.title or module.file);
-	printf("<form action='/modules:%s' method='post'><input type='hidden' name='saveConfig' value='yes'/><table border='0'>", rawfile);
+	printf("<form action='/modules:%s' method='post'><input type='hidden' name='saveConfig' value='yes'/><table border='0' class='elements'>", rawfile);
+	printf("<tr><th colspan='2' class='orange'>Configuration for '%s':</th></tr>", module.title or module.file);
 	for k, entry in pairs(cfg) do
 		if (entry.type == "string" or entry.type == "number") then
 			printf("<tr><td valign='top'><b>%s:</b></td><td><input  type='text' name='%s' value=\"%s\" style='width:%upx;'/><br/><i>%s</i><hr/></td></tr>", entry.key, entry.key, entry.value, entry.length*10, entry.description or "(no description)");
