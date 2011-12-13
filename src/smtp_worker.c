@@ -178,7 +178,7 @@ rumble_sendmail_response *rumble_send_email(
     fclose(fp);
     rcprintf(&s, "QUIT\r\n", sender);
     pthread_mutex_lock(&(((rumbleService*)s._svc)->mutex));
-    comm_addEntry(s._svc, c.brecv + c.bsent);
+    comm_addEntry(s._svc, c.brecv + c.bsent, 0);
     pthread_mutex_unlock(&(((rumbleService*)s._svc)->mutex));
     if (c.socket) disconnect(c.socket);
     return (res);
