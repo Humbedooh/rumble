@@ -25,13 +25,24 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
     <th width="164">Traffic</th>
   </tr>
 <?
+	my.shares = {{0,0,0,0},{0,0,0,0}};
 	local total = 0;
-    for k,v in pairs({"smtp", "imap4", "pop3", "mailman"}) do
+	local totalJobs = 0;
+	local totalIdle = 0;
+	local totalWorking = 0;
+    for k,v in pairs({"pop3", "imap4", "smtp", "mailman"}) do
         local svc = Rumble.serviceInfo(v);
+		if (svc) then
+			my.shares[1][k] = my.shares[1][k] + svc.sessions;
+			my.shares[2][k] = my.shares[2][k] + svc.sent + svc.received;
+		end
 		local status = (svc.enabled == 1 and "Running") or (svc.enabled == 0 and "Stopped") or "Paused";
 		local icon = "<img src='/icons/service_" .. status:lower() .. ".png' align='absmiddle' />";
 		local traffic = math.comma(svc.received + svc.sent);
 		total = total + svc.received + svc.sent;
+		totalJobs = totalJobs + svc.sessions;
+		totalIdle = totalIdle + svc.idle;
+		totalWorking = totalWorking + svc.busy;
 		local actions = "";
 		if (session.credentials and session.credentials.admin) then
 			if (svc.enabled == 0) then actions = string.format([[
@@ -52,7 +63,7 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 		printf("<tr><td>%s <a href='/services:%s'>%s</a></td><td>%s %s</td><td align='right'>%u / %u</td><td align='right'>%u</td><td align='right'>%s bytes</td></tr>", actions, v, v:upper(), icon, status, svc.busy, svc.idle, svc.sessions, traffic);
     end
 
-	printf("<tr><td colspan='4' align='right'>Total:</td><td align='right'>%s bytes</td></tr>", math.comma(total) or "0");
+	printf("<tr style='color:#371; font-weight: bold;'><td colspan='2' align='right'>Totals:</td><td align='right'>%s / %s</td><td align='right'>%s</td><td align='right'>%s bytes</td></tr>", math.comma(totalWorking), math.comma(totalIdle), math.comma(totalJobs), math.comma(total) or "0");
 ?>
 
 
@@ -67,18 +78,21 @@ end
 local poplog = {};
 local smtplog = {};
 local now = os.time();
-for i=1,12,1 do
+for i=1,13,1 do
 	poplog[i] = {0,0};
 	smtplog[i] = {0,0};
+-- For testing purposes: --
 --	poplog[i] = {math.random(1,20),math.random(1,500000)};
 --	smtplog[i] = {math.random(1,10),math.random(1,1500000)};
+-- --
 end
 
+local shares = {{0,0,0,1},{0,0,0,1}};
 local i = 0;
 local t = Rumble.trafficInfo("pop3");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3)+1;
+		i = math.floor(k/3.999)+1;
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 	end
@@ -87,20 +101,32 @@ end
 t = Rumble.trafficInfo("imap4");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3)+1;
+		i = math.floor(k/3.999)+1;
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
+
 	end
 end
 
 t = Rumble.trafficInfo("smtp");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3)+1;
+		i = math.floor(k/3.999)+1;
+		smtplog[i][1] = smtplog[i][1] + v[1];
+		smtplog[i][2] = smtplog[i][2] + v[2];
+
+	end
+end
+
+t = Rumble.trafficInfo("mailman");
+if (t) then
+	for k,v in pairs(t) do
+		i = math.floor(k/3.999)+1;
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
 	end
 end
+
 
 local maxHits = 1;
 local maxBytes = 1;
@@ -116,6 +142,7 @@ for k, v in pairs({10,50,100,500,1000,5000,10000,50000,100000,300000,500000,1000
 	if (maxBytes > p and maxBytes < v) then maxBytes = v; end
 	p = v;
 end
+
 local abbr = {1, "bytes"};
 if (maxBytes > 1000) then abbr = {1000, "KB"}; end
 if (maxBytes > 1000000) then abbr = {1000000, "MB"}; end
@@ -201,8 +228,76 @@ if (f) then
 	f:close();
 	
 end
+
+
+--[[
+Pie charts!!
+]]--
+local f = io.open(session.path .. "/traffic_piechart_shares.svg", "w");
+if (f) then
+	local shareTotal = {my.shares[1][1]+my.shares[1][2]+my.shares[1][3]+my.shares[1][4],my.shares[2][1]+my.shares[2][2]+my.shares[2][3]+my.shares[2][4]};
+	local pies = "";
+		for i, what in pairs({"Session", "Data"}) do
+		
+		local angle = 0;
+		local colors = {"#006bb6", "#e2c315", "#56b600", "#b60011"};
+		local y = i;
+		if (i == 2) then y = 3; end
+		for k,v in pairs({"pop3", "imap", "smtp", "mailman"}) do
+			start = angle;
+			local share = (my.shares[i][k]/(shareTotal[i]/100))*3.6;
+			if (share < 2) then share = 2; end
+			stop = angle + math.rad(share);
+			angle = stop;
+			startpoint = { math.cos(start), math.sin(start)}
+			stoppoint = {math.cos(stop), math.sin(stop) };
+			longarc = 0;
+			if (share >= 180) then longarc = 1; end
+			
+			pies = pies .. string.format([[
+			<path d="M%u,100 L%f,%f A80,80 0 %u,1 %f,%f z"
+			style="fill:%s;
+				fill-opacity: 1;
+				stroke:black;
+				stroke-width: 1"/>
+				]], 100*y, (100*y)+ startpoint[1]*80, 100 + startpoint[2]*80, longarc, (100*y) + stoppoint[1]*80, 100 + stoppoint[2]*80, colors[k]);
+		end
+		pies = pies .. string.format(
+		[[<text style="font-weight:bold;font-size:13px;font-family:Arial" x="%u" y="15" text-anchor="middle"> %s share: </text>]]
+		,y*100, what)
+		;
+	end
+	f:write([[
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="800" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<defs>
+		<linearGradient id="backgroundGradient" gradientTransform="rotate(90)">
+			<stop offset="10%" stop-color="#e1e9a0" />
+			<stop offset="90%" stop-color="#eff4be" />
+		</linearGradient>
+</defs>
+<g id="background" fill="url(#backgroundGradient)" >
+		<rect x="0" y="0" width="800px" height="200px" stroke="black"/>
+	</g>
+<!-- Pie chart sample -->
+]]..pies..[[
+</svg>
+	]]);
+
+	f:close();
+	
+end
+
 ?>
 <p align="center">
 	<img src="../traffic_stats.png" width="800" height="24" /><br/>
-	<object data="/traffic_snapshot2.svg" type="image/svg+xml"/>
+  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="800" height="220"></object>
+    
+</p>
+<p align="center"><br />
+  <img src="../traffic_shares.png" width="800" height="24" /><br/>
+  <object data="/traffic_piechart_shares.svg" type="image/svg+xml" width="800" height="202"> </object>
+  <br /><br />
+  
+  
 </p>
