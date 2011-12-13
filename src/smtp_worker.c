@@ -107,6 +107,8 @@ rumble_sendmail_response *rumble_send_email(
     c.socket = comm_open(master, mailserver, 25);
     c.recv = 0;
     c.send = 0;
+    c.brecv = 0;
+    c.bsent = 0;
     me = rumble_get_dictionary_value(master->_core.conf, "servername");
     FD_ZERO(&c.fd);
     FD_SET(c.socket, &c.fd);
@@ -175,6 +177,9 @@ rumble_sendmail_response *rumble_send_email(
 
     fclose(fp);
     rcprintf(&s, "QUIT\r\n", sender);
+    pthread_mutex_lock(&(((rumbleService*)s._svc)->mutex));
+    comm_addEntry(s._svc, c.brecv + c.bsent);
+    pthread_mutex_unlock(&(((rumbleService*)s._svc)->mutex));
     if (c.socket) disconnect(c.socket);
     return (res);
 }
