@@ -1629,12 +1629,12 @@ static int rumble_lua_trafficinfo(lua_State *L) {
         pthread_mutex_unlock(&(svc->mutex));
         lua_newtable(L);
         dforeach ((traffic_entry*), tentry, svc->trafficlog, iter) {
-            if (tentry && tentry->date) {
+            if (tentry && tentry->when) {
                 x++;
                 lua_pushinteger(L, x);
                 lua_newtable(L);
                 lua_pushinteger(L, 1);
-                lua_pushinteger(L, tentry->date);
+                lua_pushinteger(L, tentry->hits);
                 lua_rawset(L, -3);
                 
                 lua_pushinteger(L, 2);
