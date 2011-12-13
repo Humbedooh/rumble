@@ -498,7 +498,8 @@ typedef struct
 } masterHandle;
 
 typedef struct {
-    time_t      date;
+    time_t      when;
+    uint32_t    hits;
     uint32_t    bytes;
 } traffic_entry;
 typedef struct

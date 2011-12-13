@@ -191,10 +191,11 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.stackSize = 2.5 * 1024 * 1024;
     cvector_add(master->services, svcp);
     svc->trafficlog = dvector_init();
-    for (x = 0; x < 10000; x++) {
+    for (x = 0; x < 170; x++) {
          tentry = (traffic_entry *) malloc(sizeof(traffic_entry));
          tentry->bytes = 0;
-         tentry->date = 0;
+         tentry->hits = 0;
+         tentry->when = 0;
         dvector_add(svc->trafficlog, tentry);
     }
     rumble_debug("svc", "Registered new service (%s) on port %s.", svcName, port ? port : "(null)");
@@ -202,19 +203,27 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
 }
 
 void comm_addEntry(rumbleService* svc, uint32_t bytes) {
+    time_t now;
     traffic_entry* entry = 0;
     dvector_element* obj;
+    now = time(NULL) / 3600;
     if (svc) {
-        entry = (traffic_entry *) svc->trafficlog->last->object;
-        obj = svc->trafficlog->last;
-        obj->next = svc->trafficlog->first;
-        obj->prev->next = 0;
-        svc->trafficlog->last = obj->prev;
-        svc->trafficlog->first->prev = obj;
-        svc->trafficlog->first = obj;
-        obj->prev = 0;
-        entry->bytes = bytes;
-        entry->date = time(NULL);
+        entry = (traffic_entry *) svc->trafficlog->first->object;
+        if (entry->when < now) {
+            obj = svc->trafficlog->first;
+            obj->prev = svc->trafficlog->last;
+            svc->trafficlog->first = svc->trafficlog->last;
+            svc->trafficlog->last = svc->trafficlog->last->prev;
+            svc->trafficlog->last->next = 0;
+            svc->trafficlog->first->prev = 0;
+            svc->trafficlog->first->next = obj;
+            entry = (traffic_entry *) svc->trafficlog->first->object;
+            entry->bytes = 0;
+            entry->hits = 0;
+            entry->when = now;
+        }
+        entry->bytes += bytes;
+        entry->hits ++;
     }
 }
 

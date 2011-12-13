@@ -1625,25 +1625,25 @@ static int rumble_lua_trafficinfo(lua_State *L) {
     svcName = lua_tostring(L, 1);
     svc = comm_serviceHandle(svcName);
     if (svc) {
-//        pthread_mutex_lock(&(svc->mutex));
-  //      pthread_mutex_unlock(&(svc->mutex));
-        printf("Creating traffic table for %s\n", svcName);
+        pthread_mutex_lock(&(svc->mutex));
+        pthread_mutex_unlock(&(svc->mutex));
         lua_newtable(L);
         dforeach ((traffic_entry*), tentry, svc->trafficlog, iter) {
             if (tentry && tentry->date) {
-                printf("Got an entry\n");
                 x++;
                 lua_pushinteger(L, x);
                 lua_newtable(L);
-                    lua_pushinteger(L, tentry->date);
-                    lua_pushinteger(L, tentry->bytes);
-                    lua_rawset(L, -3);
+                lua_pushinteger(L, 1);
+                lua_pushinteger(L, tentry->date);
+                lua_rawset(L, -3);
+                
+                lua_pushinteger(L, 2);
+                lua_pushinteger(L, tentry->bytes);
+                lua_rawset(L, -3);
+                
                 lua_rawset(L, -3);
             }
         }
-        printf("Done, sending table\n");
-        //lua_rawset(L, -3);
-        printf("moo\n");
         return (1);
     }
 
