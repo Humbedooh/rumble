@@ -244,6 +244,7 @@ void comm_accept(socketHandle sock, clientHandle *client) {
         client->recv = 0;
         client->brecv = 0;
         client->bsent = 0;
+        client->rejected = 0;
         if (client->socket == SOCKET_ERROR) {
             perror("Error while attempting accept()");
             break;

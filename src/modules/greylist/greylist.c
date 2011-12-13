@@ -108,6 +108,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
         rcprintf(session, "451 4.7.1 Grey-listed for %u seconds. See http://www.greylisting.org\r\n", GREYLIST_MIN_AGE - n);
         rumble_debug("module", "Mail from %s for %s greylisted for %u seconds.\r\n", session->client->addr, junk, GREYLIST_MIN_AGE - n);
         ( (rumbleService*) session->_svc)->traffic.rejections++;
+        session->client->rejected = 1;
         return (RUMBLE_RETURN_IGNORE);  /* Tell rumble to ignore the command quietly. */
     }
 

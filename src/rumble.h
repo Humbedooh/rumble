@@ -389,6 +389,7 @@ typedef struct
     dummySocketOp           send;   /* Dummy operator for GNUTLS */
     uint32_t                bsent;
     uint32_t                brecv;
+    char                    rejected;
 } clientHandle;
 typedef struct
 {
@@ -501,6 +502,7 @@ typedef struct {
     time_t      when;
     uint32_t    hits;
     uint32_t    bytes;
+    uint32_t    rejections;
 } traffic_entry;
 typedef struct
 {
@@ -725,7 +727,7 @@ rumble_sendmail_response    *rumble_send_email
 void                        rumble_debug(const char *svc, const char *msg, ...);
 void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
 dvector* rumble_readconfig(const char* filename);
-void comm_addEntry(rumbleService* svc, uint32_t bytes);
+void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected);
 
 /*$3
  =======================================================================================================================

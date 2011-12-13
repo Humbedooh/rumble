@@ -65,6 +65,7 @@ void *rumble_smtp_init(void *T) {
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_smtp_reply_code(220), myName);   /* Hello! */
         else {
             svc->traffic.rejections++;
+            session.client->rejected = 1;
             rumble_debug("smtp", "SMTP session was blocked by an external module!");
         }
 
@@ -98,6 +99,7 @@ void *rumble_smtp_init(void *T) {
             } 
             else if (rc == RUMBLE_RETURN_FAILURE) {
                 svc->traffic.rejections++;
+                session.client->rejected = 1;
                 break;  /* Abort! */
             }
             else {
@@ -121,7 +123,7 @@ void *rumble_smtp_init(void *T) {
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_SMTP);
         pthread_mutex_lock(&(svc->mutex));
-        comm_addEntry(svc, session.client->brecv + session.client->bsent);
+        comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
         pthread_mutex_unlock(&(svc->mutex));
         disconnect(session.client->socket);
 

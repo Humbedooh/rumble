@@ -67,6 +67,7 @@ void *rumble_pop3_init(void *T) {
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_POP3);
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_pop3_reply_code(101), myName);   /* Hello! */
         else svc->traffic.rejections++;
+        session.client->rejected = 1;
 
         /* Parse incoming commands */
         cmd = (char *) malloc(9);
@@ -99,6 +100,7 @@ void *rumble_pop3_init(void *T) {
             if (rc == RUMBLE_RETURN_IGNORE) continue;   /* Skip to next line. */
             else if (rc == RUMBLE_RETURN_FAILURE) {
                 svc->traffic.rejections++;
+                session.client->rejected = 1;
                 break;  /* Abort! */
             }
             else rumble_comm_send(sessptr, rumble_pop3_reply_code(rc));         /* Bad command thing. */
@@ -119,7 +121,7 @@ void *rumble_pop3_init(void *T) {
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_POP3);
         pthread_mutex_lock(&(svc->mutex));
-        comm_addEntry(svc, session.client->brecv + session.client->bsent);
+        comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
         pthread_mutex_unlock(&(svc->mutex));
         disconnect(session.client->socket);
 

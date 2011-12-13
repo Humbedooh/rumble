@@ -1641,6 +1641,10 @@ static int rumble_lua_trafficinfo(lua_State *L) {
                 lua_pushinteger(L, tentry->bytes);
                 lua_rawset(L, -3);
                 
+                lua_pushinteger(L, 3);
+                lua_pushinteger(L, tentry->rejections);
+                lua_rawset(L, -3);
+                
                 lua_rawset(L, -3);
             }
         }
