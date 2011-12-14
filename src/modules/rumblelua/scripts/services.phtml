@@ -1,4 +1,25 @@
 <h2>Service information: <?=string.upper(session.section or "")?></h2>
+<p>
+<?
+local descriptions = {
+	mailman = [[ 
+Mailman is the core service that takes care of all the internal data handling. It moves messages around, sends them to other mail servers and passes them through internal modules and spam/virus checks.
+	 ]],
+	smtp = [[
+SMTP is the service that handles all incoming requests to send emails. It checks that the requests are valid, and stores the messages. Once stored, the process of assigning emails to their recipients is passed on to the <a href="/services:mailman">mailman</a> service.
+	 ]],
+	pop3 = [[ 
+The Post Office Protocol version 3 is an old, but simple and stable method of retrieving emails. It consists of one single folder where all emails are stored, and you can either read them, delete them, or...do nothing.
+	]],
+	imap4 = [[ 
+The Internet Message Access Protocol is a more complex protocol than the simple POP3. It allows for multiple folders as well as flagging messages and searching among them. This is the prefered message retrieval service today. Rumble's IMAP service is compliant with most of the LEMONADE profile, which allows the server to be more optimized for handling communication with mobile devices such as phones and tablet PCs.
+	]]
+};
+if (descriptions[session.section]) then
+	printf("%s", descriptions[session.section]);
+end
+?>
+</p>
 <?
 if (not session.credentials.admin) then
 	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
