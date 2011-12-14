@@ -124,9 +124,7 @@ void *rumble_smtp_init(void *T) {
          */
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_SMTP);
-        pthread_mutex_lock(&(svc->mutex));
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
-        pthread_mutex_unlock(&(svc->mutex));
         disconnect(session.client->socket);
 
         /*$2
@@ -480,6 +478,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
         return (451);   /* Couldn't open file for writing :/ */
     }
 
+    /* Add the server signature */
     log = (char *) calloc(1, 1024);
     if (!log) merror();
     now = rumble_mtime();

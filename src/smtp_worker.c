@@ -15,7 +15,7 @@
 #endif
 mqueue  *current = 0;
 dvector *badmx;
-
+static const char *svcs[] = { "imap4", "pop3", "smtp", "mailman", 0 };
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -177,9 +177,7 @@ rumble_sendmail_response *rumble_send_email(
 
     fclose(fp);
     rcprintf(&s, "QUIT\r\n", sender);
-    pthread_mutex_lock(&(((rumbleService*)s._svc)->mutex));
     comm_addEntry(s._svc, c.brecv + c.bsent, 0);
-    pthread_mutex_unlock(&(((rumbleService*)s._svc)->mutex));
     if (c.socket) disconnect(c.socket);
     return (res);
 }
@@ -613,7 +611,18 @@ void *rumble_worker_init(void *T) {
                 }
             }
         } else {
+            
+            /* Update traffic stats while we're doing nothing */
+            rumbleService *xsvc = 0;
+            int K = 0;
+            
+            for (K=0;K<4;K++) {
+                xsvc = comm_serviceHandle(svcs[K]);
+                if (xsvc) comm_addEntry(xsvc, 0, 100);
+            }
             radb_cleanup(dbo);
+            
+            
             sleep(2);   /* sleep for 2 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }

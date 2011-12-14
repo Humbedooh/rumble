@@ -33,7 +33,7 @@ rumbleService *comm_serviceHandle(const char *svcName) {
     rumbleServicePointer    *svcp = 0;
     c_iterator              iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    if (!svcName) return 0;
     cforeach((rumbleServicePointer *), svcp, comm_master_handle->services, iter) {
         if (!strcmp(svcName, svcp->svcName)) {
             return (svcp->svc);
@@ -189,7 +189,6 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.name = svcp->svcName;
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;
     svc->settings.stackSize = 2.5 * 1024 * 1024;
-    cvector_add(master->services, svcp);
     svc->trafficlog = dvector_init();
     for (x = 0; x < 170; x++) {
          tentry = (traffic_entry *) malloc(sizeof(traffic_entry));
@@ -198,16 +197,19 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
          tentry->when = 0;
         dvector_add(svc->trafficlog, tentry);
     }
+    cvector_add(master->services, svcp);
     rumble_debug("svc", "Registered new service (%s) on port %s.", svcName, port ? port : "(null)");
     return (svc);
 }
 
+/* Adds traffic entry to the statistical data pile (and rotates every week)*/
 void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected) {
     time_t now;
     traffic_entry* entry = 0;
     dvector_element* obj;
     now = time(NULL) / 3600;
     if (svc) {
+        pthread_mutex_lock(&(svc->mutex));
         entry = (traffic_entry *) svc->trafficlog->first->object;
         if (entry->when < now) {
             obj = svc->trafficlog->first;
@@ -221,10 +223,13 @@ void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected) {
             entry->bytes = 0;
             entry->hits = 0;
             entry->when = now;
-        }
+        }  
         entry->bytes += bytes;
-        entry->hits ++;
-        entry->rejections += (rejected ? 1 : 0);
+        if (rejected < 100) { // 100 means discard this info, just rotate the log pile
+                entry->hits ++;
+                entry->rejections += (rejected ? 1 : 0);
+        }
+        pthread_mutex_unlock(&(svc->mutex));
     }
 }
 

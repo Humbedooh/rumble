@@ -123,9 +123,7 @@ void *rumble_pop3_init(void *T) {
          */
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_POP3);
-        pthread_mutex_lock(&(svc->mutex));
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
-        pthread_mutex_unlock(&(svc->mutex));
         disconnect(session.client->socket);
 
         /* Start cleaning up after the session */
@@ -164,6 +162,7 @@ void *rumble_pop3_init(void *T) {
             }
 
             pthread_mutex_unlock(&svc->mutex);
+            //free(session._svcHandle);
             pthread_exit(0);
         }
 

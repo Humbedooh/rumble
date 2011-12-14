@@ -134,9 +134,8 @@ void *rumble_imap_init(void *T) {
          */
 
         rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
-        pthread_mutex_lock(&(svc->mutex));
+        
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
-        pthread_mutex_unlock(&(svc->mutex));
         disconnect(session.client->socket);
 
         /* Start cleanup */
@@ -863,7 +862,7 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
                 rumble_debug("imap4", "File written OK");
                 radb_run_inject(master->_core.mail, "INSERT INTO mbox (id,uid, fid, size, flags, folder) VALUES (NULL,%u, %s, %u,%u, %l)",
                                         imap->account->uid, fid, size, flags, dFolder.id);
-                rumble_debug("imap4", "Added message no. #%u to folder %llu of user %u", fid, dFolder.id, imap->account->uid);
+                rumble_debug("imap4", "Added message no. #%s to folder %llu of user %u", fid, dFolder.id, imap->account->uid);
                 
             }
         }
