@@ -224,6 +224,7 @@ void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected) {
         }
         entry->bytes += bytes;
         entry->hits ++;
+        entry->rejections += (rejected ? 1 : 0);
     }
 }
 

@@ -58,6 +58,7 @@ void *rumble_pop3_init(void *T) {
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
         session._svc = svc;
+        session.client->rejected = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         rumble_debug("pop3", "Accepted connection from %s on POP3", session.client->addr);
 #endif
@@ -66,8 +67,10 @@ void *rumble_pop3_init(void *T) {
         rc = RUMBLE_RETURN_OKAY;
         rc = rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_ACCEPT + RUMBLE_HOOK_POP3);
         if (rc == RUMBLE_RETURN_OKAY) rcprintf(sessptr, rumble_pop3_reply_code(101), myName);   /* Hello! */
-        else svc->traffic.rejections++;
-        session.client->rejected = 1;
+        else {
+            svc->traffic.rejections++;
+            session.client->rejected = 1;
+        }
 
         /* Parse incoming commands */
         cmd = (char *) malloc(9);

@@ -190,31 +190,41 @@ void *rumble_imap_init(void *T) {
 ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char            user[512],
-                    pass[512],
+    char            user[256],
+                    pass[256],
                     digest[1024];
     address         *addr;
     accountSession  *imap = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    
     rumble_mailman_close_bag(imap->bag);
-    if (sscanf(parameters, "%s %s", user, pass) == 2) {
+    if (
+            sscanf(parameters, "\"%256[^\" ]\" \"%256[^\" ]\"", user, pass) == 2 or 
+            sscanf(parameters, "%255s %255s", user, pass) == 2
+            ) {
         sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
+        
         if (addr) {
+            rumble_debug("imap4", "%s requested access to %s@%s via LOGIN\n", session->client->addr, addr->user, addr->domain);
             imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
             if (imap->account) {
+                rumble_debug("imap4", "%s's request for %s@%s was granted\n", session->client->addr, addr->user, addr->domain);
                 rcprintf(session, "%s OK Welcome!\r\n", extra_data);
                 imap->folder = -1;
                 imap->bag = rumble_mailman_open_bag(imap->account->uid);
             } else {
+                rumble_debug("imap4", "%s's request for %s@%s was denied (wrong pass?)\n", session->client->addr, addr->user, addr->domain);
                 rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
+                session->client->rejected = 1;
             }
         } else {
             rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
+            session->client->rejected = 1;
         }
     } else {
         rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
+                session->client->rejected = 1;
     }
 
     return (RUMBLE_RETURN_IGNORE);
@@ -263,26 +273,31 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     accountSession  *imap = (accountSession *) session->_svcHandle;
-    char            method[32],
-                    *user,
-                    *pass,
+    char            method[32], tmp[258],
+                    user[256],
+                    pass[256],
                     *line,
                     *buffer;
     address         *addr = 0;
+    int x = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_mailman_close_bag(imap->bag);
     if (sscanf(strchr(parameters, '"') ? strchr(parameters, '"') + 1 : parameters, "%32[a-zA-Z]", method)) {
         rumble_string_upper(method);
         if (!strcmp(method, "PLAIN")) {
-            rcprintf(session, "+ OK Method <%s> accepted, input stuffs!\r\n", method);
+            rcprintf(session, "%s OK Method <%s> accepted, input stuffs!\r\n", extra_data, method);
             line = rcread(session);
             if (line) {
                 buffer = rumble_decode_base64(line);
-                user = buffer + 1;
-                pass = buffer + 2 + strlen(user);
-                addr = rumble_parse_mail_address(user);
+                if (sscanf(buffer + 1, "\"%255[^\"]\"", user)) x = 2;
+                else sscanf(buffer + 1, "%255s", user);
+                if (!sscanf(buffer + 2 + x + strlen(user), "\"%255[^\"]\"", pass)) sscanf(buffer + 2 + x + strlen(user), "%255s", pass);
+                sprintf(tmp, "<%s>", user);
+                if (pass[strlen(pass)-1] == 4) pass[strlen(pass)-1] = 0; // remove EOT character if present.
+                addr = rumble_parse_mail_address(tmp);
                 if (addr) {
+                    rumble_debug("imap4", "%s requested access to %s@%s via AUTHENTICATE\n", session->client->addr, addr->user, addr->domain);
                     imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
                     if (imap->account) {
                         rcprintf(session, "%s OK Welcome!\r\n", extra_data);
@@ -292,9 +307,11 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                         imap->bag = rumble_mailman_open_bag(imap->account->uid);
                     } else {
                         rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
+                        session->client->rejected = 1;
                     }
                 } else {
                     rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
+                    session->client->rejected = 1;
                 }
 
                 free(buffer);
@@ -859,6 +876,7 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
         return (RUMBLE_RETURN_IGNORE);
     }
 
+    rumble_mailman_scan_incoming(folder);
     uid = strstr(parameters, "UID") ? 1 : 0;
     internaldate = strstr(parameters, "INTERNALDATE") ? 1 : 0;
     envelope = strstr(parameters, "ENVELOPE") ? 1 : 0;

@@ -38,6 +38,7 @@ void *rumble_smtp_init(void *T) {
     session.client->tls = 0;
     session.client->recv = 0;
     session.client->send = 0;
+    session.client->rejected = 0;
     session._master = svc->master;
     session._svc = svc;
     session._tflags = RUMBLE_THREAD_SMTP;   /* Identify the thread/session as SMTP */
@@ -55,6 +56,7 @@ void *rumble_smtp_init(void *T) {
         session._tflags += 0x00100000;      /* job count ( 0 through 4095) */
         session.sender = 0;
         session._svc = svc;
+        session.client->rejected = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         rumble_debug("smtp", "Accepted connection from %s on SMTP", session.client->addr);
 #endif
