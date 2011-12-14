@@ -90,6 +90,7 @@ void *rumble_imap_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%32s %32s %1000[^\r\n]", extra_data, cmd, parameters)) {
                 rumble_string_upper(cmd);
+                rumble_debug("imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
                 if (!strcmp(cmd, "UID")) {
 
                     /* Set UID flag if requested */
@@ -100,12 +101,15 @@ void *rumble_imap_init(void *T) {
                     if (!strcmp(cmd, hook->cmd)) rc = hook->func(master, &session, parameters, extra_data);
                 }
 
-                rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
+                //rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
                 printf("Selected folder is: %"PRId64 "\r\n", pops->folder);
             }
 
             free(line);
-            if (rc == RUMBLE_RETURN_IGNORE) continue;   /* Skip to next line. */
+            if (rc == RUMBLE_RETURN_IGNORE) {
+              //  printf("Ignored command: %s %s\n",cmd, parameters);
+                continue;   /* Skip to next line. */
+            }
             else if (rc == RUMBLE_RETURN_FAILURE) {
                 svc->traffic.rejections++;
                 break;  /* Abort! */
@@ -136,7 +140,6 @@ void *rumble_imap_init(void *T) {
         disconnect(session.client->socket);
 
         /* Start cleanup */
-        printf("cleaning up\n");
         free(parameters);
         free(cmd);
         rumble_clean_session(sessptr);
@@ -144,7 +147,6 @@ void *rumble_imap_init(void *T) {
         rumble_mailman_close_bag(pops->bag);
 
         /* End cleanup */
-        printf("done!\n");
         pthread_mutex_lock(&(svc->mutex));
         foreach((sessionHandle *), s, svc->handles, iter) {
             if (s == sessptr) {
@@ -750,6 +752,7 @@ ssize_t rumble_server_imap_lsub(masterHandle *master, sessionHandle *session, co
         /* Shared Object Reader Unlock */
         rumble_rw_stop_read(imap->bag->rrw);
         rcprintf(session, "%s OK LSUB completed\r\n", extra_data);
+        printf("listed subscribed stuff\n");
     } else rcprintf(session, "%s BAD Invalid LSUB syntax!\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);
 }
@@ -769,7 +772,106 @@ ssize_t rumble_server_imap_status(masterHandle *master, sessionHandle *session, 
  =======================================================================================================================
  */
 ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
-    rcprintf(session, "%s NO Append completed\r\n", extra_data);
+    rumble_args                     *params;
+    char *destFolder;
+    char *Flags;
+    char buffer[32];
+    uint32_t size = 0;
+     rumble_args                     *args;
+    char                            *mbox,
+                                    *pattern,
+                                    *pfolder;
+    rumble_mailman_shared_folder    *pair;
+    accountSession                  *imap = (accountSession *) session->_svcHandle;
+    
+    d_iterator                      iter;
+    rumble_mailman_shared_folder    *folder, dFolder;
+    int foundFolder = 0, readBytes = 0, flags = 0;
+    
+    dFolder.id = 0;
+    params = rumble_read_words(parameters);
+    if (params->argc > 1 && imap->bag) {
+        printf("getting size of email\n");
+        sscanf(params->argv[params->argc-1], "{%d", &size);
+        printf("size is %u bytes\n", size);
+        destFolder = params->argv[0];
+        Flags = params->argc > 2 ? params->argv[1] : "";
+        /* Shared Object Reader Lock */
+        rumble_rw_start_read(imap->bag->rrw);
+        foreach(rmsf, folder, imap->bag->folders, iter) {
+            if (!strcmp(destFolder, folder->name)) {
+                dFolder.id = folder->id;
+                foundFolder++;
+                break;
+            }
+        }
+    }
+    //rcprintf(session, "FLAGS (%s%s%s%s) ", (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
+// /                    (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
+     //                (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
+    if (strlen(Flags)) {
+        if (strstr(Flags, "\\Seen")) flags |= RUMBLE_LETTER_READ;
+        if (strstr(Flags, "\\Recent")) flags |= RUMBLE_LETTER_RECENT;
+        if (strstr(Flags, "\\Deleted")) flags |= RUMBLE_LETTER_DELETED;
+        if (strstr(Flags, "\\Flagged")) flags |= RUMBLE_LETTER_FLAGGED;
+    }
+    rumble_args_free(params);
+    
+    if (!size or !foundFolder) {
+        rcprintf(session, "%s BAD Invalid APPEND syntax!\r\n", extra_data);
+    }
+    else {
+        rumble_debug("imap4", "Append required, making up new filename");
+        char *sf, *fid, *filename;
+        FILE* fp = 0; 
+        fid = rumble_create_filename();
+        sf = rumble_config_str(master, "storagefolder");
+        printf("sf is <%s>, fid is <%s>\n", sf, fid);
+        filename = (char *) calloc(1, strlen(sf) + 36);
+        if (!filename) merror();
+        printf("1\n");
+        sprintf(filename, "%s/%s.msg", sf, fid);
+        printf("2\n");
+        rumble_debug("imap4", "Storing new message of size %u in folder", size);
+        printf("3\n");
+        fp = fopen(filename, "wb");
+        if (fp) {
+            char* line;
+            char OK = 1;
+            int readNow = 0;
+            rumble_debug("imap4", "Writing to file %s", filename);
+            rcprintf(session, "%s OK Appending!\r\n", extra_data); // thunderbird bug?? yes it is!
+            while (readBytes < size) {
+                printf("reading a line...\n");
+                line = rumble_comm_read_bytes(session, size > 1024 ? 1024 : size);
+                printf("line is <%s>\n", line);
+                if (line) {
+                    readBytes += strlen(line);
+                    fwrite(line, strlen(line), 1, fp);
+                    free(line);
+                }
+                else { OK = 0; break; }
+            }
+            fclose(fp);
+            if (!OK) {
+                rumble_debug("imap4", "An error occured while reading file from client");
+                unlink(filename);
+            }
+            else {
+                rumble_debug("imap4", "File written OK");
+                radb_run_inject(master->_core.mail, "INSERT INTO mbox (id,uid, fid, size, flags, folder) VALUES (NULL,%u, %s, %u,%u, %l)",
+                                        imap->account->uid, fid, size, flags, dFolder.id);
+                rumble_debug("imap4", "Added message no. #%u to folder %llu of user %u", fid, dFolder.id, imap->account->uid);
+                
+            }
+        }
+        free(filename);
+        free(fid);
+        /* TODO: Check if there's room for storing message */
+        
+    }
+    //003 APPEND saved-messages (\Seen) {310}
+    
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1116,7 +1218,7 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    printf("Preparing to copy with params: %s\n", parameters);
     folder = rumble_mailman_current_folder(imap);
     if (!folder) {
         rcprintf(session, "%s NO COPY: I don't know where to copy from!\r\n", extra_data);
@@ -1149,7 +1251,7 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
             break;
         }
     }
-
+    
     /*$1
      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         TODO: Move this to mailman.c and make it spiffy!
@@ -1193,9 +1295,9 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
     char    *line;
     /*~~~~~~~~~~*/
 
-    rcprintf(session, "+ OK IDLE Starting idle mode.\r\n", extra_data);
+    rcprintf(session, "%s OK IDLE Starting idle mode.\r\n", extra_data);
     line = rcread(session);
-    rcprintf(session, "+ OK IDLE completed.\r\n", extra_data);
+    rcprintf(session, "%s OK IDLE completed.\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);
 }
 

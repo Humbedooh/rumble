@@ -154,7 +154,24 @@ int                 alreadyDead = 0;
  */
 static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
     if (sig == SIGHUP) printf("FATAL: Program hung up\n");
-    if (sig == SIGSEGV || sig == SIGBUS) {
+    else if (sig == SIGQUIT) {
+        printf("User ended the program - bye bye!\r\n");
+        cleanup();
+    }
+    else if (sig == SIGKILL) {
+        printf("Rumble got killed :(\r\n");
+        cleanup();
+    }
+    else if (sig == SIGTERM) {
+        printf("Rumble got killed :(\r\n");
+        cleanup();
+    }
+    else if (sig == SIGINT) {
+        if (time(0) - lastClick < 2) { cleanup(); exit(0); }
+        printf("Ctrl+C detected. Press it again to exit rumble.\r\n");
+        lastClick = time(0);
+    }
+    else {
         if (!alreadyDead) {
 
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -198,27 +215,6 @@ static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
             cleanup();
         } else exit(0);
     }
-
-    if (sig == SIGQUIT) {
-        printf("User ended the program - bye bye!\r\n");
-        cleanup();
-    }
-
-    if (sig == SIGKILL) {
-        printf("Rumble got killed :(\r\n");
-        cleanup();
-    }
-
-    if (sig == SIGTERM) {
-        printf("Rumble got killed :(\r\n");
-        cleanup();
-    }
-
-    if (sig == SIGINT) {
-        if (time(0) - lastClick < 2) { cleanup(); exit(0); }
-        printf("Ctrl+C detected. Press it again to exit rumble.\r\n");
-        lastClick = time(0);
-    }
 }
 
 /*
@@ -231,11 +227,13 @@ void init_signals(void) {
     sigact.sa_flags = SA_RESTART | SA_SIGINFO;
     if (sigaction(SIGKILL, &sigact, 0) < 0) printf("Couldn't lock onto SIGKILL\n");
     sigaction(SIGINT, &sigact, 0);
-
+ 
     /*
      * sigaddset(&sigact.sa_mask, SIGSEGV);
      */
     sigaction(SIGSEGV, &sigact, 0);
+        sigaction(SIGSTKFLT, &sigact, 0);
+        sigaction(SIGPIPE, &sigact, 0);
 
     /*
      * sigaddset(&sigact.sa_mask, SIGBUS);

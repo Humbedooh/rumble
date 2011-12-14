@@ -501,15 +501,17 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
             return (RUMBLE_RETURN_FAILURE);
         }
 
-        if (!strcmp(line, ".\r\n")) break;  /* We're done here. */
+        if (!strcmp(line, ".\r\n")) { free(line);break; } /* We're done here. */
         if (fwrite(line, strlen(line), 1, fp) != 1) {
 
             /* Writing failed? */
+            free(line);
             fclose(fp);
             free(fid);
             free(filename);
             return (452);
         }
+        else { free(line);}
     }
 
     fclose(fp);
