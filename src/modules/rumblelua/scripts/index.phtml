@@ -1,3 +1,4 @@
+<? dofile("modules/rumblelua/libpie.lua"); ?>
 <? my.debug = false; ?>
 <h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Server info:</h2>
 <p><strong>Operating environment: </strong>
@@ -103,10 +104,10 @@ end
 local shares = {{0,0,0,1},{0,0,0,1}};
 local i = 0;
 local t = Rumble.trafficInfo("pop3");
-
+local d = 1.9999;
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3.999)+1;
+		i = math.floor(k/d)+1;
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -117,7 +118,7 @@ end
 t = Rumble.trafficInfo("imap4");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3.999)+1;
+		i = math.floor(k/d)+1;
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -128,7 +129,7 @@ end
 t = Rumble.trafficInfo("smtp");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3.999)+1;
+		i = math.floor(k/d)+1;
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -140,7 +141,7 @@ end
 t = Rumble.trafficInfo("mailman");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/3.999)+1;
+		i = math.floor(k/d)+1;
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -254,47 +255,29 @@ if (f) then
 	
 end
 
-
 --[[
 Pie charts!!
 ]]--
 local f = io.open(session.path .. "/traffic_piechart_shares.svg", "w");
+local chart = LibPie:new();
+
 if (f) then
-	local shareTotal = {my.shares[1][1]+my.shares[1][2]+my.shares[1][3]+my.shares[1][4],my.shares[2][1]+my.shares[2][2]+my.shares[2][3]+my.shares[2][4]};
 	local pies = "";
-		for i, what in pairs({"Session", "Data"}) do
-		
-		local angle = 0;
-		local colors = {"#006bb6", "#e2c315", "#56b600", "#b60011"};
-		local y = i;
-		if (i == 2) then y = 3; end
-		for k,v in pairs({"pop3", "imap", "smtp", "mailman"}) do
-			start = angle;
-			local share = (my.shares[i][k]/(shareTotal[i]/100))*3.6;
-			if (share < 2) then share = 2; end
-			stop = angle + math.rad(share);
-			angle = stop;
-			startpoint = { math.cos(start), math.sin(start)}
-			stoppoint = {math.cos(stop), math.sin(stop) };
-			longarc = 0;
-			if (share >= 180) then longarc = 1; end
-			
-			pies = pies .. string.format([[
-			<path d="M%u,100 L%f,%f A80,80 0 %u,1 %f,%f z"
-			style="fill:%s;
-				fill-opacity: 1;
-				stroke:black;
-				stroke-width: 1"/>
-				]], 100*y, (100*y)+ startpoint[1]*80, 100 + startpoint[2]*80, longarc, (100*y) + stoppoint[1]*80, 100 + stoppoint[2]*80, colors[k]);
+	for i, what in pairs({"Sessions", "Data (bytes)"}) do
+		local pie = chart:newPie(what);
+		pie.title = what;
+		local x = 200 + ((i-1)*350); -- 200 or 550
+
+		for k,svcName in pairs({"pop3", "imap", "smtp", "mailman"}) do
+			pie:addShare(svcName, my.shares[i][k]);
 		end
-		pies = pies .. string.format(
-		[[<text style="font-weight:bold;font-size:13px;font-family:Arial" x="%u" y="15" text-anchor="middle"> %s share: </text>]]
-		,y*100, what)
-		;
+		pie:showNumbers(true);
+		pie:showNames(true);
+		pies = pies .. pie:plot(x, 120, 140, 140);
 	end
 	f:write([[
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="800" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<svg width="800" height="220" version="1.1" xmlns="http://www.w3.org/2000/svg">
 <defs>
 		<linearGradient id="backgroundGradient" gradientTransform="rotate(90)">
 			<stop offset="10%" stop-color="#e1e9a0" />
@@ -302,10 +285,12 @@ if (f) then
 		</linearGradient>
 </defs>
 <g id="background" fill="url(#backgroundGradient)" >
-		<rect x="0" y="0" width="800px" height="200px" stroke="black"/>
+		<rect x="0" y="0" width="800px" height="220px" stroke="black"/>
 	</g>
+
 <!-- Pie chart sample -->
 ]]..pies..[[
+
 </svg>
 	]]);
 
@@ -314,15 +299,17 @@ if (f) then
 end
 
 ?>
+<table class="elements" style="width: 800px;">
+<tr><th>Traffic shares across services:</th></tr>
+<tr><td>
+  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="800" height="220"> </object>
+</td></tr>
+</table>
 <p align="center">
-	<img src="../traffic_stats.png" width="800" height="24" /><br/>
-  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="800" height="220"></object>
-    
-</p>
-<p align="center"><br />
-  <img src="../traffic_shares.png" width="800" height="24" /><br/>
-  <object data="/traffic_piechart_shares.svg" type="image/svg+xml" width="800" height="202"> </object>
-  <br /><br />
-  
+<table class="elements" style="width: 800px;">
+<tr><th>Traffic shares across services:</th></tr>
+<tr><td>
+  <object data="/traffic_piechart_shares.svg" type="image/svg+xml" width="800" height="220"> </object>
+</td></tr></table>
   
 </p>
