@@ -186,7 +186,6 @@ void rumble_rw_stop_read(rumble_readerwriter *rrw)
 #endif
     pthread_mutex_lock(&rrw->mutex);
     rrw->readers--;
-
     /*
      * If a writer is waiting;
      * Signal that we've stopped reading
@@ -208,6 +207,7 @@ void rumble_rw_start_write(rumble_readerwriter *rrw)
 
     /* Wait for any previous writer to finish */
     while (rrw->writers) {
+        printf("waiting for writer to finish...\n");
         pthread_cond_wait(&rrw->writing, &rrw->mutex);
     }
 
@@ -216,6 +216,7 @@ void rumble_rw_start_write(rumble_readerwriter *rrw)
 
     /* Wait for all readers to quit */
     while (rrw->readers) {
+        printf("waiting for reader to finish...\n");
         pthread_cond_wait(&rrw->reading, &rrw->mutex);
     }
 

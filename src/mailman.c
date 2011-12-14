@@ -87,9 +87,12 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     bag->rrw = rumble_rw_init();
     bag->uid = uid;
     bag->sessions = 1;
+    printf("+write mailboxes (retrieve_shared)\n");
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);
     dvector_add(rumble_database_master_handle->mailboxes.list, bag);
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);
+    printf("-write mailboxes (retrieve_shared)\n");
+    printf("+write folders (retrieve_shared)\n");
     rumble_rw_start_write(bag->rrw);
 
     /* Add the default inbox */
@@ -144,7 +147,7 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
             free(letter);
         }
     }
-
+printf("-write folder (retrieve_shared)\n");
     rumble_rw_stop_write(bag->rrw);
     radb_cleanup(dbo);
     return (bag);
@@ -190,6 +193,7 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    printf("+write folder (update_folders)\n");
     rumble_rw_start_write(bag->rrw);    /* Lock bag for writing */
     dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", bag->uid);
     while ((dbr = radb_step(dbo))) {
@@ -222,6 +226,7 @@ void rumble_mailman_update_folders(rumble_mailman_shared_bag *bag) {
     }
 
     radb_cleanup(dbo);
+    printf("-write folder (update_folders)\n");
     rumble_rw_stop_write(bag->rrw);     /* Unlock bag again. */
 }
 
@@ -249,7 +254,9 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
     dbo = radb_prepare(rumble_database_master_handle->_core.mail,
                        "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE folder = %l AND id > %l", folder->id,
                        folder->lastMessage);
+    printf("+write folder (scan_incoming)\n");
     rumble_rw_start_write(folder->bag->rrw);    /* Lock the bag for writing */
+    printf("got it!\n");
     while ((dbr = radb_step(dbo))) {
         r++;
         exists = 1;
@@ -261,6 +268,8 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
     }
 
     printf("<Mailman> Set last ID in <%s> to %"PRIu64 "\n", folder->name, folder->lastMessage);
+    printf("unlocking folder (scan_incoming)\n");
+    printf("-write folder (scan_incoming)\n");
     rumble_rw_stop_write(folder->bag->rrw);     /* Unlock the bag */
 
     /* Clean up DB */
@@ -288,6 +297,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
     path = strlen(session->account->domain->path) ? session->account->domain->path : rrdict(rumble_database_master_handle->_core.conf,
                                                                                             "storagefolder");
     r = 0;
+    printf("+write folder (commit)\n");
     rumble_rw_start_write(session->bag->rrw);   /* Lock the bag */
     rumble_debug("mailman", "Cleaning up %s@%s's folder <%s>\n", session->account->user, session->account->domain->name, folder->name);
     dforeach((rumble_letter *), letter, folder->letters, iter) {
@@ -337,7 +347,8 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
             r++;
         }
     }
-
+printf("unlocking folder (commit)\n");
+printf("-write folder (commit)\n");
     rumble_rw_stop_write(session->bag->rrw);    /* Unlock the bag */
     return (r);
 }
@@ -357,6 +368,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!bag) return;
+    printf("+write mailboxes (close_bag)\n");
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);    /* Lock the mailboxes */
     bag->sessions--;
 
@@ -399,7 +411,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
         free(bag);
         bag = 0;
     }
-
+    printf("-write mailboxes (close_bag)\n");
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw); /* Unlock mailboxes */
 }
 
@@ -416,6 +428,7 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
     d_iterator                  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    printf("+read mailboxes (open_bag)\n");
     rumble_rw_start_read(rumble_database_master_handle->mailboxes.rrw); /* Lock mailboxes for writing */
     printf("looking for bag...\n");
 
@@ -427,7 +440,7 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
             break;
         }
     }
-
+printf("-read mailboxes (open_bag)\n");
     rumble_rw_stop_read(rumble_database_master_handle->mailboxes.rrw);
 
     /* If not, create a new shared object */

@@ -376,6 +376,7 @@ ssize_t rumble_server_imap_select(masterHandle *master, sessionHandle *session, 
             folder = rumble_mailman_current_folder(imap);
             if (!folder) {
                 rcprintf(session, "%s BAD Couldn't find the mailbox <%s>!\r\n", extra_data, selector);
+                rumble_rw_stop_read(imap->bag->rrw);
                 return (RUMBLE_RETURN_IGNORE);
             }
 
@@ -805,6 +806,7 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
                 break;
             }
         }
+        rumble_rw_stop_read(imap->bag->rrw);
     }
     //rcprintf(session, "FLAGS (%s%s%s%s) ", (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
 // /                    (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
