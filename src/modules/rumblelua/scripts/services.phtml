@@ -93,7 +93,7 @@ local svc = session.section;
 local svclog = {};
 local colors = {
 	core = 282,
-	smtp = 228,
+	smtp = 278,
 	pop3 = 228,
 	imap4 = 228,
 	startup = 882,
@@ -101,7 +101,6 @@ local colors = {
 	module = 852,
 	mailman = 284
 };
-
 local color = "993333";
 for k,c in pairs(colors) do
 	if (svc == k) then
@@ -115,7 +114,11 @@ for i,entry in pairs(Rumble.getLog()) do
 	if (svc == service) then
 		log = log:gsub("<", "&lt;");
 		log = log:gsub("(%d[%d%.]+)", "<span style='color: #996622;'>%1</span>");
-		table.insert(svclog, "<div style='border: 1px dotted #522; margin: 3px; width: 720px;'>"..date.." <b style='color: #"..color..";'>"..svc..": </b> "..log.."</div>");
+		local style = "";
+		if (log:find("session was blocked")) then
+			style = " style='color: #AC3010; font-weight: bold'";
+		end
+		table.insert(svclog, "<div style='border: 1px dotted #522; margin: 3px; width: 720px;'>"..date.." <b style='color: #"..color..";'>"..svc..": </b> <span" .. style .. ">"..log.."</span></div>");
 	end
 end
 

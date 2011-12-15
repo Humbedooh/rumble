@@ -89,13 +89,13 @@ local smtplog = {};
 local rejections = {};
 local now = os.time();
 local rj = 0;
-for i=1,13,1 do
+for i=1,168,1 do
 	poplog[i] = {0,0};
 	smtplog[i] = {0,0};
 	rejections[i] = 0;
 -- For testing purposes: --
 	if (my.debug) then
-		poplog[i] = {math.random(1,50),math.random(1,500000)};
+		poplog[i] = {math.random(1,50),math.random(1,1500000)};
 		smtplog[i] = {math.random(1,60),math.random(1,1500000)};
 		rejections[i] = math.random(1,25);
 	end
@@ -104,10 +104,13 @@ end
 local shares = {{0,0,0,1},{0,0,0,1}};
 local i = 0;
 local t = Rumble.trafficInfo("pop3");
-local d = 1.9999;
+my.howLong = tonumber(http.form.history) or 48;
+local D = (my.howLong/12); -- 4 hours per bar
+local T = my.howLong; -- 48 hours total
+
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/d)+1;
+		i = math.floor(k/D)+1;
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -118,7 +121,7 @@ end
 t = Rumble.trafficInfo("imap4");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/d)+1;
+		i = math.floor(k/D)+1;
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -129,7 +132,7 @@ end
 t = Rumble.trafficInfo("smtp");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/d)+1;
+		i = math.floor(k/D)+1;
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -141,7 +144,7 @@ end
 t = Rumble.trafficInfo("mailman");
 if (t) then
 	for k,v in pairs(t) do
-		i = math.floor(k/d)+1;
+		i = math.floor(k/D)+1;
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
@@ -149,74 +152,44 @@ if (t) then
 	end
 end
 
-local maxHits = 1;
-local maxBytes = 1;
 
-for i=1,12,1 do
-	if (smtplog[i][1] > maxHits) then maxHits = smtplog[i][1]; end
-	if (smtplog[i][2] > maxBytes) then maxBytes = smtplog[i][2]; end
-	if (poplog[i][1] > maxHits) then maxHits = poplog[i][1]; end
-	if (poplog[i][2] > maxBytes) then maxBytes = poplog[i][2]; end
+
+local sessionChart = LibPie:new();
+local trafficChart = LibPie:new();
+
+trafficChart:setGraphType(1, "area");
+trafficChart:setGraphType(2, "area");
+trafficChart.min = 0;
+
+
+sessionChart:setGraphType(1, "bar");
+sessionChart:setGraphType(2, "bar");
+sessionChart:setGraphType(3, "bar");
+sessionChart.min = 0;
+sessionChart.units = "sessions";
+
+for i=(T/D),1,-1 do
+	trafficChart:addSeries(i, smtplog[i][2],poplog[i][2]);
+	sessionChart:addSeries(i,  poplog[i][1], rejections[i],smtplog[i][1]);
 end
-local p = 0;
-for k, v in pairs({10,50,100,500,1000,5000,10000,50000,100000,300000,500000,1000000,3000000,5000000,10000000,50000000,100000000,1000000000,10000000000}) do
-	if (maxHits > p and maxHits < v) then maxHits = v; end
-	if (maxBytes > p and maxBytes < v) then maxBytes = v; end
-	p = v;
-end
+
+local maxBytes = (trafficChart:minMax())[2];
 
 local abbr = {1, "bytes"};
-if (maxBytes > 1000) then abbr = {1000, "KB"}; end
-if (maxBytes > 1000000) then abbr = {1000000, "MB"}; end
-if (maxBytes > 1000000000) then abbr = {1000*1000*1000, "GB"}; end
-local units = [[
-<text class="units" x="0" y="209"> 0 hits</text>
-<text class="units" x="795" y="209" text-anchor="end">      0 ]]..abbr[2]..[[ -</text>
-<polyline fill="none" style="opacity:0.5;" stroke="grey" stroke-width="1" points="0,209 800,209"/>  
-]];
-for i=1,4,1 do
-	local y = 209-(i*42.5)
-	units = units .. string.format([[
-	<polyline fill="none" style="opacity:0.5;" stroke="grey" stroke-width="1" points="0,%u 800,%u"/>  
-	<text class="units" x="0" y="%u"> %s hits</text>
-	<text class="units" style='text-align:left; width: 100px;' x="795" text-anchor="end" y="%u">%5s %s -</text>
-	]], y,y,y, math.comma(maxHits*(i/4)), y, math.comma((maxBytes/abbr[1])*(i/4)), abbr[2]);
-end
+if (maxBytes > 1024) then abbr = {1024, "KiB"}; end
+if (maxBytes > 1024*1024) then abbr = {1000*1000, "MiB"}; end
+if (maxBytes > 1024*1024*1024) then abbr = {1000*1000*1000, "GiB"}; end
+trafficChart.units = abbr[2];
+trafficChart.divisor = abbr[1];
+trafficChart.unitAnchor = "right";
 
-local pixelPerByte = 170/maxBytes;
-local pixelPerHit = 170/maxHits;
-
-local popboxes = "";
-local popcoords = "";
-
-local smtpboxes = "";
-local smtpcoords = "";
-local rejectcoords = "";
-
-for i=12,1,-1 do
-	local bytes,hits,x = poplog[i][2], poplog[i][1], ((740/12)*(12-i))+40;
-	local rhits = rejections[i];
-	popcoords = popcoords .. x+10 .. "," .. 205-(hits*pixelPerHit) .. " ";
-	rejectcoords = rejectcoords .. x+10 .. "," .. 205-(rhits*pixelPerHit) .. " ";
-	popboxes = popboxes .. string.format(
-	'<rect x="%u" y="%u" width="24px" height="%upx" style="fill:rgb(42,107,166);fill-opacity:0.75;" stroke="blue"/>',
-	x-12, 209-(bytes*pixelPerByte), 2+(bytes*pixelPerByte));
-end
-
-for i=12,1,-1 do
-	local bytes,hits,x = smtplog[i][2], smtplog[i][1], ((740/12)*(12-i))+40;
-	smtpcoords = smtpcoords .. x+10 .. "," .. 205-(hits*pixelPerHit) .. " ";
-    smtpboxes = smtpboxes .. string.format(
-	'<rect x="%u" y="%u" width="24px" height="%upx" style="fill:rgb(107,166,42);fill-opacity:0.75;" stroke="green"/>',
-	x+12, 209-(bytes*pixelPerByte), 2+(bytes*pixelPerByte));
-end
-
+local svg =  trafficChart:plot(590,220,85,0,2)..sessionChart:plot(590,220,85,0,3,2);
 
 local f = io.open(session.path .. "/traffic_snapshot2.svg", "w");
 if (f) then
 	f:write([=[
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="800" height="220" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<svg width="704" height="220" version="1.1" xmlns="http://www.w3.org/2000/svg">
 	<defs>
 		<linearGradient id="backgroundGradient" gradientTransform="rotate(90)">
 			<stop offset="10%" stop-color="#e1e9a0" />
@@ -228,26 +201,16 @@ if (f) then
 				 .units {font-weight:normal;font-size:10px;font-family:Arial}
 			]]>
 		</style>
-		
-		<symbol id="crossingPoint" overflow="visible">
-			<circle cx="0" cy="0" r="3000" style="fill:rgb(12,166,107);fill-opacity:0.8;
-				stroke:rgb(0,0,0);stroke-width:300" />
-  		 </symbol>
 	</defs>
 	<g id="background" fill="url(#backgroundGradient)" >
-		<rect x="0" y="0" width="800px" height="220px" stroke="black"/>
+		<rect x="0" y="0" width="704px" height="220px" stroke="black"/>
 	</g>
 	
 	
 	<g id="drawing">
-		]=]..popboxes.. smtpboxes..[=[ 
-		<polyline fill="none" stroke="blue" stroke-width="2" points="]=]..popcoords..[=["/>  
-		<polyline fill="none" stroke="green" stroke-width="2" points="]=]..smtpcoords..[=["/>  
-		<polyline fill="none" stroke="red" stroke-width="2" points="]=]..rejectcoords..[=["/> 
+		]=]..svg..[=[
 	</g>
-	<g id="units">
-	]=]..units..[=[
-	</g>
+	
 	
 </svg>
 ]=]);
@@ -271,6 +234,7 @@ if (f) then
 		for k,svcName in pairs({"pop3", "imap", "smtp", "mailman"}) do
 			pie:addShare(svcName, my.shares[i][k]);
 		end
+	
 		pie:showNumbers(true);
 		pie:showNames(true);
 		pies = pies .. pie:plot(x, 120, 140, 140);
@@ -300,10 +264,10 @@ end
 
 ?>
 <table class="elements" style="width: 800px;">
-<tr><th>Traffic shares across services:</th></tr>
+<tr>
+  <th colspan="2"><? printf("Traffic history for the last %u hours:", my.howLong);?> [<a href="/?history=24">last day</a> | <a href="/?history=48">last two days</a> | <a href="/?history=168">last week</a>]</th></tr>
 <tr><td>
-  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="800" height="220"> </object>
-</td></tr>
+  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="704" height="220"> </object></td><td><img src="../legend_traffic.png" width="96" height="221" /></td></tr>
 </table>
 <p align="center">
 <table class="elements" style="width: 800px;">
