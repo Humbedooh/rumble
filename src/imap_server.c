@@ -1412,7 +1412,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
             return (RUMBLE_RETURN_FAILURE); /* disconnected? */
         else if (rc == -1) {
             cc++;
-            if (cc == 10) { // Check the DB for new messages every 20 seconds.
+            if (cc == 10) { // Check the DB for new messages every 40 seconds.
                 rumble_mailman_scan_incoming(folder);
                 cc = 0;
             }
@@ -1438,7 +1438,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
             exists = 0;
             recent = 0;
             first = 0;
-            sleep(2);
+            sleep(3);
         }
     }
 
