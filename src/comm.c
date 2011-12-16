@@ -282,7 +282,7 @@ char *rumble_comm_read(sessionHandle *session) {
         exit(1);
     }
 
-    t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
+    t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 30 : 10;
     t.tv_usec = 0;
     z = time(0);
     for (p = 0; p < 1024; p++) {
@@ -303,7 +303,7 @@ char *rumble_comm_read(sessionHandle *session) {
 #ifndef PRIdPTR
 #   define PRIdPTR "ld"
 #endif
-            printf("timeout after %"PRIdPTR " secs!\r\n", z);
+            printf("timeout after %"PRIdPTR " secs! %d\r\n", z,f);
             return (NULL);
         }
     }
@@ -332,6 +332,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     z = time(0);
     buffer = (char *) calloc(1, len + 1);
     f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
+    
     if (f > 0) {
         if (session->client->recv) rc = (session->client->recv) (session->client->tls, buffer, len, 0);
         else rc = recv(session->client->socket, buffer, len, 0);
@@ -348,6 +349,36 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     return (0);
 }
 
+int *rumble_comm_read_waitForInput(sessionHandle *session, int timeout) {
+
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    char            b;
+    ssize_t         rc = 0;
+    struct timeval  t;
+    signed int      f;
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    t.tv_sec = timeout;
+    t.tv_usec = 0;
+    
+    while (1) {
+        printf(".");
+        f = select(session->client->socket+1, &session->client->fd, NULL, NULL, &t);
+        printf("f=%d\n",f);
+        if (f > 0) {
+            printf("input?\n");
+            rc = recv(session->client->socket, &b, 1, MSG_PEEK);
+            if (!rc) return 0;
+            return 2;
+        }
+        else if (f == 0) {
+            printf("timeout?\n");
+            return 1;
+        }
+        printf("Disconnect?\n");
+        return 0;
+    }
+    return (1);
+}
 /*
  =======================================================================================================================
  =======================================================================================================================

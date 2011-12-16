@@ -233,7 +233,6 @@ void init_signals(void) {
      */
     sigaction(SIGSEGV, &sigact, 0);
         sigaction(SIGSTKFLT, &sigact, 0);
-        sigaction(SIGPIPE, &sigact, 0);
 
     /*
      * sigaddset(&sigact.sa_mask, SIGBUS);

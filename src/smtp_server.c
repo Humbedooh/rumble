@@ -466,7 +466,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
     sprintf(filename, "%s/%s", sf, fid);
     fp = fopen(filename, "wb");
 #ifdef RUMBLE_DEBUG_STORAGE
-    printf("Writing to file %s...\n", filename);
+    rumble_debug("smtp", "Writing to file %s...\n", filename);
 #endif
     if (!fp)
     {

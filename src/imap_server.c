@@ -822,11 +822,14 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
         rcprintf(session, "%s BAD Invalid APPEND syntax!\r\n", extra_data);
     }
     else {
-        rumble_debug("imap4", "Append required, making up new filename");
-        char *sf, *fid, *filename;
+
+        char *sf;
+		char *fid;
+		char *filename;
         FILE* fp = 0; 
+		rumble_debug("imap4", "Append required, making up new filename");
         fid = rumble_create_filename();
-        sf = rumble_config_str(master, "storagefolder");
+        sf = (char*) rumble_config_str(master, "storagefolder");
         printf("sf is <%s>, fid is <%s>\n", sf, fid);
         filename = (char *) calloc(1, strlen(sf) + 36);
         if (!filename) merror();
@@ -843,9 +846,7 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
             rumble_debug("imap4", "Writing to file %s", filename);
             rcprintf(session, "%s OK Appending!\r\n", extra_data); // thunderbird bug?? yes it is!
             while (readBytes < size) {
-                printf("reading a line...\n");
                 line = rumble_comm_read_bytes(session, size > 1024 ? 1024 : size);
-                printf("line is <%s>\n", line);
                 if (line) {
                     readBytes += strlen(line);
                     fwrite(line, strlen(line), 1, fp);
@@ -1294,12 +1295,74 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
 
     /*~~~~~~~~~~*/
     char    *line;
+    char buffer[5];
+    int rc = -1;
+    struct timeval timeout;
+    int exists = 0;
+int     recent = 0;
+    int first = 0;
+    
+    int oexists = 0;
+int     orecent = 0;
+    int ofirst = 0;
+    rumble_letter                   *letter;
+    accountSession                  *imap = (accountSession *) session->_svcHandle;
+    d_iterator                      iter;
+    
+    rumble_mailman_shared_folder* folder = 0;
     /*~~~~~~~~~~*/
+    
+    folder = rumble_mailman_current_folder(imap);
+    if (!folder) {
+        rcprintf(session, "%s NO No mailbox selected for fetching!\r\n", extra_data);
+        return (RUMBLE_RETURN_IGNORE);
+    }
 
     rcprintf(session, "%s OK IDLE Starting idle mode.\r\n", extra_data);
+    memset(buffer, 0, 5);
+    
+    /* Retrieve the statistics of the folder before idling */
+    rumble_rw_start_read(imap->bag->rrw);
+    foreach((rumble_letter *), letter, folder->letters, iter) {
+        oexists++;
+        if (!ofirst && ((letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT))) ofirst = oexists;
+        if (letter->flags == RUMBLE_LETTER_RECENT) orecent++;
+    }
+    rumble_rw_stop_read(imap->bag->rrw);
+     
+    /*~~~~~~~~~~~~~~~~~~~~*/
+    // While idle, check for stuff, otherwise break off
+    while (rc < 0) {
+        timeout.tv_sec = 2;
+        rc = recv(session->client->socket, buffer, 1, MSG_PEEK | MSG_DONTWAIT);
+        if (rc == 1) break; // got data from client again
+        else if (rc == 0) return RUMBLE_RETURN_FAILURE; // disconnected?
+        else if (rc == -1) { 
+//            printf("Idle checking for new stuff...\n");
+            rumble_mailman_scan_incoming(folder);
+            rumble_rw_start_read(imap->bag->rrw);
+            foreach((rumble_letter *), letter, folder->letters, iter) {
+                exists++;
+                if (!first && ((letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT))) first = exists;
+                if (letter->flags == RUMBLE_LETTER_RECENT) recent++;
+            }
+            rumble_rw_stop_read(imap->bag->rrw);
+//            printf("Comparing: E=%u <=> OE=%u\n", exists, oexists);
+//            printf("Comparing: R=%u <=> OR=%u\n", recent, orecent);
+            if (oexists != exists) { rcprintf(session, "* %u EXISTS\r\n", exists); oexists = exists; }
+            if (recent != orecent) { rcprintf(session, "* %u RECENT\r\n", exists); orecent = recent; }
+            exists = 0; recent = 0; first = 0;
+            sleep(5);
+        }
+        
+    }
+    
     line = rcread(session);
-    rcprintf(session, "%s OK IDLE completed.\r\n", extra_data);
-    return (RUMBLE_RETURN_IGNORE);
+    if (!line) return RUMBLE_RETURN_FAILURE;
+    else {
+        rcprintf(session, "%s OK IDLE completed.\r\n", extra_data);
+        return (RUMBLE_RETURN_IGNORE);
+    }
 }
 
 /*

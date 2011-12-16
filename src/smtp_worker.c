@@ -316,12 +316,12 @@ void *rumble_worker_process(void *m) {
         /* Check for rampant loops */
         item->loops++;
         if (item->loops > 5) {
+            rumble_debug("mailman", "Message %s is looping, dumping it!\n", item->fid);
             if (item->recipient) rumble_free_address(item->recipient);
             if (item->sender) rumble_free_address(item->recipient);
             if (item->fid) free((char *) item->fid);
             if (item->flags) free((char *) item->flags);
             free(item);
-            printf("Mail is looping, ignoring it!\n");
             continue;
         }
 
@@ -623,7 +623,7 @@ void *rumble_worker_init(void *T) {
             radb_cleanup(dbo);
             
             
-            sleep(2);   /* sleep for 2 seconds if there's nothing to do right now. */
+            sleep(3);   /* sleep for 3 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }
     }
