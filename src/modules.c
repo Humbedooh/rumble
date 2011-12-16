@@ -18,7 +18,7 @@
 #endif
 typedef int (*rumbleModInit) (void *master, rumble_module_info *modinfo);
 typedef uint32_t (*rumbleVerCheck) (void);
-typedef rumblemodule_config_struct* (*rumbleModConfig) (const char* key, const char* value);
+typedef rumblemodule_config_struct * (*rumbleModConfig) (const char *key, const char *value);
 extern FILE *sysLog;
 
 /*
@@ -87,7 +87,7 @@ void rumble_modules_load(masterHandle *master) {
             modinfo->title = 0;
             init = (rumbleModInit) dlsym(handle, "rumble_module_init");
             mcheck = (rumbleVerCheck) dlsym(handle, "rumble_module_check");
-			modinfo->config = (rumbleModConfig) dlsym(handle, "rumble_module_config");
+            modinfo->config = (rumbleModConfig) dlsym(handle, "rumble_module_config");
             error = (init == 0 || mcheck == 0) ? "no errors" : 0;
             if (error != NULL) {
                 rumble_debug("core", "Warning: %s does not contain required module functions.\n", el->value);
@@ -113,6 +113,7 @@ void rumble_modules_load(masterHandle *master) {
                     modinfo->file = el->value;
                     x = init(master, modinfo);
                 }
+
                 if (x != EXIT_SUCCESS) {
                     rumble_debug("module", "Error: %s failed to load!", el->value);
                     dlclose(handle);
@@ -123,8 +124,6 @@ void rumble_modules_load(masterHandle *master) {
                     else rumble_debug("module", "Loaded %48s", el->value);
                 } else rumble_debug("module", "%s exited prematurely!", el->value);
             }
-
-            
 
             /*
              * dlclose(handle);

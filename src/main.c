@@ -1,5 +1,5 @@
 /* File: main.c Author: Administrator Created on January 2, 2011, 8:22 AM */
-#define __USE_GNU 
+#define __USE_GNU
 #define _GNU_SOURCE
 #include "rumble.h"
 #include "database.h"
@@ -128,7 +128,6 @@ void ServiceMain(int argc, char **argv) {
 #   include <limits.h>
 #   include <sys/types.h>
 
-
 /*
  -----------------------------------------------------------------------------------------------------------------------
     This structure mirrors the one found in /usr/include/asm/ucontext.h
@@ -157,54 +156,49 @@ static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
     else if (sig == SIGQUIT) {
         printf("User ended the program - bye bye!\r\n");
         cleanup();
-    }
-    else if (sig == SIGKILL) {
+    } else if (sig == SIGKILL) {
         printf("Rumble got killed :(\r\n");
         cleanup();
-    }
-    else if (sig == SIGTERM) {
+    } else if (sig == SIGTERM) {
         printf("Rumble got killed :(\r\n");
         cleanup();
-    }
-    else if (sig == SIGINT) {
-        if (time(0) - lastClick < 2) { cleanup(); exit(0); }
+    } else if (sig == SIGINT) {
+        if (time(0) - lastClick < 2) {
+            cleanup();
+            exit(0);
+        }
+
         printf("Ctrl+C detected. Press it again to exit rumble.\r\n");
         lastClick = time(0);
-    }
-    else {
+    } else {
         if (!alreadyDead) {
 
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~~~~~~~~~*/
             void            *array[50];
             char            **messages;
             int             size,
                             i;
             sig_ucontext_t  *uc;
-            ucontext_t *context;
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            ucontext_t      *context;
+            /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
             alreadyDead++;
             uc = (sig_ucontext_t *) ucontext;
-            context = (ucontext_t*) ucontext;
-
+            context = (ucontext_t *) ucontext;
             rumble_debug("debug", "Caught signal %d (%s), address is %p\n", sig, strsignal(sig), info->si_addr);
-            
-            rumble_debug("debug", "PID=%d \n", getpid ());
-            rumble_debug("debug", "signo=%d/%s\n", sig, strsignal (sig));
-            rumble_debug("debug",  "code=%d (not always applicable)\n", info->si_code);
-            rumble_debug("debug",  "\nContext: 0x%08lx\n", (unsigned long) ucontext);
+            rumble_debug("debug", "PID=%d \n", getpid());
+            rumble_debug("debug", "signo=%d/%s\n", sig, strsignal(sig));
+            rumble_debug("debug", "code=%d (not always applicable)\n", info->si_code);
+            rumble_debug("debug", "\nContext: 0x%08lx\n", (unsigned long) ucontext);
             rumble_debug("debug", "Register stuff:\n    gs: 0x%08x   fs: 0x%08x   es: 0x%08x   ds: 0x%08x\n"
-               "   edi: 0x%08x  esi: 0x%08x  ebp: 0x%08x  esp: 0x%08x\n"
-               "   ebx: 0x%08x  edx: 0x%08x  ecx: 0x%08x  eax: 0x%08x\n"
-               "  trap:   %8u  err: 0x%08x  cs: 0x%08x\n",
-               context->uc_mcontext.gregs [23],     context->uc_mcontext.gregs [22],   context->uc_mcontext.gregs [24],  context->uc_mcontext.gregs [25],
-               context->uc_mcontext.gregs [7],    context->uc_mcontext.gregs [6],  context->uc_mcontext.gregs [5], context->uc_mcontext.gregs [4],
-               context->uc_mcontext.gregs [3],    context->uc_mcontext.gregs [2],  context->uc_mcontext.gregs [1], context->uc_mcontext.gregs [0],
-               context->uc_mcontext.gregs [15], context->uc_mcontext.gregs [16],   context->uc_mcontext.gregs [18] );
-           
+                         "   edi: 0x%08x  esi: 0x%08x  ebp: 0x%08x  esp: 0x%08x\n""   ebx: 0x%08x  edx: 0x%08x  ecx: 0x%08x  eax: 0x%08x\n"
+                     "  trap:   %8u  err: 0x%08x  cs: 0x%08x\n", context->uc_mcontext.gregs[23], context->uc_mcontext.gregs[22],
+                         context->uc_mcontext.gregs[24], context->uc_mcontext.gregs[25], context->uc_mcontext.gregs[7],
+                         context->uc_mcontext.gregs[6], context->uc_mcontext.gregs[5], context->uc_mcontext.gregs[4],
+                         context->uc_mcontext.gregs[3], context->uc_mcontext.gregs[2], context->uc_mcontext.gregs[1],
+                         context->uc_mcontext.gregs[0], context->uc_mcontext.gregs[15], context->uc_mcontext.gregs[16],
+                         context->uc_mcontext.gregs[18]);
             size = backtrace(array, 50);
-
-            
             messages = backtrace_symbols(array, size);
 
             /* skip first stack frame (points here) */
@@ -227,12 +221,12 @@ void init_signals(void) {
     sigact.sa_flags = SA_RESTART | SA_SIGINFO;
     if (sigaction(SIGKILL, &sigact, 0) < 0) printf("Couldn't lock onto SIGKILL\n");
     sigaction(SIGINT, &sigact, 0);
- 
+
     /*
      * sigaddset(&sigact.sa_mask, SIGSEGV);
      */
     sigaction(SIGSEGV, &sigact, 0);
-        sigaction(SIGSTKFLT, &sigact, 0);
+    sigaction(SIGSTKFLT, &sigact, 0);
 
     /*
      * sigaddset(&sigact.sa_mask, SIGBUS);
@@ -251,7 +245,7 @@ void init_signals(void) {
 
     /*
      * sigaddset(&sigact.sa_mask, SIGKILL);
-     * *sigaddset(&sigact.sa_mask, SIGTERM);
+     * sigaddset(&sigact.sa_mask, SIGTERM);
      */
     sigaction(SIGKILL, &sigact, (struct sigaction *) NULL);
 }
@@ -283,12 +277,12 @@ static void dumpstack(void) {
  */
 int rumbleStart(void) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
     masterHandle    *master = 0;
     int             rc,
                     x;
     rumbleService   *svc;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     srand(time(NULL));
     master = (masterHandle *) malloc(sizeof(masterHandle));
@@ -311,7 +305,7 @@ int rumbleStart(void) {
         master->lua.states[x].state = 0;
         master->lua.states[x].working = 0;
     }
-    
+
     srand(time(0));
     rumble_config_load(master, s_args);
     if (rhdict(s_args, "execpath")) rsdict(master->_core.conf, "execpath", rrdict(s_args, "execpath"));

@@ -186,6 +186,7 @@ void rumble_rw_stop_read(rumble_readerwriter *rrw)
 #endif
     pthread_mutex_lock(&rrw->mutex);
     rrw->readers--;
+
     /*
      * If a writer is waiting;
      * Signal that we've stopped reading

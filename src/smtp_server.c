@@ -98,13 +98,11 @@ void *rumble_smtp_init(void *T) {
             if (rc == RUMBLE_RETURN_IGNORE) {
                 rumble_debug("smtp", "a module replied to %s instead of me", session.client->addr);
                 continue;   /* Skip to next line. */
-            } 
-            else if (rc == RUMBLE_RETURN_FAILURE) {
+            } else if (rc == RUMBLE_RETURN_FAILURE) {
                 svc->traffic.rejections++;
                 session.client->rejected = 1;
-                break;  /* Abort! */
-            }
-            else {
+                break;      /* Abort! */
+            } else {
                 rumble_comm_send(sessptr, rumble_smtp_reply_code(rc));  /* Bad command thing. */
                 rumble_debug("smtp", "I said to %s: %s", session.client->addr, rumble_smtp_reply_code(rc));
             }
@@ -500,7 +498,11 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
             return (RUMBLE_RETURN_FAILURE);
         }
 
-        if (!strcmp(line, ".\r\n")) { free(line);break; } /* We're done here. */
+        if (!strcmp(line, ".\r\n")) {
+            free(line);
+            break;
+        }   /* We're done here. */
+
         if (fwrite(line, strlen(line), 1, fp) != 1) {
 
             /* Writing failed? */
@@ -509,8 +511,9 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
             free(fid);
             free(filename);
             return (452);
+        } else {
+            free(line);
         }
-        else { free(line);}
     }
 
     fclose(fp);
@@ -599,7 +602,7 @@ ssize_t rumble_server_smtp_noop(masterHandle *master, sessionHandle *session, co
 
     /*
      * Do...nothing ;
-     * Fire post-processing hook
+     * Fire post-processing hoo
      */
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_NOOP, parameters);

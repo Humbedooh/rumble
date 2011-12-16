@@ -105,8 +105,7 @@ void *rumble_pop3_init(void *T) {
                 svc->traffic.rejections++;
                 session.client->rejected = 1;
                 break;  /* Abort! */
-            }
-            else rumble_comm_send(sessptr, rumble_pop3_reply_code(rc));         /* Bad command thing. */
+            } else rumble_comm_send(sessptr, rumble_pop3_reply_code(rc));       /* Bad command thing. */
         }
 
         /* Cleanup */
@@ -162,7 +161,10 @@ void *rumble_pop3_init(void *T) {
             }
 
             pthread_mutex_unlock(&svc->mutex);
-            //free(session._svcHandle);
+
+            /*
+             * free(session._svcHandle);
+             */
             pthread_exit(0);
         }
 
@@ -428,6 +430,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         rcsend(session, "\r\n.\r\n");
     } else {
         rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n", i);
+
         /* Might as well delete the letter if it doesn't exist :( */
         rumble_rw_start_write(pops->bag->rrw);
         folder = rumble_mailman_current_folder(pops);
@@ -435,7 +438,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         foreach((rumble_letter *), letter, folder->letters, iter) {
             j++;
             if (j == i) {
-                letter->flags |= RUMBLE_LETTER_EXPUNGE; /* Used to be _DELETED, but that was baaad. */
+                letter->flags |= RUMBLE_LETTER_EXPUNGE;         /* Used to be _DELETED, but that was baaad. */
                 found = 1;
                 break;
             }

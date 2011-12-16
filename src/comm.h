@@ -13,7 +13,7 @@
 void            *get_in_addr(struct sockaddr *sa);
 socketHandle    comm_init(masterHandle *m, const char *port);
 void            comm_accept(socketHandle sock, clientHandle *client);
-int *rumble_comm_read_waitForInput(sessionHandle *session, int timeout);
+int             *rumble_comm_read_waitForInput(sessionHandle *session, int timeout);
 dvector         *comm_mxLookup(const char *domain);
 void            comm_mxFree(dvector *list);
 socketHandle    comm_open(masterHandle *m, const char *host, unsigned short port);

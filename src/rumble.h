@@ -308,23 +308,20 @@
  #######################################################################################################################
  */
 
-typedef struct rumblemodule_config_struct {
-	const char* key;
-	signed int length;
-	const char* description;
-	char		type;
-	void* value;
+typedef struct rumblemodule_config_struct
+{
+    const char  *key;
+    signed int  length;
+    const char  *description;
+    char        type;
+    void        *value;
 } rumblemodule_config_struct;
-
-#define RCS_STRING  1
-#define RCS_NUMBER  2
-#define RCS_BOOLEAN 3
-
-
-
+#   define RCS_STRING  1
+#   define RCS_NUMBER  2
+#   define RCS_BOOLEAN 3
 #   ifdef RUMBLE_MSC
 #      define rumblemodule    int __declspec(dllexport)
-#define rumbleconfig    rumblemodule_config_struct __declspec(dllexport)*
+#      define rumbleconfig    rumblemodule_config_struct __declspec(dllexport) *
 #      ifndef uint32_t
 typedef unsigned char       uint8_t;
 typedef unsigned short      uint16_t;
@@ -343,9 +340,8 @@ typedef long long           int64_t;
 #      endif
 #   else
 #      define rumblemodule    int
-#define rumbleconfig rumblemodule_config_struct*
+#      define rumbleconfig    rumblemodule_config_struct *
 #   endif
-
 
 /*$3
  =======================================================================================================================
@@ -450,7 +446,7 @@ typedef struct
     const char  *description;
     const char  *author;
     const char  *file;
-	rumblemodule_config_struct* (*config) (const char* key, const char* value);
+    rumblemodule_config_struct * (*config) (const char *key, const char *value);
 } rumble_module_info;
 typedef struct
 {
@@ -497,8 +493,8 @@ typedef struct
         pthread_mutex_t mutex;
     } lua;
 } masterHandle;
-
-typedef struct {
+typedef struct
+{
     time_t      when;
     uint32_t    hits;
     uint32_t    bytes;
@@ -701,8 +697,8 @@ void                        rumble_scan_flags(dvector *dict, const char *flags);
 void                        rumble_flush_dictionary(dvector *dict);
 const char                  *rumble_get_dictionary_value(dvector *dict, const char *flag);
 void                        rumble_add_dictionary_value(dvector *dict, const char *key, const char *value);
-void rumble_edit_dictionary_value(dvector *dict, const char *key, const char *value);
-void rumble_delete_dictionary_value(dvector *dict, const char *key);
+void                        rumble_edit_dictionary_value(dvector *dict, const char *key, const char *value);
+void                        rumble_delete_dictionary_value(dvector *dict, const char *key);
 uint32_t                    rumble_has_dictionary_value(dvector *dict, const char *flag);
 void                        rumble_free_address(address *a);
 void                        rumble_free_account(rumble_mailbox *user);
@@ -726,8 +722,8 @@ rumble_sendmail_response    *rumble_send_email
                             );
 void                        rumble_debug(const char *svc, const char *msg, ...);
 void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
-dvector* rumble_readconfig(const char* filename);
-void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected);
+dvector                     *rumble_readconfig(const char *filename);
+void                        comm_addEntry(rumbleService *svc, uint32_t bytes, char rejected);
 
 /*$3
  =======================================================================================================================
@@ -777,12 +773,12 @@ void                            rumble_mailman_free_parsed_letter(rumble_parsed_
  #######################################################################################################################
  */
 
-#   define rrdict      rumble_get_dictionary_value  /* read dict */
-#   define rsdict      rumble_add_dictionary_value  /* set dict */
-#define redict rumble_edit_dictionary_value /* edit dict (danger danger!) */
-#define rmdict rumble_delete_dictionary_value /* edit dict (danger danger!) */
-#   define rfdict      rumble_flush_dictionary      /* flush dict */
-#   define rhdict      rumble_has_dictionary_value  /* returns 1 if value exists, 0 otherwise */
+#   define rrdict      rumble_get_dictionary_value      /* read dict */
+#   define rsdict      rumble_add_dictionary_value      /* set dict */
+#   define redict      rumble_edit_dictionary_value     /* edit dict (danger danger!) */
+#   define rmdict      rumble_delete_dictionary_value   /* edit dict (danger danger!) */
+#   define rfdict      rumble_flush_dictionary          /* flush dict */
+#   define rhdict      rumble_has_dictionary_value      /* returns 1 if value exists, 0 otherwise */
 #   define rcsend      rumble_comm_send
 #   define rcprintf    rumble_comm_printf
 #   define rcread      rumble_comm_read

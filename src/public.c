@@ -282,49 +282,53 @@ void rumble_add_dictionary_value(dvector *dict, const char *key, const char *val
     dvector_add(dict, el);
 }
 
-
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
 void rumble_edit_dictionary_value(dvector *dict, const char *key, const char *value) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char                *nval;
     rumbleKeyValuePair  *el;
-	rumbleKeyValuePair  *oel = 0;
+    rumbleKeyValuePair  *oel = 0;
     d_iterator          iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-	foreach((rumbleKeyValuePair *), el, dict, iter) {
-		if (el->key && !strcmp(el->key, key)) {
-			oel = el;
-			break;
-		}
-	}
-	if (oel && value) {
-		if (oel->value) free((char*) oel->value);
-		nval = (char *) calloc(1, strlen(value) + 1);
-		strcpy(nval, value);
-	    oel->value = (const char *) nval;
-	}
+    foreach((rumbleKeyValuePair *), el, dict, iter) {
+        if (el->key && !strcmp(el->key, key)) {
+            oel = el;
+            break;
+        }
+    }
+
+    if (oel && value) {
+        if (oel->value) free((char *) oel->value);
+        nval = (char *) calloc(1, strlen(value) + 1);
+        strcpy(nval, value);
+        oel->value = (const char *) nval;
+    }
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 void rumble_delete_dictionary_value(dvector *dict, const char *key) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
     rumbleKeyValuePair  *el;
     d_iterator          iter;
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
-	foreach((rumbleKeyValuePair *), el, dict, iter) {
-		if (el->key && !strcmp(el->key, key)) {
-			if (el->value) free((char*) el->value);
-			if (el->key) free((char*) el->key);
-			break;
-			dvector_delete(&iter);
-		}
-	}
+    foreach((rumbleKeyValuePair *), el, dict, iter) {
+        if (el->key && !strcmp(el->key, key)) {
+            if (el->value) free((char *) el->value);
+            if (el->key) free((char *) el->key);
+            break;
+            dvector_delete(&iter);
+        }
+    }
 }
 
 /*

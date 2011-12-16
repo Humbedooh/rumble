@@ -33,7 +33,8 @@ rumbleService *comm_serviceHandle(const char *svcName) {
     rumbleServicePointer    *svcp = 0;
     c_iterator              iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    if (!svcName) return 0;
+
+    if (!svcName) return (0);
     cforeach((rumbleServicePointer *), svcp, comm_master_handle->services, iter) {
         if (!strcmp(svcName, svcp->svcName)) {
             return (svcp->svc);
@@ -160,12 +161,12 @@ int comm_resumeService(rumbleService *svc) {
  */
 rumbleService *comm_registerService(masterHandle *master, const char *svcName, void * (*init) (void *), const char *port, int threadCount) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService           *svc;
     rumbleServicePointer    *svcp;
-    int x = 0;
-    traffic_entry* tentry = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    int                     x = 0;
+    traffic_entry           *tentry = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     svcp = (rumbleServicePointer *) malloc(sizeof(rumbleServicePointer));
     svc = (rumbleService *) malloc(sizeof(rumbleService));
@@ -191,22 +192,31 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.stackSize = 2.5 * 1024 * 1024;
     svc->trafficlog = dvector_init();
     for (x = 0; x < 170; x++) {
-         tentry = (traffic_entry *) malloc(sizeof(traffic_entry));
-         tentry->bytes = 0;
-         tentry->hits = 0;
-         tentry->when = 0;
+        tentry = (traffic_entry *) malloc(sizeof(traffic_entry));
+        tentry->bytes = 0;
+        tentry->hits = 0;
+        tentry->when = 0;
         dvector_add(svc->trafficlog, tentry);
     }
+
     cvector_add(master->services, svcp);
     rumble_debug("svc", "Registered new service (%s) on port %s.", svcName, port ? port : "(null)");
     return (svc);
 }
 
-/* Adds traffic entry to the statistical data pile (and rotates every week)*/
-void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected) {
-    time_t now;
-    traffic_entry* entry = 0;
-    dvector_element* obj;
+/*
+ =======================================================================================================================
+    Adds traffic entry to the statistical data pile (and rotates every week)
+ =======================================================================================================================
+ */
+void comm_addEntry(rumbleService *svc, uint32_t bytes, char rejected) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+    time_t          now;
+    traffic_entry   *entry = 0;
+    dvector_element *obj;
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+
     now = time(NULL) / 3600;
     if (svc) {
         pthread_mutex_lock(&(svc->mutex));
@@ -223,12 +233,16 @@ void comm_addEntry(rumbleService* svc, uint32_t bytes, char rejected) {
             entry->bytes = 0;
             entry->hits = 0;
             entry->when = now;
-        }  
-        entry->bytes += bytes;
-        if (rejected < 100) { // 100 means discard this info, just rotate the log pile
-                entry->hits ++;
-                entry->rejections += (rejected ? 1 : 0);
         }
+
+        entry->bytes += bytes;
+        if (rejected < 100) {
+
+            /* 100 means discard this info, just rotate the log pile */
+            entry->hits++;
+            entry->rejections += (rejected ? 1 : 0);
+        }
+
         pthread_mutex_unlock(&(svc->mutex));
     }
 }

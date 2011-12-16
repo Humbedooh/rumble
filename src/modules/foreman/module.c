@@ -17,7 +17,8 @@ ssize_t accept_hook(sessionHandle *session, const char *junk);  /* Prototype */
 rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "Foreman module";
     modinfo->description = "Standard module for dynamically managing worker pools.";
-	modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
+    modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
+
     /* Hook the module to incoming connections on any service. */
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_ACCEPT, accept_hook);
     rumble_hook_function(master, RUMBLE_HOOK_POP3 + RUMBLE_HOOK_ACCEPT, accept_hook);

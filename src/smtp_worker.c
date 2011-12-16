@@ -13,9 +13,10 @@
 #ifdef __GNUC__
 #   include <dirent.h>
 #endif
-mqueue  *current = 0;
-dvector *badmx;
-static const char *svcs[] = { "imap4", "pop3", "smtp", "mailman", 0 };
+mqueue              *current = 0;
+dvector             *badmx;
+static const char   *svcs[] = { "imap4", "pop3", "smtp", "mailman", 0 };
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -56,7 +57,8 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
             free(line);
         }
     }
-    if (res->replyCode == 500) ((rumbleService*) session->_svc)->traffic.rejections++;
+
+    if (res->replyCode == 500) ((rumbleService *) session->_svc)->traffic.rejections++;
 }
 
 /*
@@ -167,9 +169,10 @@ rumble_sendmail_response *rumble_send_email(
             memset(buffer, 0, 2000);
             chunk = fread(buffer, 1, 2000, fp);
             send(c.socket, buffer, (int) chunk, 0);
-            if (s._svc) ((rumbleService*) s._svc)->traffic.sent += chunk;
+            if (s._svc) ((rumbleService *) s._svc)->traffic.sent += chunk;
             else printf("..");
         }
+
         rcsend(&s, ".\r\n");
         get_smtp_response(&s, res);
         break;
@@ -297,7 +300,7 @@ void *rumble_worker_process(void *m) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sess->client = &c;
-	sess->_svc = svc;
+    sess->_svc = svc;
     if (!sess) merror();
     sess->_master = (masterHandle *) svc->master;
     tmp = (char *) calloc(1, 256);
@@ -611,18 +614,19 @@ void *rumble_worker_init(void *T) {
                 }
             }
         } else {
-            
+
+            /*~~~~~~~~~~~~~~~~~~~~~~*/
             /* Update traffic stats while we're doing nothing */
-            rumbleService *xsvc = 0;
-            int K = 0;
-            
-            for (K=0;K<4;K++) {
+            rumbleService   *xsvc = 0;
+            int             K = 0;
+            /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+            for (K = 0; K < 4; K++) {
                 xsvc = comm_serviceHandle(svcs[K]);
                 if (xsvc) comm_addEntry(xsvc, 0, 100);
             }
+
             radb_cleanup(dbo);
-            
-            
             sleep(3);   /* sleep for 3 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }
