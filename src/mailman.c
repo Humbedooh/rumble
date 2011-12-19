@@ -90,8 +90,6 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     rumble_rw_start_write(rumble_database_master_handle->mailboxes.rrw);
     dvector_add(rumble_database_master_handle->mailboxes.list, bag);
     rumble_rw_stop_write(rumble_database_master_handle->mailboxes.rrw);
-    
-    
 
     /* Add the default inbox */
     rumble_rw_start_write(bag->rrw);
@@ -123,7 +121,6 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
         folder->lastMessage = 0;
         dvector_add(bag->folders, folder);
     }
-
     radb_cleanup(dbo);
     dbo = radb_prepare(rumble_database_master_handle->_core.mail, "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u",
                        uid);
@@ -136,11 +133,14 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
                 l++;
                 dvector_add(folder->letters, letter);
                 folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
-                printf("<Mailman> Set last ID in <%s> to %"PRIu64 "\n", folder->name, folder->lastMessage);
+
+                /*
+                 * printf("<Mailman> Set last ID in <%s> to %"PRIu64 "\n", folder->name, folder->lastMessage);
+                 */
                 break;
             }
         }
-
+        
         if (!l) {
             free(letter->fid);
             free(letter);
@@ -152,13 +152,32 @@ rumble_mailman_shared_bag *rumble_letters_retrieve_shared(uint32_t uid) {
     return (bag);
 }
 
+
+/* $2
+ rumble_mailman_get_folder: Finds a folder with the specified name
+ */
+rumble_mailman_shared_folder* rumble_mailman_get_folder(accountSession *imap, const char* name) {
+    rumble_mailman_shared_folder *folder = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    rumble_mailman_shared_folder    *pair;
+    d_iterator                      iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    
+    rumble_rw_start_read(imap->bag->rrw);
+    foreach(rmsf, pair, imap->bag->folders, iter) {
+        if (!strcmp(pair->name, name)) folder = pair;
+    }
+    rumble_rw_stop_read(imap->bag->rrw);
+    return folder;
+}
+
 /*
  =======================================================================================================================
     rumble_mailman_current_folder: Fetches the currently selected folder in the session.
  =======================================================================================================================
  */
 rumble_mailman_shared_folder *rumble_mailman_current_folder(accountSession *sess) {
-
+    
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_mailman_shared_folder    *folder;
     d_iterator                      iter;
@@ -262,10 +281,11 @@ uint32_t rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder) {
         letter->uid = folder->bag->uid;
         dvector_add(folder->letters, letter);
         folder->lastMessage = (folder->lastMessage < letter->id) ? letter->id : folder->lastMessage;
-
+        
         /*
          * printf("Adding letter %"PRIu64 " to <%s>\n", letter->id, folder->name);
          */
+        
     }
 
     /*
@@ -300,6 +320,7 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
     r = 0;
     rumble_rw_start_write(session->bag->rrw);   /* Lock the bag */
     rumble_debug("mailman", "Cleaning up %s@%s's folder <%s>\n", session->account->user, session->account->domain->name, folder->name);
+     printf("size of folder before commit: %u", folder->letters->size);
     dforeach((rumble_letter *), letter, folder->letters, iter) {
 
         /*
@@ -314,39 +335,31 @@ uint32_t rumble_mailman_commit(accountSession *session, rumble_mailman_shared_fo
 #endif
             sprintf(tmp, "%s/%s.msg", path, letter->fid);
             unlink(tmp);
-            dbo = radb_prepare(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
-            radb_step(dbo);
-            radb_cleanup(dbo);
+            radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
 
             /*
              * printf("DELETE FROM mbox WHERE id = %"PRIu64 "\n", letter->id);
              */
             r++;
-            free(letter->fid);
+            if (letter->fid) free(letter->fid);
             letter->fid = 0;
             free(letter);
-
-            /*
-             * printf("size of folder before deletion: %u", folder->letters->size);
-             */
             dvector_delete(&iter);
-
-            /*
-             * printf("size of folder after deletion: %u", folder->letters->size);
-             */
+ 
         } else if (letter->flags != letter->_flags)
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
             printf("Updating letter no. %"PRIu64 " (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
 #endif
             if (letter->flags & RUMBLE_LETTER_UPDATED) letter->flags -= RUMBLE_LETTER_UPDATED;
-            dbo = radb_prepare(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags,
+            radb_run_inject(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE id = %l", letter->flags,
                                letter->id);
-            radb_step(dbo);
-            radb_cleanup(dbo);
             r++;
+        } else {
+            printf("Skipping letter no. %"PRIu64 " (%08x -> %08x)\r\n", letter->id, letter->_flags, letter->flags);
         }
     }
+    printf("size of folder after commit: %u", folder->letters->size);
 
     rumble_rw_stop_write(session->bag->rrw);    /* Unlock the bag */
     return (r);
@@ -391,7 +404,7 @@ void rumble_mailman_close_bag(rumble_mailman_shared_bag *bag) {
 
         /* Traverse folders */
         foreach(rmsf, folder, bag->folders, fiter) {
-
+            if (!folder or !folder->name) continue;
             /* Traverse letters */
             foreach((rumble_letter *), letter, folder->letters, liter) {
                 if (letter->fid) free(letter->fid);
@@ -436,7 +449,6 @@ rumble_mailman_shared_bag *rumble_mailman_open_bag(uint32_t uid) {
             break;
         }
     }
-
 
     rumble_rw_stop_read(rumble_database_master_handle->mailboxes.rrw);
 
@@ -729,7 +741,7 @@ rumble_parsed_letter *rumble_mailman_readmail_private(FILE *fp, const char *boun
 
                     /*
                      * printf(".");
-                     * New body, malloc it
+                     * New body, malloc i
                      */
                     if (!letter->body) {
                         letter->body = (char *) calloc(1, llen + 1);

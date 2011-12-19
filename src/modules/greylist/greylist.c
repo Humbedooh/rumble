@@ -1,13 +1,9 @@
-/*$I0
- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
- */
+/*$I0 */
 
-
-   /* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
+/* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
 #include "../../rumble.h"
 #include <string.h>
-dvector * configuration;
+dvector                     *configuration;
 int                         GREYLIST_MAX_AGE = 432000;  /* Grey-list records will linger for 5 days. */
 int                         GREYLIST_MIN_AGE = 599;     /* Put new triplets on hold for 10 minutes */
 int                         GREYLIST_ENABLED = 1;       /* 1 = yes, 0 = no */

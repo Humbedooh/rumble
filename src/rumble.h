@@ -648,6 +648,11 @@ typedef struct
     char    result;
     int     stepcount;
 } base64_encodestate;
+typedef struct
+{
+    uint64_t    start;
+    uint64_t    end;
+} rangePair;
 #   ifdef __cplusplus
 extern "C"
 {
@@ -689,7 +694,9 @@ int                         rumble_unbase64(unsigned char *dest, const unsigned 
 void                        rumble_string_lower(char *d);           /* Converts <d> into lowercase. */
 void                        rumble_string_upper(char *d);           /* Converts <d> into uppercase. */
 rumble_args                 *rumble_read_words(const char *d);
+rumble_args                 *rumble_splitstring(const char *d, char delimiter);
 void                        rumble_args_free(rumble_args *d);
+void                        rumble_scan_ranges(rangePair *ranges, const char *line);
 char                        *rumble_mtime(void);            /* mail time */
 char                        *rumble_create_filename(void);  /* Generates random 16-letter filenames */
 void                        rumble_scan_words(dvector *dict, const char *wordlist);
@@ -751,6 +758,7 @@ void            rumble_domain_free(rumble_domain *domain);          /* cleanup f
 FILE                            *rumble_letters_open(rumble_mailbox *mbox, rumble_letter *letter);
 rumble_mailman_shared_bag       *rumble_mailman_open_bag(uint32_t uid);
 void                            rumble_mailman_close_bag(rumble_mailman_shared_bag *bag);
+rumble_mailman_shared_folder* rumble_mailman_get_folder(accountSession *imap, const char* name);
 rumble_mailman_shared_folder    *rumble_mailman_current_folder(accountSession *sess);
 rumble_mailman_shared_bag       *rumble_letters_retrieve_shared(uint32_t uid);
 void                            rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);

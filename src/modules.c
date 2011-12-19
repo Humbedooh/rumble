@@ -45,8 +45,6 @@ void rumble_modules_load(masterHandle *master) {
     const char          *services[] = { "mailman", "smtp", "pop3", "imap4", 0 };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    master->_core.feed_hooks = cvector_init();
-    master->_core.parser_hooks = cvector_init();
     rumble_debug("core", "Preparing to load modules");
     for (x = 0; services[x]; x++) {
         svc = comm_serviceHandle(services[x]);

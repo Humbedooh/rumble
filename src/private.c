@@ -57,9 +57,12 @@ void rumble_clean_session(sessionHandle *session) {
     /*~~~~~~~~~~~~~*/
 
     if (!session) return;
-    rumble_free_address(session->sender);
+    if (session->sender) {
+        rumble_free_address(session->sender);
+        session->sender = 0;
+    }
     foreach((address *), el, session->recipients, iter) {
-        rumble_free_address(el);
+        if (el) rumble_free_address(el);
     }
 
     dvector_flush(session->recipients);
@@ -213,6 +216,7 @@ void rumble_rw_start_write(rumble_readerwriter *rrw)
     }
 
     /* Let readers know that we want to write */
+//    printf("++ Add write hook\n");
     rrw->writers++;
 
     /* Wait for all readers to quit */
@@ -239,6 +243,7 @@ void rumble_rw_stop_write(rumble_readerwriter *rrw)
     }
 
     /* Signal that we've stopped writing now */
+//    printf("-- Remove write hook\n");
     pthread_cond_broadcast(&rrw->writing);
     pthread_mutex_unlock(&rrw->mutex);
 }

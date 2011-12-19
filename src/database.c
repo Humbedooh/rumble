@@ -101,12 +101,12 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
         }
     }
 
-    radb_free(dbr);
     if (!rc) {
         rumble_debug("core", "db structure is deprecated, updating\n");
         rc = radb_do(master->_core.db, "ALTER TABLE \"domains\" ADD COLUMN \"flags\" INTEGER NOT NULL  DEFAULT 0");
     } else rumble_debug("core", "db structure is up to date!\n");
     rumble_debug("db", "Database successfully initialized");
+    radb_cleanup(dbo);
 }
 
 #ifdef MYSQL_CLIENT
@@ -325,7 +325,6 @@ rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *
         /* Account args */
         acc->arg = strclone(dbr->column[5].data.string);
     }
-
     radb_cleanup(dbo);
     return (acc);
 }
@@ -346,10 +345,12 @@ rumble_mailbox *rumble_account_data_auth(uint32_t uid, const char *user, const c
         hash = rumble_sha256((const unsigned char *) pass);
         if (!strcmp(hash, acc->hash)) {
             rumble_debug("core", "Account %s successfully logged in.", user);
+            free(hash);
             return (acc);
         }
-
+        free(hash);
         rumble_free_account(acc);
+        free(acc);
         acc = 0;
     }
 

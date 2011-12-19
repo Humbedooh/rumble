@@ -24,7 +24,6 @@ void *rumble_smtp_init(void *T) {
     char            cmd[10],
                     arg[1024];
     const char      *myName;
-    int             x = 0;
     sessionHandle   *s;
     d_iterator      iter;
     c_iterator      citer;
@@ -34,6 +33,7 @@ void *rumble_smtp_init(void *T) {
     rumble_rw_start_read(master->domains.rrw);
     session.dict = dvector_init();
     session.recipients = dvector_init();
+    session.sender = 0;
     session.client = (clientHandle *) malloc(sizeof(clientHandle));
     session.client->tls = 0;
     session.client->recv = 0;
@@ -86,6 +86,7 @@ void *rumble_smtp_init(void *T) {
 #endif
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
+                    free(line);
                     break;
                 } /* bye! */ else {
                     cforeach((svcCommandHook *), hook, svc->commands, citer) {
@@ -143,7 +144,6 @@ void *rumble_smtp_init(void *T) {
         foreach((sessionHandle *), s, svc->handles, iter) {
             if (s == sessptr) {
                 dvector_delete(&iter);
-                x = 1;
                 break;
             }
         }
@@ -210,6 +210,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
 
             /* Something went wrong, let's clean up and return. */
             rumble_free_address(session->sender);
+            session->sender = 0;
             return (rc);
         }
 
@@ -217,6 +218,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
         size = atoi(rumble_get_dictionary_value(session->sender->flags, "SIZE"));
         if (max != 0 && size != 0 && size > max) {
             rumble_free_address(session->sender);
+            session->sender = 0;
             return (552);       /* message too big. */
         }
 
@@ -240,6 +242,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
 
             if (!(session->flags & RUMBLE_SMTP_HAS_BATV)) {
                 rumble_free_address(session->sender);
+                session->sender = 0;
                 return (530);   /* bounce is invalid or too old. */
             }
         }
@@ -247,6 +250,7 @@ ssize_t rumble_server_smtp_mail(masterHandle *master, sessionHandle *session, co
         /* Check if it's a supposed (but fake or very very old) bounce */
         if (!strlen(session->sender->domain) && !(session->flags & RUMBLE_SMTP_HAS_BATV)) {
             rumble_free_address(session->sender);
+            session->sender = 0;
             return (530);       /* bounce is invalid or too old. */
         }
 
@@ -288,6 +292,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         if (rc != RUMBLE_RETURN_OKAY) {
             dvector_pop(session->recipients);           /* pop the last element from the vector */
             rumble_free_address(recipient);             /* flush the memory */
+            recipient = 0;
             return (rc);
         }
 
@@ -309,6 +314,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
             if (rc != RUMBLE_RETURN_OKAY) {
                 dvector_pop(session->recipients);       /* pop the last element from the vector */
                 rumble_free_address(recipient);         /* flush the memory */
+                recipient = 0;
                 return (rc);
             }
 
@@ -345,6 +351,7 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 if (rc != RUMBLE_RETURN_OKAY) {
                     dvector_pop(session->recipients);   /* pop the last element from the vector */
                     rumble_free_address(recipient);     /* flush the memory */
+                    recipient = 0;
                     return (rc);
                 }
 
@@ -357,12 +364,14 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
             /* Not local and no relaying allowed, return 530. */
             dvector_pop(session->recipients);
             rumble_free_address(recipient);
+            recipient = 0;
             return (530);
         }
 
         /* Domain is local but user doesn't exist, return 550 */
         dvector_pop(session->recipients);
         rumble_free_address(recipient);
+        recipient = 0;
         return (550);
     }
 
@@ -484,6 +493,7 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
             session->client->addr, rumble_config_str(master, "servername"), fid, now);
     free(now);
     fwrite(log, strlen(log), 1, fp);
+    free(log);
     rumble_comm_send(session, rumble_smtp_reply_code(354));
 
     /* Save the message */
@@ -647,12 +657,13 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         line = rcread(session);
         if (!sscanf(line, "%s", digest)) user = "";
         else user = rumble_decode_base64(digest);
-
+        free(line);
         /* Password */
         rcsend(session, "334 UGFzc3dvcmQ6\r\n");
         line = rcread(session);
         if (!sscanf(line, "%s", digest)) pass = "";
         else pass = rumble_decode_base64(digest);
+        free(line);
         sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
         rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
@@ -661,6 +672,8 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         strcpy(digest, pass);
         free(pass);
         pass = digest;
+        rumble_free_address(addr);
+        addr = 0;
     }
 
     /* PLAIN method */
@@ -673,11 +686,14 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         rumble_debug("smtp", "%s trying to auth login with [%s]", session->client->addr, user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(buffer);
+        rumble_free_address(addr);
+        addr = 0;
     }
 
     if (OK) {
         session->flags |= RUMBLE_SMTP_CAN_RELAY;
         rumble_free_account(OK);
+        free(OK);
         return (250);
     } else {
         session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);

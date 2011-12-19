@@ -135,6 +135,7 @@ void rumble_master_init(masterHandle *master) {
         rumble_service_add_command(svc, "STORE", rumble_server_imap_store);
         rumble_service_add_command(svc, "COPY", rumble_server_imap_copy);
         rumble_service_add_command(svc, "IDLE", rumble_server_imap_idle);
+        rumble_service_add_command(svc, "TEST", rumble_server_imap_test);
 
         /*$2
          ---------------------------------------------------------------------------------------------------------------
@@ -146,6 +147,9 @@ void rumble_master_init(masterHandle *master) {
         rumble_service_add_capability(svc, "IDLE");
         rumble_service_add_capability(svc, "CONDSTORE");
         rumble_service_add_capability(svc, "AUTH=PLAIN");
+        rumble_service_add_capability(svc, "LITERAL");
         rumble_service_add_capability(svc, "UIDPLUS");
+        rumble_service_add_capability(svc, "ANNOTATEMORE");
+        rumble_service_add_capability(svc, "IMPLEMENTATION Rumble Mail Server");
     }
 }

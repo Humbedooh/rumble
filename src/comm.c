@@ -201,7 +201,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     char    moo[1024];
 #endif
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    if (!d) return 0;
     va_start(vl, d);
 #ifdef _CRTIMP      /* Windows CRT library has a nifty function for this */
     len = _vscprintf(d, vl) + 10;
@@ -213,8 +213,9 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
 #   endif
 #endif
     va_end(vl);
-    buffer = (char *) calloc(1, len);
+    buffer = (char *) calloc(1, len+1);
     if (!buffer) merror();
+    
     va_start(vl, d);
     vsprintf(buffer, d, vl);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
@@ -324,12 +325,10 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     ssize_t         rc = 0;
     struct timeval  t;
     signed int      f;
-    time_t          z;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     t.tv_sec = (session->_tflags & RUMBLE_THREAD_IMAP) ? 1000 : 10;
     t.tv_usec = 0;
-    z = time(0);
     buffer = (char *) calloc(1, len + 1);
     f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
     if (f > 0) {
@@ -348,41 +347,6 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
     return (0);
 }
 
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-int *rumble_comm_read_waitForInput(sessionHandle *session, int timeout) {
-
-    /*~~~~~~~~~~~~~~~~~~~*/
-    char            b;
-    ssize_t         rc = 0;
-    struct timeval  t;
-    signed int      f;
-    /*~~~~~~~~~~~~~~~~~~~*/
-
-    t.tv_sec = timeout;
-    t.tv_usec = 0;
-    while (1) {
-        printf(".");
-        f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
-        printf("f=%d\n", f);
-        if (f > 0) {
-            printf("input?\n");
-            rc = recv(session->client->socket, &b, 1, MSG_PEEK);
-            if (!rc) return (0);
-            return (2);
-        } else if (f == 0) {
-            printf("timeout?\n");
-            return (1);
-        }
-
-        printf("Disconnect?\n");
-        return (0);
-    }
-
-    return (1);
-}
 
 /*
  =======================================================================================================================

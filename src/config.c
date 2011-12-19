@@ -102,9 +102,9 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         int             p = 0;
         unsigned int    ignore = 0,
                         n = 0;
-        char            *key,
-                        *value,
-                        *buffer,
+        char            key[512],
+                        value[512],
+                        buffer[512],
                         line[512],
                         ckey[129],
                         coper[3],
@@ -115,10 +115,6 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         memset(ckey, 0, 129);
         memset(cval, 0, 129);
         memset(coper, 0, 3);
-        buffer = (char *) malloc(512);
-        key = (char *) calloc(1, 512);
-        value = (char *) calloc(1, 512);
-        if (!buffer || !key || !value) merror();
         while (!feof(config)) {
             memset(buffer, 0, 512);
             memset(line, 0, 512);
@@ -168,16 +164,18 @@ void rumble_config_load(masterHandle *master, dvector *args) {
                 }
             } else {
                 rumble_debug("config", "ERROR: Could not read %s!", cfgfile);
+                free(cfgfile);
                 exit(EXIT_FAILURE);
             }
         }
 
-        free(buffer);
         fclose(config);
     } else {
         rumble_debug("config", "ERROR: Could not open %s!", cfgfile);
+        free(cfgfile);
         exit(EXIT_FAILURE);
     }
+    free(cfgfile);
 }
 
 /*
@@ -229,7 +227,6 @@ dvector *rumble_readconfig(const char *filename) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char                *paths[3] = { "config", "/var/rumble/config", "g:/home/vaps/rumble/config" };
     char                cfgfile[1024];
-    const char          *cfgpath;
     FILE                *config;
     rumbleKeyValuePair  *el;
     dvector             *configFile;
@@ -237,7 +234,6 @@ dvector *rumble_readconfig(const char *filename) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     configFile = dvector_init();
-    cfgpath = 0;
     for (x = 0; x < 3; x++) {
         sprintf(cfgfile, "%s/%s", paths[x], filename);
         config = fopen(cfgfile, "r");
@@ -260,9 +256,9 @@ dvector *rumble_readconfig(const char *filename) {
         int             p = 0;
         unsigned int    ignore = 0,
                         n = 0;
-        char            *key,
-                        *value,
-                        *buffer,
+        char            key[512],
+                        value[512],
+                        buffer[512],
                         line[512],
                         ckey[129],
                         coper[3],
@@ -273,10 +269,6 @@ dvector *rumble_readconfig(const char *filename) {
         memset(ckey, 0, 129);
         memset(cval, 0, 129);
         memset(coper, 0, 3);
-        buffer = (char *) malloc(512);
-        key = (char *) calloc(1, 512);
-        value = (char *) calloc(1, 512);
-        if (!buffer || !key || !value) merror();
         while (!feof(config)) {
             memset(buffer, 0, 512);
             memset(line, 0, 512);
@@ -329,13 +321,12 @@ dvector *rumble_readconfig(const char *filename) {
                 exit(EXIT_FAILURE);
             }
         }
-
-        free(buffer);
+ 
         fclose(config);
     } else {
         rumble_debug("config", "ERROR: Could not open %s!", cfgfile);
         exit(EXIT_FAILURE);
     }
-
+    
     return (configFile);
 }

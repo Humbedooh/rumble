@@ -44,11 +44,58 @@ rumble_args *rumble_read_words(const char *d) {
     c = 0;
     x = 0;
     ret->argc = 0;
-    if (!d || !strlen(d)) return (ret);
+    if (!d || !strlen(d)) { free(ret->argv); return (ret); }
     for (s = (char *) d; *s; s++) {
         b++;
         if (*s == '"') c++;
         if (c % 2 == 0 && *s == ' ') {
+            x = (*(d + a) == '"') ? 1 : 0;
+            if (b - a - x - 1 > 0) {
+                ret->argv[ret->argc] = (char *) calloc(1, b - a - x  + 1);
+                strncpy(ret->argv[ret->argc++], d + a + x, b - a - x - x - 1);
+            }
+
+            a = b;
+        }
+    }
+
+    if (b > a) {
+        x = (*(d + a) == '"') ? 1 : 0;
+        if (b - a - x - 1 > 0) {
+            ret->argv[ret->argc] = (char *) calloc(1, b - a - x + 1);
+            strncpy(ret->argv[ret->argc++], d + a + x, b - a - x - x );
+        }
+    }
+
+    return (ret);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+rumble_args *rumble_splitstring(const char *d, char delimiter) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char        *s;
+    ssize_t     a,
+                b,
+                c,
+                x;
+    rumble_args *ret = (rumble_args *) malloc(sizeof(rumble_args));
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    ret->argv = (char **) calloc(1, 32 * sizeof(char *));
+    a = 0;
+    b = 0;
+    c = 0;
+    x = 0;
+    ret->argc = 0;
+    if (!d || !strlen(d)) return (ret);
+    for (s = (char *) d; *s; s++) {
+        b++;
+        if (*s == '"') c++;
+        if (c % 2 == 0 && *s == delimiter) {
             x = (*(d + a) == '"') ? 1 : 0;
             if (b - a - x - 1 > 0) {
                 ret->argv[ret->argc] = (char *) calloc(1, b - a - x + 1);
@@ -63,11 +110,50 @@ rumble_args *rumble_read_words(const char *d) {
         x = (*(d + a) == '"') ? 1 : 0;
         if (b - a - x - 1 > 0) {
             ret->argv[ret->argc] = (char *) calloc(1, b - a - x + 1);
-            strncpy(ret->argv[ret->argc++], d + a + x, b - a - x - 1);
+            strncpy(ret->argv[ret->argc++], d + a + x, b - a - x);
         }
     }
 
     return (ret);
+}
+
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_scan_ranges(rangePair *ranges, const char *line) {
+
+    /*~~~~~~~~~~~~~~~~~~~*/
+    rumble_args *rangeList;
+    size_t      first,
+                last;
+    int         x,
+                y;
+    /*~~~~~~~~~~~~~~~~~~~*/
+
+    if (!line) return;
+    rangeList = rumble_splitstring(line, ',');
+    y = 0;
+    for (x = 0; x < rangeList->argc; x++) {
+        first = 0;
+        last = 0;
+        if (sscanf(rangeList->argv[x], "%lu:%1[*]", &first, (char *) &last) == 2) {
+            last = -1;
+        } else if (sscanf(rangeList->argv[x], "%lu:%lu", &first, &last)) { } else {
+            sscanf(rangeList->argv[x], "%lu", &first);
+        }
+
+        if (last == 0) last = first;
+        if (first && last) {
+            ranges[y].start = first;
+            ranges[y].end = last;
+            y++;
+            if (y == 63) break;
+        }
+    }
+
+    ranges[y].start = 0;
+    rumble_args_free(rangeList);
 }
 
 /*
@@ -125,7 +211,7 @@ address *rumble_parse_mail_address(const char *addr) {
         if (addr) sscanf(addr, "%128[^@ ]@%128c", usr->user, usr->domain);
     }
 
-    if (!strlen(usr->user) or!strlen(usr->domain)) {
+    if (!strlen(usr->user) or !strlen(usr->domain)) {
         rumble_free_address(usr);
         usr = 0;
     } else sprintf(usr->raw, "<%s@%s> %s", usr->user, usr->domain, usr->_flags ? usr->_flags : "NOFLAGS");
@@ -194,6 +280,8 @@ void rumble_scan_flags(dvector *dict, const char *flags) {
 
         pch = strtok(NULL, " ");
     }
+    free(key);
+    free(val);
 }
 
 /*
@@ -218,6 +306,7 @@ void rumble_scan_words(dvector *dict, const char *wordlist) {
 
         pch = strtok(NULL, " ");
     }
+    free(key);
 }
 
 /*
@@ -367,11 +456,13 @@ void rumble_free_address(address *a) {
     if (a->_flags) free(a->_flags);
     if (a->tag) free(a->tag);
     rumble_flush_dictionary(a->flags);
+    dvector_destroy(a->flags);
     a->domain = 0;
     a->user = 0;
     a->raw = 0;
     a->_flags = 0;
     a->tag = 0;
+    free(a);
 }
 
 /*

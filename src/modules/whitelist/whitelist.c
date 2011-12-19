@@ -77,6 +77,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
                     sprintf(el, "%s.", address);    /* add a trailing dot for security measures. */
                     cvector_add(rumble_whiteList, el);
                 }
+                free(address);
             } else {
                 perror("<whitelist> Error: Could not read config/whitelist.conf");
                 exit(EXIT_FAILURE);

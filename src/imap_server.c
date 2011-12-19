@@ -104,7 +104,7 @@ void *rumble_imap_init(void *T) {
                 /*
                  * rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
                  */
-                printf("Selected folder is: %"PRId64 "\r\n", pops->folder);
+//                printf("Selected folder is: %"PRId64 "\r\n", pops->folder);
             }
 
             free(line);
@@ -124,7 +124,9 @@ void *rumble_imap_init(void *T) {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         rumble_debug("imap4", "Closing connection to %s on IMAP4", session.client->addr);
 #endif
-        if (rc == 421) rcprintf(&session, "%s BAD Session timed out!\r\n", extra_data); /* timeout! */
+        if (rc == 421) {
+            //rcprintf(&session, "%s BAD Session timed out!\r\n", extra_data); /* timeout! */
+        }
         else {
             rcsend(&session, "* BYE bye!\r\n");
             rcprintf(&session, "%s OK <%s> signing off for now.\r\n", extra_data, myName);
@@ -136,7 +138,7 @@ void *rumble_imap_init(void *T) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
+        //rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
         disconnect(session.client->socket);
 
@@ -309,6 +311,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                         rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
                         session->client->rejected = 1;
                     }
+                    rumble_free_address(addr);
                 } else {
                     rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
                     session->client->rejected = 1;
@@ -320,7 +323,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
         }
     }
 
-    rumble_free_address(addr);
+    
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -403,6 +406,7 @@ ssize_t rumble_server_imap_select(masterHandle *master, sessionHandle *session, 
 
         /* Shared Object Reader Unlock */
         rumble_rw_stop_read(imap->bag->rrw);
+        rumble_args_free(params);
     } else {
         rcprintf(session, "%s NO Not logged in yet!\r\n", extra_data);
     }
@@ -501,33 +505,34 @@ ssize_t rumble_server_imap_create(masterHandle *master, sessionHandle *session, 
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    if (!imap->account) return RUMBLE_RETURN_IGNORE;
+    
     args = rumble_read_words(parameters);
     newFolder = 0;
     if (args && args->argc == 1) {
         newName = args->argv[0];
 
         /* Shared Object Writer Lock */
-        rumble_rw_start_write(imap->bag->rrw);
-        foreach(rmsf, folder, imap->bag->folders, iter) {
-            if (!strcmp(folder->name, newName)) {
-                newFolder = folder;
-                break;
-            }
+        newFolder = rumble_mailman_get_folder(imap, newName);
+        
+
+        if (newFolder) {
+             
+            rcprintf(session, "%s NO CREATE failed: Duplicate folder name.\r\n", extra_data);
         }
-
-        if (newFolder) rcprintf(session, "%s NO CREATE failed: Duplicate folder name.\r\n", extra_data);
         else {
-
+            rumble_rw_start_write(imap->bag->rrw);
             /* Add the folder to the SQL DB */
             radb_run_inject(master->_core.db, "INSERT INTO folders (uid, name) VALUES (%u, %s)", imap->account->uid, newName);
 
             /* Update the local folder list */
+            rumble_rw_stop_write(imap->bag->rrw);
             rumble_mailman_update_folders(imap->bag);
             rcprintf(session, "%s OK CREATE completed\r\n", extra_data);
         }
 
         /* Shared Object Writer Unlock */
-        rumble_rw_stop_write(imap->bag->rrw);
+       
     } else rcprintf(session, "%s BAD Invalid CREATE syntax!\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);
 }
@@ -538,6 +543,56 @@ ssize_t rumble_server_imap_create(masterHandle *master, sessionHandle *session, 
  =======================================================================================================================
  */
 ssize_t rumble_server_imap_delete(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
+    rumble_letter                   *letter;
+    accountSession                  *imap = (accountSession *) session->_svcHandle;
+    d_iterator                      iter;
+    rumble_args                     *args;
+    rumble_mailman_shared_folder    *folder = 0;
+    rumble_mailman_shared_folder    *pair;
+    char                            *folderName = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    /* Are we authed? */
+    if (!imap->account) return RUMBLE_RETURN_IGNORE;
+    args = rumble_read_words(parameters);
+    
+    // Find the folder we're looking for
+    if (args && args->argc >= 1) {
+        folderName = args->argv[0];
+        folder = rumble_mailman_get_folder(imap, folderName);
+    }
+    if (!folder) {
+        rcprintf(session, "%s NO DELETE failed: No such folder <%s>\r\n", extra_data, folderName);
+        return (RUMBLE_RETURN_IGNORE);
+    }
+    
+
+    /* Obtain write lock on the bag */
+    rumble_rw_start_write(imap->bag->rrw);
+    
+    /* Mark all letters as deleted */
+    
+    foreach((rumble_letter *), letter, folder->letters, iter) {
+        letter->flags |= RUMBLE_LETTER_EXPUNGE;
+    }
+    
+    
+    /* Commit the deletion */
+    rumble_rw_stop_write(imap->bag->rrw);
+    rumble_mailman_commit(imap, folder, 1);
+    
+    
+    /* Delete folder from database and bag struct */
+    rumble_rw_start_write(imap->bag->rrw);
+    radb_run_inject(master->_core.db, "DELETE FROM folders WHERE id = %u", folder->id);
+    foreach(rmsf, pair, imap->bag->folders, iter) {
+        if (!strcmp(pair->name, folderName)) dvector_delete(&iter);
+    }
+    if (folder->name) free(folder->name);
+    free(folder);
+    rumble_rw_stop_write(imap->bag->rrw);
+    
+    rcprintf(session, "%s OK Deleted <%s>\r\n", extra_data, folderName);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -567,12 +622,10 @@ ssize_t rumble_server_imap_rename(masterHandle *master, sessionHandle *session, 
         newName = args->argv[1];
 
         /* Shared Object Writer Lock */
+        oldFolder = rumble_mailman_get_folder(imap, oldName);
+        newFolder = rumble_mailman_get_folder(imap, newName);
         rumble_rw_start_write(imap->bag->rrw);
-        foreach(rmsf, folder, imap->bag->folders, iter) {
-            if (!strcmp(folder->name, oldName)) oldFolder = folder;
-            if (!strcmp(folder->name, newName)) newFolder = folder;
-        }
-
+        
         if (newFolder) rcprintf(session, "%s NO RENAME failed: Duplicate folder name.\r\n", extra_data);
         else if (!oldFolder)
             rcprintf(session, "%s NO RENAME failed: No such folder <%s>\r\n", extra_data, oldName);
@@ -613,20 +666,18 @@ ssize_t rumble_server_imap_subscribe(masterHandle *master, sessionHandle *sessio
         folderName = args->argv[0];
 
         /* Shared Object Writer Lock */
-        rumble_rw_start_write(imap->bag->rrw);
-        foreach(rmsf, pair, imap->bag->folders, iter) {
-            if (!strcmp(pair->name, folderName)) folder = pair;
-        }
-
+        folder = rumble_mailman_get_folder(imap, folderName);
         if (!folder) rcprintf(session, "%s NO SUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
         else {
+            rumble_rw_start_write(imap->bag->rrw);
             radb_run_inject(master->_core.db, "UPDATE folders set subscribed = true WHERE id = %u", folder->id);
             folder->subscribed = 1;
+            rumble_rw_stop_write(imap->bag->rrw);
             rcprintf(session, "%s OK SUBSCRIBE completed\r\n", extra_data);
         }
 
         /* Shared Object Writer Unlock */
-        rumble_rw_stop_write(imap->bag->rrw);
+        
     } else rcprintf(session, "%s BAD Invalid SUBSCRIBE syntax!\r\n", extra_data);
     rumble_args_free(args);
     return (RUMBLE_RETURN_IGNORE);
@@ -654,20 +705,19 @@ ssize_t rumble_server_imap_unsubscribe(masterHandle *master, sessionHandle *sess
         folderName = args->argv[0];
 
         /* Shared Object Writer Lock */
-        rumble_rw_start_write(imap->bag->rrw);
-        foreach(rmsf, pair, imap->bag->folders, iter) {
-            if (!strcmp(pair->name, folderName)) folder = pair;
-        }
+        folder = rumble_mailman_get_folder(imap, folderName);
 
         if (!folder) rcprintf(session, "%s NO UNSUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
         else {
+            rumble_rw_start_write(imap->bag->rrw);
             radb_run_inject(master->_core.db, "UPDATE folders set subscribed = false WHERE id = %u", folder->id);
             folder->subscribed = 0;
-            rcprintf(session, "%s OK UNSUBSCRIBE completed\r\n", extra_data);
+            rumble_rw_stop_write(imap->bag->rrw);
+            rcprintf(session, "%s OK UNSUBSCRIBE completed\r\n", extra_data);            
         }
 
         /* Shared Object Writer Unlock */
-        rumble_rw_stop_write(imap->bag->rrw);
+        
     } else rcprintf(session, "%s BAD Invalid UNSUBSCRIBE syntax!\r\n", extra_data);
     rumble_args_free(args);
     return (RUMBLE_RETURN_IGNORE);
@@ -710,6 +760,7 @@ ssize_t rumble_server_imap_list(masterHandle *master, sessionHandle *session, co
         rumble_rw_stop_read(imap->bag->rrw);
         rcprintf(session, "%s OK LIST completed\r\n", extra_data);
     } else rcprintf(session, "%s BAD Invalid LIST syntax!\r\n", extra_data);
+    rumble_args_free(args);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -753,6 +804,7 @@ ssize_t rumble_server_imap_lsub(masterHandle *master, sessionHandle *session, co
         rcprintf(session, "%s OK LSUB completed\r\n", extra_data);
         printf("listed subscribed stuff\n");
     } else rcprintf(session, "%s BAD Invalid LSUB syntax!\r\n", extra_data);
+    rumble_args_free(args);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -778,26 +830,19 @@ ssize_t rumble_server_imap_status(masterHandle *master, sessionHandle *session, 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     args = rumble_read_words(parameters);
+    
+    // Find the folder we're looking for
     folder = 0;
     if (args && args->argc >= 1) {
         folderName = args->argv[0];
-
-        /* Shared Object Writer Lock */
-        rumble_rw_start_read(imap->bag->rrw);
-        foreach(rmsf, pair, imap->bag->folders, iter) {
-            if (!strcmp(pair->name, folderName)) folder = pair;
-        }
-
-        rumble_rw_stop_read(imap->bag->rrw);
+        folder = rumble_mailman_get_folder(imap, folderName);
         if (!folder) {
-            rcprintf(session, "%s NO SUBSCRIBE failed: No such folder <%s>\r\n", extra_data, folderName);
+            rcprintf(session, "%s NO STATUS failed: No such folder <%s>\r\n", extra_data, folderName);
             return (RUMBLE_RETURN_IGNORE);
         }
     }
 
-    printf("getting status of %s\n", folderName);
-
-    /* Retrieve the statistics of the folder before idling */
+    /* Retrieve the status of the folder */
     rumble_rw_start_read(imap->bag->rrw);
     foreach((rumble_letter *), letter, folder->letters, iter) {
         if ((letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT)) unseen++;
@@ -813,7 +858,6 @@ ssize_t rumble_server_imap_status(masterHandle *master, sessionHandle *session, 
         if (strstr(args->argv[x], "MESSAGES")) rcprintf(session, "MESSAGES %u ", messages);
     }
 
-    printf("%s:: u: %u, r: %u, m: %u\n", folderName, unseen, recent, messages);
     rcprintf(session, "\r\n");
     rumble_args_free(args);
     return (RUMBLE_RETURN_IGNORE);
@@ -830,13 +874,7 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
     rumble_args                     *params;
     char                            *destFolder;
     char                            *Flags;
-    char                            buffer[32];
     uint32_t                        size = 0;
-    rumble_args                     *args;
-    char                            *mbox,
-                                    *pattern,
-                                    *pfolder;
-    rumble_mailman_shared_folder    *pair;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     d_iterator                      iter;
     rumble_mailman_shared_folder    *folder,
@@ -896,21 +934,16 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
         rumble_debug("imap4", "Append required, making up new filename");
         fid = rumble_create_filename();
         sf = (char *) rumble_config_str(master, "storagefolder");
-        printf("sf is <%s>, fid is <%s>\n", sf, fid);
         filename = (char *) calloc(1, strlen(sf) + 36);
         if (!filename) merror();
-        printf("1\n");
         sprintf(filename, "%s/%s.msg", sf, fid);
-        printf("2\n");
         rumble_debug("imap4", "Storing new message of size %u in folder", size);
-        printf("3\n");
         fp = fopen(filename, "wb");
         if (fp) {
 
             /*~~~~~~~~~~~~~~~~*/
             char    *line;
             char    OK = 1;
-            int     readNow = 0;
             /*~~~~~~~~~~~~~~~~*/
 
             rumble_debug("imap4", "Writing to file %s", filename);
@@ -970,13 +1003,9 @@ ssize_t rumble_server_imap_close(masterHandle *master, sessionHandle *session, c
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    
     folder = rumble_mailman_current_folder(imap);
-    if (!folder) {
-        rcprintf(session, "%s NO CLOSE: No mailbox to close!\r\n", extra_data);
-        return (RUMBLE_RETURN_IGNORE);
-    }
-
-    if (imap->account && (session->flags & rumble_mailman_HAS_SELECT)) {
+    if (folder && imap->account && (session->flags & rumble_mailman_HAS_SELECT)) {
         rumble_mailman_commit(imap, folder, 0);
         session->flags -= rumble_mailman_HAS_SELECT;    /* clear select flag. */
         imap->folder = -1;
@@ -1022,7 +1051,8 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumble_letter                   *letter;
-    rumble_args                     *parts;
+    rumble_args                     *parts,
+                                    *params;
     rumble_mailman_shared_folder    *folder;
     size_t                          a,
                                     b,
@@ -1031,7 +1061,8 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
                                     w_uid,
                                     first,
                                     last;
-    char                            line[1024];
+    char                            line[1024],
+                                    range[1024];
     const char                      *body,
                                     *body_peek;
     int                             flags,
@@ -1040,10 +1071,12 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
                                     envelope;
     int                             size,
                                     text,
+                                    x,
                                     header; /* rfc822.size/text/header */
     uint32_t                        octets;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     d_iterator                      iter;
+    rangePair                       ranges[64];
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     folder = rumble_mailman_current_folder(imap);
@@ -1065,12 +1098,6 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
     body_peek = strstr(parameters, "BODY.PEEK[");
     body = strstr(parameters, "BODY[");
     parts = 0;
-    first = 0;
-    last = 0;
-    if (sscanf(parameters, "%lu:%c[*]", &first, (char *) &last) == 2) {
-        last = -1;
-    } else sscanf(parameters, "%lu:%lu", &first, &last);
-    if (last == 0) last = first;
     if (body) sscanf(body, "BODY[%1000[^]]<%u>", line, &octets);
     else if (body_peek)
         sscanf(body_peek, "BODY.PEEK[%1000[^]]<%u>", line, &octets);
@@ -1092,99 +1119,106 @@ ssize_t rumble_server_imap_fetch(masterHandle *master, sessionHandle *session, c
         }
     }
 
-    b = 0;
-    a = 0;
-    d = 0;
-    foreach((rumble_letter *), letter, folder->letters, iter) {
-        a++;
-        printf("%ld %s %"PRIu64 "\n", a, letter->fid, letter->id);
-        if (w_uid && (letter->id < first || (last > 0 && letter->id > last))) continue;
-        if (!w_uid && (a < first || (last > 0 && a > last))) continue;
-        d++;
-        rcprintf(session, "* %u FETCH (", a);
-        if (flags) {
-            rcprintf(session, "FLAGS (%s%s%s%s) ", (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
-                     (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
-                     (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
-        }
+    params = rumble_read_words(parameters);
+    rumble_scan_ranges(&ranges, params->argc > 0 ? params->argv[0] : "0");
+    for (x = 0; ranges[x].start != 0; x++) {
+        first = ranges[x].start;
+        last = ranges[x].end;
+        b = 0;
+        a = 0;
+        d = 0;
+        printf("Fetching letter %lu through %lu\n", first, last);
+        foreach((rumble_letter *), letter, folder->letters, iter) {
+            a++;
+            if (w_uid && (letter->id < first || (last > 0 && letter->id > last))) continue;
+            if (!w_uid && (a < first || (last > 0 && a > last))) continue;
+            d++;
+            rcprintf(session, "* %u FETCH (", a);
+            if (flags) {
+                rcprintf(session, "FLAGS (%s%s%s%s) ", (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
+                         (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
+                         (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
+            }
 
-        if (uid || w_uid) rcprintf(session, "UID %llu ", letter->id);
-        if (size) rcprintf(session, "RFC822.SIZE %u ", letter->size);
-        if (internaldate) rcprintf(session, "INTERNALDATE %u ", letter->delivered);
-        if (body) letter->flags -= (letter->flags & RUMBLE_LETTER_RECENT);  /* Remove \Recent flag since we're not peeking. */
-        if (body || body_peek) {
+            if (uid || w_uid) rcprintf(session, "UID %llu ", letter->id);
+            if (size) rcprintf(session, "RFC822.SIZE %u ", letter->size);
+            if (internaldate) rcprintf(session, "INTERNALDATE %u ", letter->delivered);
+            if (body) letter->flags -= (letter->flags & RUMBLE_LETTER_RECENT);  /* Remove \Recent flag since we're not peeking. */
+            if (body || body_peek) {
 
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            char    header[10240],
-                    key[64];
-            FILE    *fp = rumble_letters_open(imap->account, letter);
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                char    header[10240],
+                        key[64];
+                FILE    *fp = rumble_letters_open(imap->account, letter);
+                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-            if (fp) {
-                if (parts) {
-                    memset(header, 0, 10240);
-                    while (fgets(line, 1024, fp)) {
-                        c = strlen(line);
-                        if (line[0] == '\r' || line[0] == '\n') break;
-                        memset(key, 0, 64);
-                        if (sscanf(line, "%63[^:]", key)) {
-                            rumble_string_lower(key);
-                            if (parts) {
-                                for (b = 0; b < parts->argc; b++) {
-                                    if (!strcmp(key, parts->argv[b])) {
-                                        if (line[c - 2] != '\r') {
-                                            line[c - 1] = '\r';
-                                            line[c] = '\n';
-                                            line[c + 1] = 0;
+                if (fp) {
+                    if (parts) {
+                        memset(header, 0, 10240);
+                        while (fgets(line, 1024, fp)) {
+                            c = strlen(line);
+                            if (line[0] == '\r' || line[0] == '\n') break;
+                            memset(key, 0, 64);
+                            if (sscanf(line, "%63[^:]", key)) {
+                                rumble_string_lower(key);
+                                if (parts) {
+                                    for (b = 0; b < parts->argc; b++) {
+                                        if (!strcmp(key, parts->argv[b])) {
+                                            if (line[c - 2] != '\r') {
+                                                line[c - 1] = '\r';
+                                                line[c] = '\n';
+                                                line[c + 1] = 0;
+                                            }
+
+                                            strncpy(header + strlen(header), line, strlen(line));
                                         }
-
-                                        strncpy(header + strlen(header), line, strlen(line));
                                     }
-                                }
-                            } else {
+                                } else {
 
-                                /*
-                                 * if ( line[c-2] != '\r' ) {line[c-1] = '\r';
-                                 * line[c] = '\n';
-                                 * line[c+1] = 0;
-                                 */
-                                strncpy(header + strlen(header), line, strlen(line));
+                                    /*
+                                     * if ( line[c-2] != '\r' ) {line[c-1] = '\r';
+                                     * line[c] = '\n';
+                                     * line[c+1] = 0;
+                                     */
+                                    strncpy(header + strlen(header), line, strlen(line));
+                                }
                             }
+                        }
+
+                        sprintf(header + strlen(header), "\r\n \r\n");
+                        rcprintf(session, "BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
+                        rcsend(session, header);
+
+                        /*
+                         * printf("BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
+                         * printf("%s", header);
+                         */
+                    } else {
+                        rcprintf(session, "BODY[] {%u}\r\n", letter->size);
+
+                        /*
+                         * printf("BODY[] {%u}\r\n", letter->size);
+                         */
+                        memset(line, 0, 1024);
+                        while (fgets(line, 1024, fp)) {
+                            rcsend(session, line);
+
+                            /*
+                             * printf("%s", line);
+                             */
                         }
                     }
 
-                    sprintf(header + strlen(header), "\r\n \r\n");
-                    rcprintf(session, "BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
-                    rcsend(session, header);
+                    fclose(fp);
+                } else printf("meh, couldn't open letter file\n");
+                rcsend(session, " ");
+            }
 
-                    /*
-                     * printf("BODY[HEADER.FIELDS (%s)] {%u}\r\n", line, strlen(header));
-                     * printf("%s", header);
-                     */
-                } else {
-                    rcprintf(session, "BODY[] {%u}\r\n", letter->size);
-
-                    /*
-                     * printf("BODY[] {%u}\r\n", letter->size);
-                     */
-                    memset(line, 0, 1024);
-                    while (fgets(line, 1024, fp)) {
-                        rcsend(session, line);
-
-                        /*
-                         * printf("%s", line);
-                         */
-                    }
-                }
-
-                fclose(fp);
-            } else printf("meh, couldn't open letter file\n");
-            rcsend(session, " ");
+            rcprintf(session, ")\r\n");
         }
-
-        rcprintf(session, ")\r\n");
     }
-
+    if (parts) rumble_args_free(parts);
+    rumble_args_free(params);
     rcprintf(session, "%s OK FETCH completed\r\n", extra_data);
     if (folder) printf("Fetched %lu letters from <%s>\n", d, folder->name);
     return (RUMBLE_RETURN_IGNORE);
@@ -1212,6 +1246,9 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
     rumble_mailman_shared_folder    *folder;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     d_iterator                      iter;
+    rumble_args                     *parts;
+    rangePair                       ranges[64];
+    int                             x = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     folder = rumble_mailman_current_folder(imap);
@@ -1220,13 +1257,6 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
         return (RUMBLE_RETURN_IGNORE);
     }
 
-    /* Get the message range */
-    first = 0;
-    last = 0;
-    if (sscanf(parameters, "%u:%1[*]", &first, (char *) &smurf) == 2) {
-        last = -1;
-    } else sscanf(parameters, "%u:%u", &first, &last);
-    if (last == 0) last = first;
     useUID = session->flags & rumble_mailman_HAS_UID;
 
     /* Get the store type */
@@ -1243,30 +1273,45 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
     flag |= strstr(parameters, "\\Draft") ? RUMBLE_LETTER_DRAFT : 0;
     flag |= strstr(parameters, "\\Answered") ? RUMBLE_LETTER_ANSWERED : 0;
 
-    /* Process the letters */
-    a = 0;
-    foreach((rumble_letter *), letter, folder->letters, iter) {
-        a++;
-        if (useUID && (letter->id < first || (last > 0 && letter->id > last))) continue;
-        if (!useUID && (a < first || (last > 0 && a > last))) continue;
+    /*
+     * Process the letters ;
+     * For each range, set the message stuff
+     */
+    parts = rumble_read_words(parameters);
+    if (parts->argc > 1) {
+        rumble_scan_ranges(&ranges, parts->argv[0]);
+        for (x = 0; ranges[x].start != 0; x++) {
+            first = ranges[x].start;
+            last = ranges[x].end;
+            a = 0;
+            printf("Storing flags for letter %lu through %u\n", first, last);
+            foreach((rumble_letter *), letter, folder->letters, iter) {
+                a++;
+                if (useUID && (letter->id < first || (last > 0 && letter->id > last))) continue;
+                if (!useUID && (a < first || (last > 0 && a > last))) continue;
 
-        /* +FLAGS ? */
-        if (control == 1) letter->flags |= flag;
+                /* +FLAGS ? */
+                if (control == 1) letter->flags |= flag;
 
-        /* -FLAGS ? */
-        if (control == -1) letter->flags -= (flag & letter->flags);
+                /* -FLAGS ? */
+                if (control == -1) letter->flags -= (flag & letter->flags);
 
-        /* FLAGS ? */
-        if (control == 0) letter->flags = (flag | RUMBLE_LETTER_UNREAD);
-        if (!silent) {
-            rcprintf(session, "* %u FETCH (FLAGS (%s%s%s%s))\r\n", (a + 1), (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
-                     (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
-                     (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
+                /* FLAGS ? */
+                if (control == 0) letter->flags = (flag | RUMBLE_LETTER_UNREAD);
+                if (!silent) {
+                    rcprintf(session, "* %u FETCH (FLAGS (%s%s%s%s))\r\n", (a + 1), (letter->flags == RUMBLE_LETTER_RECENT) ? "\\Recent " : "",
+                             (letter->flags & RUMBLE_LETTER_READ) ? "\\Seen " : "", (letter->flags & RUMBLE_LETTER_DELETED) ? "\\Deleted " : "",
+                             (letter->flags & RUMBLE_LETTER_FLAGGED) ? "\\Flagged " : "");
+                }
+
+                /*
+                 * printf("Set flags for letter %"PRIu64 " to %08x\n", letter->id, letter->flags);
+                 */
+            }
         }
-
-        printf("Set flags for letter %"PRIu64 " to %08x\n", letter->id, letter->flags);
     }
 
+    rumble_args_free(parts);
     rcprintf(session, "%s OK STORE completed\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);
 }
@@ -1282,10 +1327,12 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
     size_t                          first,
                                     last,
                                     a,
+                                    x,
                                     useUID;
     rumble_mailman_shared_folder    *destination;
     rumble_letter                   *letter;
     rumble_args                     *parts;
+    rangePair                       ranges[64];
     char                            folderName[100];
     /* Check for selected folder */
     rumble_mailman_shared_folder    *folder;
@@ -1293,7 +1340,8 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
     d_iterator                      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    printf("Preparing to copy with params: %s\n", parameters);
+
+    /* Is a folder selected to copy from? */
     folder = rumble_mailman_current_folder(imap);
     if (!folder) {
         rcprintf(session, "%s NO COPY: I don't know where to copy from!\r\n", extra_data);
@@ -1302,60 +1350,41 @@ ssize_t rumble_server_imap_copy(masterHandle *master, sessionHandle *session, co
 
     destination = 0;
 
-    /* Get the message range */
-    first = 0;
-    last = 0;
-    if (sscanf(parameters, "%lu:%1[*]", &first, (char *) &last) == 2) {
-        last = -1;
-    } else sscanf(parameters, "%lu:%lu", &first, &last);
-    if (last == 0) last = first;
+    /* Are we using UIDs? */
     useUID = session->flags & rumble_mailman_HAS_UID;
 
     /* Get the destination folder */
     memset(folderName, 0, 100);
     parts = rumble_read_words(parameters);
     if (parts->argc >= 2) {
-        a = strlen(parts->argv[1]);
-        strncpy(folderName, parts->argv[1], a < 100 ? a : 99);
+        a = strlen(parts->argv[parts->argc - 1]);
+        strncpy(folderName, parts->argv[parts->argc - 1], a < 100 ? a : 99);
     }
 
     /* Check if folder exists */
-    foreach(rmsf, folder, imap->bag->folders, iter) {
-        if (!strcmp(folderName, folder->name)) {
-            destination = folder;
-            break;
-        }
+    destination = rumble_mailman_get_folder(imap, folderName);
+    if (!destination) {
+        rcprintf(session, "%s NO COPY [TRYCREATE] failed: Destination folder doesn't exist!\r\n", extra_data);
+        return (RUMBLE_RETURN_IGNORE);
     }
 
-    /*$1
-     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        TODO: Move this to mailman.c and make it spiffy!
-     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     */
-
-    folder = rumble_mailman_current_folder(imap);
-#if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-    printf("Copying letters %lu through %lu (UID = %s) to %"PRId64 "...\n", first, last, useUID ? "enabled" : "disabled", destination->id);
-    printf("Folder has %u letters\n", folder->letters->size);
-#endif
-    if (destination) {
+    /* For each range, copy the messages */
+    folder = rumble_mailman_current_folder(imap);   /* originating folder */
+    rumble_scan_ranges(&ranges, parts->argv[0]);
+    rumble_args_free(parts);
+    for (x = 0; ranges[x].start != 0; x++) {
+        first = ranges[x].start;
+        last = ranges[x].end;
         a = 0;
         foreach((rumble_letter *), letter, folder->letters, iter) {
             a++;
             if (useUID && (letter->id < first || (last > 0 && letter->id > last))) continue;
             if (!useUID && (a < first || (last > 0 && a > last))) continue;
-#if (RUMBLE_DEBUG & RUMBLE_DEBUG_STORAGE)
-            printf("Copying letter %"PRIu64 "...\n", letter->id);
-#endif
             rumble_mailman_copy_letter(imap->account, letter, destination);
         }
-
-        rumble_mailman_scan_incoming(destination);
-        rcprintf(session, "%s OK COPY completed\r\n", extra_data);
-    } else {
-        rcprintf(session, "%s NO COPY [TRYCREATE] failed: Destination folder doesn't exist!\r\n", extra_data);
     }
 
+    rcprintf(session, "%s OK COPY completed\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1378,6 +1407,9 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
     int                             oexists = 0;
     int                             orecent = 0;
     int                             ofirst = 0;
+#ifdef RUMBLE_MSC
+    u_long                          iMode = 1;
+#endif
     rumble_letter                   *letter;
     accountSession                  *imap = (accountSession *) session->_svcHandle;
     d_iterator                      iter;
@@ -1406,13 +1438,22 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
     /* While idle, check for stuff, otherwise break off */
     while (rc < 0) {
         timeout.tv_sec = 2;
+#ifdef RUMBLE_MSC
+        ioctlsocket(session->client->socket, FIONBIO, &iMode);
+        rc = recv(session->client->socket, buffer, 1, MSG_PEEK);
+        iMode = 0;
+        ioctlsocket(session->client->socket, FIONBIO, &iMode);
+#else
         rc = recv(session->client->socket, buffer, 1, MSG_PEEK | MSG_DONTWAIT);
+#endif
         if (rc == 1) break; /* got data from client again */
         else if (rc == 0)
             return (RUMBLE_RETURN_FAILURE); /* disconnected? */
         else if (rc == -1) {
             cc++;
-            if (cc == 10) { // Check the DB for new messages every 40 seconds.
+            if (cc == 10) {
+
+                /* Check the DB for new messages every 40 seconds. */
                 rumble_mailman_scan_incoming(folder);
                 cc = 0;
             }
@@ -1445,6 +1486,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
     line = rcread(session);
     if (!line) return (RUMBLE_RETURN_FAILURE);
     else {
+        free(line);
         rcprintf(session, "%s OK IDLE completed.\r\n", extra_data);
         return (RUMBLE_RETURN_IGNORE);
     }
@@ -1456,4 +1498,25 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_imap_logout(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
     return (RUMBLE_RETURN_FAILURE);
+}
+
+/*
+ =======================================================================================================================
+    TESTING
+ =======================================================================================================================
+ */
+ssize_t rumble_server_imap_test(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
+
+    /*~~~~~~~~~~~~~~~~~~~*/
+    int         x = 0;
+    rangePair   ranges[64];
+    /*~~~~~~~~~~~~~~~~~~~*/
+
+    rcprintf(session, "<%s>\r\n", parameters);
+    rumble_scan_ranges(&ranges, parameters);
+    while (1) {
+        if (!ranges[x].start) break;
+        printf("start: %lu, stop: %lu\n", ranges[x].start, ranges[x].end);
+        x++;
+    }
 }
