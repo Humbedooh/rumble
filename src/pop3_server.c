@@ -299,7 +299,7 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
     printf("Doing stat\n");
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rumble_rw_start_read(pops->bag->lock);
-    folder = mailman_get_folder(pops, "INBOX");
+    folder = mailman_get_folder(pops->bag, "INBOX");
     if (!folder) {
         rcsend(session, "-ERR Temporary error\r\n");
         return (RUMBLE_RETURN_IGNORE);
@@ -438,7 +438,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         /* Might as well delete the letter if it doesn't exist :( */
         
         rumble_rw_start_write(pops->bag->lock);
-        folder = mailman_get_folder(pops, "INBOX");
+        folder = mailman_get_folder(pops->bag, "INBOX");
         j = 0;
         for(k=0;k<folder->size;k++) {
             letter = &folder->letters[k];
@@ -484,7 +484,7 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
             if (!letter->inuse) continue;
             j++;
             if (j == i) {
-                fp = mailman_open_letter(pops->account, folder, letter->id);
+                fp = mailman_open_letter(pops->bag, folder, letter->id);
                 break;
             }
         }

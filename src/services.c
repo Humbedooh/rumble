@@ -189,7 +189,7 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
     svc->settings.port = port;
     svc->settings.name = svcp->svcName;
     svc->settings.threadCount = threadCount ? threadCount : RUMBLE_INITIAL_THREADS;
-    svc->settings.stackSize = 2.5 * 1024 * 1024;
+    svc->settings.stackSize = 1.5 * 1024 * 1024;
     svc->trafficlog = dvector_init();
     for (x = 0; x < 170; x++) {
         tentry = (traffic_entry *) malloc(sizeof(traffic_entry));

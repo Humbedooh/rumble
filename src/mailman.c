@@ -38,7 +38,7 @@ mailman_folder *mailman_new_folder(mailman_bag *bag) {
 
     if (!x) {
         printf("No empty slots found :(\n");
-        bag->folders == (mailman_folder *) realloc((void*) bag->folders, (bag->size + 8) * sizeof(mailman_folder));
+        bag->folders = (mailman_folder *) realloc((void*) bag->folders, (bag->size + 8) * sizeof(mailman_folder));
         if (!bag->folders) printf("WTF?!\n");
         printf("Refitted bag to hold %u folders of %u bytes\n", bag->size+8, sizeof(mailman_folder));
         for (i = bag->size-1; i < (bag->size + 8); i++) {
@@ -97,12 +97,13 @@ mailman_bag *mailman_new_bag(uint32_t uid, const char *path) {
  =======================================================================================================================
  */
 mailman_letter *mailman_new_letter(mailman_folder *folder) {
-    if (!folder) return (0);
+  
 
     /*~~*/
     int i,
         f,x=0;
     /*~~*/
+	  if (!folder) return (0);
     /* Look for an empty spot first */
     for (i = folder->firstFree; i < folder->size; i++) {
         if (folder->letters[i].inuse == 0) {
@@ -115,7 +116,7 @@ mailman_letter *mailman_new_letter(mailman_folder *folder) {
 
     if (!x) {
         printf("Reallocating new space for 33x%u bytes\n", sizeof(mailman_letter));
-        folder->letters == (mailman_letter *) realloc(folder->letters, (sizeof(mailman_letter)) * (folder->size + 33));
+        folder->letters = (mailman_letter *) realloc(folder->letters, (sizeof(mailman_letter)) * (folder->size + 33));
         for (i = folder->size-1; i < folder->size + 32; i++) {
             folder->letters[i].inuse = 0;
         }
@@ -136,7 +137,7 @@ mailman_letter *mailman_new_letter(mailman_folder *folder) {
     /*~~*/
     int j;
     /*~~*/
-    if (!folder || !folder->letters) return;
+    if (!folder || !folder->inuse) return;
     printf("mailman_free_folder()\n");
     if (!folder) return;
     if (folder->letters) free(folder->letters);
@@ -155,15 +156,24 @@ void mailman_free_bag(mailman_bag *bag) {
 
     /*~~*/
     int i;
+	mailman_bag *rbag = 0;
+    c_iterator  iter;
     /*~~*/
     printf("mailman_free_bag()\n");
     if (!bag) return;
-    free(bag->lock);
+    
     for (i = 0; i < bag->size; i++) {
         mailman_free_folder(&bag->folders[i]);
     }
     free(bag->folders);
-    //free(bag->lock);
+	rumble_rw_destroy(bag->lock);
+
+    cforeach((mailman_bag *), rbag, rumble_database_master_handle->mailboxes.bags, iter) {
+        if (rbag == bag) {
+			cvector_delete(&iter);
+            break;
+        }
+    }
     free(bag);
 }
 
@@ -363,7 +373,7 @@ void mailman_update_folder(mailman_folder *folder, uint32_t uid, uint64_t lastID
             letter->id = dbr->column[0].data.uint64;
             letter->size = dbr->column[2].data.int32;
             letter->delivered = dbr->column[3].data.int32;
-            letter->updated = 1;
+            letter->updated = 0;
             letter->inuse = 1;
             memset(letter->filename, 0, 32);
             strcpy(letter->filename, dbr->column[1].data.string);
@@ -475,8 +485,8 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
                 f++;
             } else if (letter->updated) {
                 rumble_debug("mailman", "Updating letter no. %lu", letter->id);
-                radb_run_inject(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE uid = %u AND folder = %l",
-                                letter->flags, bag->uid, folder->fid);
+                radb_run_inject(rumble_database_master_handle->_core.mail, "UPDATE mbox SET flags = %u WHERE uid = %u AND id = %l",
+                                letter->flags, bag->uid, letter->id);
                 letter->updated = 0;
             }
         }

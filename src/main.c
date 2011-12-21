@@ -330,7 +330,7 @@ int rumbleStart(void) {
     printf("%-48s", "Launching core service...");
     rumble_debug("startup", "Launching mailman service");
     svc = comm_registerService(master, "mailman", rumble_worker_init, 0, 1);
-    comm_setServiceStack(svc, 1024 * 1024);
+    comm_setServiceStack(svc, 128 * 1024);
     rc = comm_startService(svc);
     svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 128kb (should be enough) */
@@ -344,7 +344,7 @@ int rumbleStart(void) {
     }
 
     svc = comm_registerService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"), RUMBLE_INITIAL_THREADS);
-    comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 256kb (should be enough) */
+    comm_setServiceStack(svc, 256 * 1024);  /* Set stack size for service to 256kb (should be enough) */
     if (rumble_config_int(master, "enablepop3")) {
         rumble_debug("core", "Launching POP3 service...");
         rc = comm_startService(svc);
@@ -357,7 +357,7 @@ int rumbleStart(void) {
     }
 
     svc = comm_registerService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
-    comm_setServiceStack(svc, 1024 * 1024); /* Set stack size for service to 1MB (should be enough) */
+    comm_setServiceStack(svc, 512 * 1024); /* Set stack size for service to 512kb (should be enough) */
     if (rumble_config_int(master, "enableimap4")) {
         rumble_debug("core", "Launching IMAP4 service...");
         rc = comm_startService(svc);

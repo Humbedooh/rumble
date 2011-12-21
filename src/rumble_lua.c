@@ -4,6 +4,7 @@
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
+#include "mailman.h"
 #include <sys/stat.h>
 #ifdef RUMBLE_LUA
 extern masterHandle *rumble_database_master_handle;
@@ -308,8 +309,8 @@ static int rumble_lua_deleteaccount(lua_State *L) {
                                     *path;
     int                             uid = 0;
     rumble_mailbox                  *acc;
-    rumble_mailman_shared_bag       *bag;
-    rumble_mailman_shared_folder    *folder;
+    mailman_bag       *bag;
+    rumble_folder    *folder;
     rumble_letter                   *letter;
     char                            tmp[256];
     d_iterator                      diter,
@@ -339,12 +340,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         bag = mailman_get_bag(acc->uid, acc->domain->path);
         rumble_debug("Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
-            dforeach(rmsf, folder, bag->folders, diter) {
-                dforeach((rumble_letter *), letter, folder->letters, liter) {
-                    sprintf(tmp, "%s/%s.msg", path, letter->fid);
-                    unlink(tmp);
-                }
-            }
+            /* TODO: Make it delete the folders and letters! */
         }
 
         radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE uid = %u", acc->uid);
