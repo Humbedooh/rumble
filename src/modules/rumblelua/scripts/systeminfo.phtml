@@ -32,13 +32,14 @@ for i,entry in pairs(Rumble.getLog()) do
 		end
 	end
 	log = log:gsub("<", "&lt;");
+	log = log:gsub(">", "&gt;");
 	log = log:gsub("(%d[%d%.]+)", "<span style='color: #996622;'>%1</span>");
 	local style = "";
 	if (log:match("session was blocked")) then
 		style = "style='font-color: #FF6600;'";
 	end
 	
-	printf("<div style='border: 1px dotted #522; margin: 3px; width: 700px;'>%s <b style='color: #%s;'>%-7s</b> <span %s>%s</span></div>", date, color, svc, log, style);
+	printf("<div style='border: 1px dotted #522; margin: 3px; width: 700px;'>%s <b style='color: #%s;'>%-7s</b> <span %s>%s</span></div>", date, color, svc, style,log);
 end
 ?>
 </code>

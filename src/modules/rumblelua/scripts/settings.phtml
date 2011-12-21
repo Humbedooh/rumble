@@ -14,10 +14,12 @@ if (session.section and http.form.save and session.credentials.admin) then
 	    cfg = cfg:gsub("(\n%s*)(%w+)(%s+)([^\r\n]+)", 
 			function(x,a,b,c)
 				local k = a:lower();
-				if (k == "servername") then c = http.form.servername;end
+				if (k == "servername") then c = http.form.servername or "my.tld";end
 				if (k == "forceipv4") then c = http.form.forceipv4 or 0;end
-				if (k == "storagefolder") then c = http.form.mailpath;end
-				if (k == "datafolder") then c = http.form.dbpath;end
+				if (k == "messagesizelimit") then c = http.form.messagesizelimit or 0;end
+				if (k == "storagefolder") then c = http.form.mailpath or "";end
+				if (k == "datafolder") then c = http.form.dbpath or "";end
+				if (k == "databaseengine") then c = http.form.dbengine or "sqlite3" ;end
 				if (k == "enablesmtp") then c = http.form.smtp or 0;end
 				if (k == "enablepop3") then c = http.form.pop3 or 0;end
 				if (k == "enableimap4") then c = http.form.imap4 or 0;end
@@ -44,7 +46,7 @@ end
 <input type="hidden" name="save" value="true"/>
   <table width="572" border="0" cellpadding="4" class="elements">
     <tr>
-      <th colspan="3">Global configuration</td>    </tr>
+      <th colspan="3">Network configuration</td>    </tr>
     <tr>
       <td width="179"><strong>Server name:</strong></td>
       <td colspan="2"><label for="servername"></label>
@@ -52,12 +54,19 @@ end
       (fx. mx.mydomain.com)</td>
     </tr>
     <tr>
-      <td><strong>Force IPv4 networking:</strong></td>
-      <td width="248"><input value="1" name="forceipv4" type="checkbox" id="forceipv4" 
-      <?
-      if (Rumble.readConfig("forceipv4") == "1") then printf("checked=\"checked\""); end
-	  ?>/>
+      <td><strong>Networking mode:</strong></td>
+      <td><select name="forceipv4">
+        <option value="1" <?if (Rumble.readConfig("forceipv4") == "1") then printf("selected"); end
+	  ?>>IPv4</option>
+        <option value="0">IPv6</option>
+      </select>
       <label for="forceipv4"></label></td>
+      <td>&nbsp;</td>
+    </tr>
+    <tr>
+      <td><strong>Message size limit:</strong></td>
+      <td width="248"><input name="messagesizelimit" type="text" id="messagesizelimit" value="<?=Rumble.readConfig("messagesizelimit")?>" size="10" /> 
+        bytes</td>
       <td width="113">&nbsp;</td>
     </tr>
     <tr>
@@ -79,9 +88,13 @@ end
     </tr>
     <tr>
       <td><strong>Database engine:</strong></td>
-      <td><input name="radio" type="radio" id="dbengine" value="dbengine" checked="checked" />
+      <td>
+      <input name="radio" type="radio" id="dbengine" value="sqlite3" checked="checked" />
         <label for="dbengine"></label>
-      sqlite3</td>
+      sqlite3&nbsp;
+      <input name="radio" type="radio" id="dbengine" value="mysql" />
+        <label for="dbengine"></label>
+      MySQL</td>
       <td>&nbsp;</td>
     </tr>
     <tr>

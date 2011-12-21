@@ -1,25 +1,65 @@
 <? dofile("modules/rumblelua/libpie.lua"); ?>
 <? my.debug = false; ?>
-<h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Server info:</h2>
-<p><strong>Operating environment: </strong>
-  <?=session.info.os?> (<?=session.info.arch?> bit)<br>
-  <strong>Server version:</strong>
-<?=session.info.version?>
-<br>
+<style type="text/css">
+h1 {
+	font-size: 24px;
+	font-style: normal;
+	text-align: center;
+	font-weight: bold;
+}
+.warning {
+	font-family: Arial, Helvetica, sans-serif;
+	color: #036;
+	height: 50px;
+	width: 666px;
+	border: thin dotted #333;
+
+	margin: 4px;
+	padding-left: 55px;
+	padding-top: 5px;
+	background-image:url(../icons/action_notify.png);
+	background-position:left;
+	background-repeat:no-repeat;
+}
+.error {
+	font-family: Arial, Helvetica, sans-serif;
+	color: #58170E;
+	height: 50px;
+	width: 666px;
+	border: thin dotted #333;
+
+	margin: 4px;
+	padding-left: 55px;
+	padding-top: 5px;
+	background-image:url(../icons/action_notify.png);
+	background-position:left;
+	background-repeat:no-repeat;
+}
+</style>
+
+<h1><img src="../rumble_icon.png" alt="server" width="87" height="80" hspace="5" align="left">Server info</h1>
+<p><strong>Server version: </strong>Rumble for
+
+  <?=session.info.os?> (<?
+  if ((type(session.info.arch) == "string") and session.info.arch == "WoW64") then
+  	printf("WoW64");
+  else
+  	printf("%s bit", session.info.arch);
+  end
+  ?>) v/
+  <?=session.info.version?>
+  <br>
 <strong>Uptime:</strong> 
 <?
-local hours = math.floor(session.info.uptime/3600);
+local days = math.floor(session.info.uptime/86400);
+local hours = math.floor(math.fmod(session.info.uptime,86400)/3600);
 local minutes = math.floor(math.fmod(session.info.uptime, 3600)/60);
 local seconds = math.fmod(session.info.uptime, 60);
 local tacc, trej = 0,0;
 
-printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
+printf(string.format("%u day(s), %02u:%02u:%02u", days,  hours,minutes,seconds));
 ?>
-
 </p>
-
-<p>&nbsp;</p>
-
 <table width="700" class="elements" border="0">
   <tr>
     <th width="109">Service</th>
@@ -36,7 +76,7 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 	local totalWorking = 0;
     for k,v in pairs({"pop3", "imap4", "smtp", "mailman"}) do
         local svc = Rumble.serviceInfo(v);
-		if (my.debug) then
+		if (my.debug and svc) then
 			svc.received = math.random(0,1200000);
 	    	svc.sent = math.random(0,12000000);
 			svc.sessions = math.random(1,320);
@@ -44,6 +84,10 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 		if (svc) then
 			my.shares[1][k] = my.shares[1][k] + svc.sessions;
 			my.shares[2][k] = my.shares[2][k] + svc.sent + svc.received;
+		end
+		if (svc == nil) then
+			printf("Error: Couldn't retrieve info on service %s!", v);
+			stop();
 		end
 		local status = (svc.enabled == 1 and "Running") or (svc.enabled == 0 and "Stopped") or "Paused";
 		local icon = "<img src='/icons/service_" .. status:lower() .. ".png' align='absmiddle' />";
@@ -78,18 +122,50 @@ printf(string.format("%02u:%02u:%02u",  hours,minutes,seconds));
 
 
 </table>
-<p>&nbsp;</p>
+<table width="700" class="elements" border="0">
+  <tr>
+    <th>Notifications:</th>
+  </tr>
+  <tr>
+  <td>
 <?
+
+-- [[ Local configuration tests ]] --
+
+local errors = 0;
+
+-- Check server name
 if (Rumble.readConfig("servername") == "mydomain.tld") then
-	printf("<div class='notification'>Note: Your hostname (mydomain.tld) is <font color='#a30'>incorrect</font>.<br/>Please go to the <a href='/settings'>Server settings</a> page and correct this.</div>");
+	errors = errors + 1;
+	printf("<div class='warning'><b>Warning:</b> Your hostname (mydomain.tld) is <font color='#a30'>incorrect</font>.<br/>Please go to the <a href='/settings'>server settings</a> page and correct this.</div>");
 end
+
+-- Check writeability on default storage path
+local path = Rumble.readConfig("storagefolder");
+local f = io.open(path .. "/writetest", "wb");
+if (f) then
+	f:close();
+else
+	errors = errors +1;
+	printf("<div class='error'><b>Error:</b></font> The default storage path, <i style='color:#236'>%s</i>, is not writeable by the mail server. <br/>Either you need to visit the <a href='/settings'>server settings</a> page and enter a different location for the emails, or you need to run the mail server with the proper permissions. If you do not, no inbound messages will be saved.</div>", path);
+end
+
+if (errors > 0) then
+	printf("%u error(s) were found<br/>", errors);
+else
+	printf("<img src='/icons/information.png' align='absmiddle'> No errors were found.");
+end
+?>
+</td></tr></table><br />
+
+<?
 
 local poplog = {};
 local smtplog = {};
 local rejections = {};
 local now = os.time();
 local rj = 0;
-for i=1,168,1 do
+for i=1,170,1 do
 	poplog[i] = {0,0};
 	smtplog[i] = {0,0};
 	rejections[i] = 0;
@@ -175,6 +251,7 @@ end
 
 local maxBytes = (trafficChart:minMax())[2];
 
+
 local abbr = {1, "bytes"};
 if (maxBytes > 1024) then abbr = {1024, "KiB"}; end
 if (maxBytes > 1024*1024) then abbr = {1000*1000, "MiB"}; end
@@ -183,7 +260,10 @@ trafficChart.units = abbr[2];
 trafficChart.divisor = abbr[1];
 trafficChart.unitAnchor = "right";
 
-local svg =  trafficChart:plot(590,220,85,0,2)..sessionChart:plot(590,220,85,0,3,2);
+local tc = trafficChart:plot(590,220,85,0,2);
+local sc = sessionChart:plot(590,220,85,0,3,2);
+
+local svg =  tc .. sc;
 
 local f = io.open(session.path .. "/traffic_snapshot2.svg", "w");
 if (f) then
