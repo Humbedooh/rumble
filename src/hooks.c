@@ -137,7 +137,8 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
     hookHandle  *hook;
     c_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    if (!hooks) return RUMBLE_RETURN_IGNORE;
+
+    if (!hooks) return (RUMBLE_RETURN_IGNORE);
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
     if (dvector_size(hooks)) printf("<debug :: hooks> Running hooks of type %#x\n", flags);
 #endif
@@ -239,7 +240,7 @@ ssize_t rumble_server_schedule_hooks(masterHandle *handle, sessionHandle *sessio
         }
         break;
 
-        case RUMBLE_HOOK_CLOSE:
+    case RUMBLE_HOOK_CLOSE:
         switch (flags & RUMBLE_HOOK_SVC_MASK)
         {
         case RUMBLE_HOOK_SMTP:
@@ -346,7 +347,7 @@ ssize_t rumble_service_schedule_hooks(rumbleService *svc, sessionHandle *session
     {
     case RUMBLE_HOOK_ACCEPT:    hook = svc->init_hooks; break;
     case RUMBLE_HOOK_COMMAND:   hook = svc->cue_hooks; break;
-    case RUMBLE_HOOK_CLOSE:      hook = svc->exit_hooks; break;
+    case RUMBLE_HOOK_CLOSE:     hook = svc->exit_hooks; break;
     case RUMBLE_HOOK_FEED:      hook = svc->master->_core.feed_hooks; break;
     case RUMBLE_HOOK_PARSER:    hook = svc->master->_core.parser_hooks; break;
     default:                    break;

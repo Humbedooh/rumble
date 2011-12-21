@@ -308,6 +308,53 @@
  #######################################################################################################################
  */
 
+typedef struct
+{
+    uint32_t        readers;
+    uint32_t        writers;
+    pthread_cond_t  reading;
+    pthread_cond_t  writing;
+    pthread_mutex_t mutex;
+} rumble_readerwriter;
+
+/*$4
+ ***********************************************************************************************************************
+    New mailman structs
+ ***********************************************************************************************************************
+ */
+
+typedef struct
+{
+    uint32_t inuse;
+    uint64_t    id;
+    uint32_t    flags;
+    uint32_t    size;
+    uint32_t    delivered;
+    char        filename[32];
+    uint32_t    updated;
+} mailman_letter;
+typedef struct
+{
+    char                name[65];
+    uint64_t            fid;
+    uint32_t            size;
+    mailman_letter      *letters;
+    uint32_t            firstFree;
+    rumble_readerwriter *lock;
+    char                subscribed;
+    char inuse;
+} mailman_folder;
+typedef struct
+{
+    uint32_t            uid;
+    mailman_folder      *folders;
+    uint32_t            size;
+    rumble_readerwriter *lock;
+    uint32_t            sessions;
+    char                closed;
+    uint32_t            firstFree;
+    char                path[256];
+} mailman_bag;
 typedef struct rumblemodule_config_struct
 {
     const char  *key;
@@ -387,14 +434,6 @@ typedef struct
     uint32_t                brecv;
     char                    rejected;
 } clientHandle;
-typedef struct
-{
-    uint32_t        readers;
-    uint32_t        writers;
-    pthread_cond_t  reading;
-    pthread_cond_t  writing;
-    pthread_mutex_t mutex;
-} rumble_readerwriter;
 #   define RUMBLE_LSTATES  25
 
 /*
@@ -481,6 +520,7 @@ typedef struct
     {
         rumble_readerwriter *rrw;
         dvector             *list;
+        cvector             *bags;
     } mailboxes;
     const char  *cfgdir;
     struct
@@ -632,9 +672,9 @@ typedef struct
 } rumble_args;
 typedef struct
 {
-    rumble_mailbox              *account;
-    rumble_mailman_shared_bag   *bag;
-    int64_t                     folder;
+    rumble_mailbox  *account;
+    mailman_bag     *bag;
+    mailman_folder  *folder;
 } accountSession;
 typedef ssize_t (*svcCommand) (masterHandle *, sessionHandle *, const char *, const char *);
 typedef struct
@@ -755,22 +795,6 @@ void            rumble_domain_free(rumble_domain *domain);          /* cleanup f
  =======================================================================================================================
  */
 
-FILE                            *rumble_letters_open(rumble_mailbox *mbox, rumble_letter *letter);
-rumble_mailman_shared_bag       *rumble_mailman_open_bag(uint32_t uid);
-void                            rumble_mailman_close_bag(rumble_mailman_shared_bag *bag);
-rumble_mailman_shared_folder* rumble_mailman_get_folder(accountSession *imap, const char* name);
-rumble_mailman_shared_folder    *rumble_mailman_current_folder(accountSession *sess);
-rumble_mailman_shared_bag       *rumble_letters_retrieve_shared(uint32_t uid);
-void                            rumble_mailman_update_folders(rumble_mailman_shared_bag *bag);
-uint32_t                        rumble_mailman_commit(accountSession *imap, rumble_mailman_shared_folder *folder, int expungedOnly);
-void                            rumble_mailman_free(rumble_mailman_shared_bag *bag);
-uint32_t                        rumble_mailman_scan_incoming(rumble_mailman_shared_folder *folder);
-size_t                          rumble_mailman_copy_letter
-                                (
-                                    rumble_mailbox                  *account,
-                                    rumble_letter                   *letter,
-                                    rumble_mailman_shared_folder    *folder
-                                );
 rumble_parsed_letter            *rumble_mailman_readmail_private(FILE *fp, const char *boundary, int depth);
 rumble_parsed_letter            *rumble_mailman_readmail(const char *filename);
 void                            rumble_mailman_free_parsed_letter(rumble_parsed_letter *letter);

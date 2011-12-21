@@ -658,6 +658,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         if (!sscanf(line, "%s", digest)) user = "";
         else user = rumble_decode_base64(digest);
         free(line);
+
         /* Password */
         rcsend(session, "334 UGFzc3dvcmQ6\r\n");
         line = rcread(session);

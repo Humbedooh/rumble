@@ -325,6 +325,7 @@ rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *
         /* Account args */
         acc->arg = strclone(dbr->column[5].data.string);
     }
+
     radb_cleanup(dbo);
     return (acc);
 }
@@ -348,6 +349,7 @@ rumble_mailbox *rumble_account_data_auth(uint32_t uid, const char *user, const c
             free(hash);
             return (acc);
         }
+
         free(hash);
         rumble_free_account(acc);
         free(acc);

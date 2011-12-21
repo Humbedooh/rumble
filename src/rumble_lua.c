@@ -16,38 +16,39 @@ extern dvector      *debugLog;
 #   if !defined(close)
 #      include <fcntl.h>
 #   endif
-
-#ifdef RUMBLE_MSC
-
-#include <windows.h>
-#include <tchar.h>
-
+#   ifdef RUMBLE_MSC
+#      include <windows.h>
+#      include <tchar.h>
 typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
-
 LPFN_ISWOW64PROCESS fnIsWow64Process;
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+static BOOL IsWow64(void) {
 
-static BOOL IsWow64()
-{
-    BOOL bIsWow64 = FALSE;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
+    BOOL    bIsWow64 = FALSE;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
-    //IsWow64Process is not available on all supported versions of Windows.
-    //Use GetModuleHandle to get a handle to the DLL that contains the function
-    //and GetProcAddress to get a pointer to the function if available.
+    /*
+     * IsWow64Process is not available on all supported versions of Windows. ;
+     * Use GetModuleHandle to get a handle to the DLL that contains the function ;
+     * and GetProcAddress to get a pointer to the function if available.
+     */
+    fnIsWow64Process = (LPFN_ISWOW64PROCESS) GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
+    if (NULL != fnIsWow64Process) {
+        if (!fnIsWow64Process(GetCurrentProcess(), &bIsWow64)) {
 
-    fnIsWow64Process = (LPFN_ISWOW64PROCESS) GetProcAddress(
-        GetModuleHandle(TEXT("kernel32")),"IsWow64Process");
-
-    if(NULL != fnIsWow64Process)
-    {
-        if (!fnIsWow64Process(GetCurrentProcess(),&bIsWow64))
-        {
-            //handle error
+            /* handle error */
         }
     }
-    return bIsWow64;
+
+    return (bIsWow64);
 }
-#endif
+#   endif
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -262,7 +263,10 @@ static int rumble_lua_send(lua_State *L) {
     int             n = 0;
     size_t          len = 0;
     /*~~~~~~~~~~~~~~~~~~~~~*/
-//    printf("+send\n");
+
+    /*
+     * printf("+send\n");
+     */
     n = lua_gettop(L);
     luaL_checktype(L, 1, LUA_TTABLE);
     lua_rawgeti(L, 1, 0);
@@ -285,7 +289,10 @@ static int rumble_lua_send(lua_State *L) {
     }
 
     lua_settop(L, 0);
-//    printf("-send\n");
+
+    /*
+     * printf("-send\n");
+     */
     return (0);
 }
 
@@ -329,7 +336,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         sprintf(stmt, "DELETE FROM accounts WHERE id = %u", acc->uid);
         radb_run(rumble_database_master_handle->_core.db, stmt);
         path = strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder");
-        bag = rumble_mailman_open_bag(acc->uid);
+        bag = mailman_get_bag(acc->uid, acc->domain->path);
         rumble_debug("Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
             dforeach(rmsf, folder, bag->folders, diter) {
@@ -341,7 +348,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         }
 
         radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE uid = %u", acc->uid);
-        rumble_mailman_close_bag(bag);
+        mailman_close_bag(bag);
         rumble_free_account(acc);
     }
 
@@ -355,11 +362,12 @@ static int rumble_lua_deleteaccount(lua_State *L) {
  */
 static int rumble_lua_recv(lua_State *L) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
     char            *line = 0;
     sessionHandle   *session;
     size_t          len;
-    /*~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
     luaL_checktype(L, 1, LUA_TTABLE);
     lua_rawgeti(L, 1, 0);
     luaL_checktype(L, -1, LUA_TLIGHTUSERDATA);
@@ -562,14 +570,14 @@ static int rumble_lua_getdomains(lua_State *L) {
         lua_pushinteger(L, domain->flags);
         lua_rawset(L, -3);
         lua_rawset(L, -3);
-        
-        // Free up allocated memory
+
+        /* Free up allocated memory */
         if (domain->path) free(domain->path);
         if (domain->name) free(domain->name);
         free(domain);
     }
-    cvector_destroy(domains);
 
+    cvector_destroy(domains);
     return (1);
 }
 
@@ -1400,7 +1408,7 @@ void *rumble_lua_handle_service(void *s) {
     sessionHandle   *sessptr = &session;
     d_iterator      iter;
     lua_State       *L;
-	int x = 0;
+    int             x = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     session.dict = dvector_init();
@@ -1474,11 +1482,9 @@ void *rumble_lua_handle_service(void *s) {
          */
 
         lua_atpanic(L, rumble_lua_panic);
-		
-        if ( (x=lua_pcall(L, 1, 0, 0))) {
+        if ((x = lua_pcall(L, 1, 0, 0))) {
             rcprintf(&session, "\r\n\r\nLua error: %s!! (err %u)\n", lua_tostring(L, -1), x);
         }
-		
 
         /*
          * lua_close((L));
@@ -1560,12 +1566,12 @@ static int rumble_lua_serverinfo(lua_State *L) {
     lua_pushstring(L, os);
     lua_rawset(L, -3);
     lua_pushliteral(L, "arch");
-#ifdef RUMBLE_MSC
-	if (R_ARCH == 32 && IsWow64()) lua_pushliteral(L, "WoW64");
-	else lua_pushnumber(L, R_ARCH);
-#else
+#   ifdef RUMBLE_MSC
+    if (R_ARCH == 32 && IsWow64()) lua_pushliteral(L, "WoW64");
+    else lua_pushnumber(L, R_ARCH);
+#   else
     lua_pushnumber(L, R_ARCH);
-#endif
+#   endif
     lua_rawset(L, -3);
     return (1);
 }
@@ -2079,6 +2085,7 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         const char  *str = luaL_optstring(L, -1, "okay");
         /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
         if (str) {
             if (!strcmp(str, "okay")) rc = RUMBLE_RETURN_OKAY;
             if (!strcmp(str, "failure")) rc = RUMBLE_RETURN_FAILURE;

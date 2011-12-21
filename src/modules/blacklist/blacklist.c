@@ -3,17 +3,17 @@
  * 2011, 8:08
  */
 #include "../../rumble.h"
-
-typedef struct {
-    time_t when;
-    unsigned int IP[4];
+typedef struct
+{
+    time_t          when;
+    unsigned int    IP[4];
 } blackListEntry;
 
 /* include <Ws2tcpip.h> */
 masterHandle                *myMaster = 0;
-rumble_args                     *blacklist_baddomains;
-rumble_args                     *blacklist_badhosts;
-rumble_args                     *blacklist_dnsbl;
+rumble_args                 *blacklist_baddomains;
+rumble_args                 *blacklist_badhosts;
+rumble_args                 *blacklist_dnsbl;
 cvector                     *fastList;
 dvector                     *myConfig;
 unsigned int                blacklist_spf = 0;
@@ -32,24 +32,20 @@ rumblemodule_config_struct  luaConfig[] =
     { 0, 0, 0, 0 }
 };
 
-
 /*
  =======================================================================================================================
  =======================================================================================================================
  */
 ssize_t rumble_blacklist_domains(sessionHandle *session, const char *junk) {
 
-    /*~~~~~~~~~~~~~~~~*/
-    int i = 0;
+    /*~~~~~~~~~~~~~~~~~*/
+    int     i = 0;
     char    *badhost = 0;
-    /*~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~*/
 
     /* Check against pre-configured list of bad hosts */
     for (i = 0; i < blacklist_baddomains->argc; i++) {
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
         badhost = blacklist_baddomains->argv[i];
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
         if (!strcmp(session->sender->domain, badhost))
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
@@ -77,8 +73,8 @@ ssize_t rumble_blacklist_domains(sessionHandle *session, const char *junk) {
 
             return (RUMBLE_RETURN_IGNORE);
         }
-
     }
+
     return (RUMBLE_RETURN_OKAY);
 }
 
@@ -88,52 +84,55 @@ ssize_t rumble_blacklist_domains(sessionHandle *session, const char *junk) {
  */
 ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
 
-    /*~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~*/
     /* Resolve client address name */
     struct hostent  *client;
     struct in6_addr IP;
     const char      *addr;
-    blackListEntry *entry;
-    c_iterator iter;
+    blackListEntry  *entry;
+    c_iterator      iter;
     unsigned int    a,
-                        b,
-                        c,
-                        d;
-            char    *badhost;
-            int i;
-    /*~~~~~~~~~~~~~~~~~~~~*/
+                    b,
+                    c,
+                    d;
+    char            *badhost;
+    int             i;
+    /*~~~~~~~~~~~~~~~~~~~~~*/
 
     /* Check if the client has been given permission to skip this check by any other modules. */
     if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
     else
     {
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 #ifdef RUMBLE_MSC
-         /*~~~~~~~~~~~~~~~~~~~~~*/
         struct sockaddr ss;
         int             sslen = sizeof(struct sockaddr);
-        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 #endif
-        
-               
-        int x = 0;
+        int             x = 0;
+        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
         sscanf(session->client->addr, "%3u.%3u.%3u.%3u", &a, &b, &c, &d);
-        
-        // Check against the fast list of already encountered spammers
-        cforeach((blackListEntry*), entry, fastList, iter) {
+
+        /* Check against the fast list of already encountered spammers */
+        cforeach((blackListEntry *), entry, fastList, iter) {
             x++;
             printf("checking fl rec no. %u\n", x);
             if (entry->IP[0] == a && entry->IP[1] == b && entry->IP[2] == c && entry->IP[3] == d) {
-                time_t now = time(NULL);
+
+                /*~~~~~~~~~~~~~~~~~~~~~*/
+                time_t  now = time(NULL);
+                /*~~~~~~~~~~~~~~~~~~~~~*/
+
                 if (now - entry->when > 86400) {
                     cvector_delete(&iter);
                     free(entry);
-                }
-                else {
+                } else {
                     return (RUMBLE_RETURN_FAILURE);
                     rumble_debug("smtp", "<blacklist> %s is listed in the fast list as a spam host.", session->client->addr);
                 }
             }
         }
+
 #if !defined(RUMBLE_MSC)
 
         /* ANSI method */
@@ -152,10 +151,10 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
     }
 
     /* Check against pre-configured list of bad hosts */
-    for (i=0; i < blacklist_badhosts->argc; i++) {
+    for (i = 0; i < blacklist_badhosts->argc; i++) {
         badhost = blacklist_badhosts->argv[i];
         if (strstr(addr, badhost))
-            {
+        {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
             rumble_debug("smtp", "<blacklist> %s was blacklisted as a bad host name, aborting\n", addr);
 #endif
@@ -182,64 +181,56 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
     }
 
     /* Check against DNS blacklists */
-        if (session->client->client_info.ss_family == AF_INET) {
+    if (session->client->client_info.ss_family == AF_INET) {
 
-            /*~~~~~~~~~~~~~~~~~~~~~*/
-            /* I only know how to match IPv4 DNSBL :/ */
-            char            *dnshost;
-			struct hostent  *bl;
-				blackListEntry* entry = 0;
-				char            *dnsbl;
-            /*~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+        /* I only know how to match IPv4 DNSBL :/ */
+        char            *dnshost;
+        struct hostent  *bl;
+        blackListEntry  *entry = 0;
+        char            *dnsbl;
+        /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
-            
-            
-            for(i=i;i<blacklist_dnsbl->argc;i++) {
-                dnshost = (char *) blacklist_dnsbl->argv[i];
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                
-                dnsbl = (char *) calloc(1, strlen(dnshost) + strlen(session->client->addr) + 6);
-                
-                /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-                sprintf(dnsbl, "%d.%d.%d.%d.%s", d, c, b, a, dnshost);
-                bl = gethostbyname(dnsbl);
-                if (bl)
-                {
+        for (i = i; i < blacklist_dnsbl->argc; i++) {
+            dnshost = (char *) blacklist_dnsbl->argv[i];
+            dnsbl = (char *) calloc(1, strlen(dnshost) + strlen(session->client->addr) + 6);
+            sprintf(dnsbl, "%d.%d.%d.%d.%s", d, c, b, a, dnshost);
+            bl = gethostbyname(dnsbl);
+            if (bl)
+            {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-                    printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr, dnshost);
-#endif                  
-                    printf("Adding entry %u.%u.%u.%u to fl\n", a,b,c,d);
-                    entry = (blackListEntry*) malloc(sizeof(blackListEntry));
-                    entry->when = time(NULL);
-                    entry->IP[0] = a;
-                    entry->IP[1] = b;
-                    entry->IP[2] = c;
-                    entry->IP[3] = d;
-                    cvector_add(fastList, entry);
-                    if (blacklist_logfile) {
+                printf("<blacklist> %s was blacklisted by %s, closing connection!\n", session->client->addr, dnshost);
+#endif
+                printf("Adding entry %u.%u.%u.%u to fl\n", a, b, c, d);
+                entry = (blackListEntry *) malloc(sizeof(blackListEntry));
+                entry->when = time(NULL);
+                entry->IP[0] = a;
+                entry->IP[1] = b;
+                entry->IP[2] = c;
+                entry->IP[3] = d;
+                cvector_add(fastList, entry);
+                if (blacklist_logfile) {
 
-                        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                        FILE    *fp = fopen(blacklist_logfile, "a");
-                        char    *mtime;
-                        /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+                    FILE    *fp = fopen(blacklist_logfile, "a");
+                    char    *mtime;
+                    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-                        if (fp) {
-                            mtime = rumble_mtime();
-                            fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n", mtime, session->client->addr, addr,
-                                    dnshost);
-                            fclose(fp);
-                            free(mtime);
-                        }
+                    if (fp) {
+                        mtime = rumble_mtime();
+                        fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n", mtime, session->client->addr, addr, dnshost);
+                        fclose(fp);
+                        free(mtime);
                     }
-
-                    free(dnsbl);
-                    return (RUMBLE_RETURN_FAILURE);
-                }   /* Blacklisted, abort the connection! */
+                }
 
                 free(dnsbl);
-            }
+                return (RUMBLE_RETURN_FAILURE);
+            }   /* Blacklisted, abort the connection! */
+
+            free(dnsbl);
         }
+    }
 
     /* Return with EXIT_SUCCESS and let the server continue. */
     return (RUMBLE_RETURN_OKAY);
@@ -251,9 +242,9 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
  */
 rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~*/
     const char  *entry;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~*/
 
     myMaster = (masterHandle *) master;
     modinfo->title = "Blacklisting module";

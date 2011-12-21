@@ -98,7 +98,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
     config = fopen(cfgfile, "r");
     if (config) {
 
-        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~*/
         int             p = 0;
         unsigned int    ignore = 0,
                         n = 0;
@@ -109,7 +109,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
                         ckey[129],
                         coper[3],
                         cval[129];
-        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         for (n = 0; rumble_conf_tags[n].key; n++) rsdict(master->_core.conf, rumble_conf_tags[n].key, rumble_conf_tags[n].val);
         memset(ckey, 0, 129);
@@ -175,6 +175,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         free(cfgfile);
         exit(EXIT_FAILURE);
     }
+
     free(cfgfile);
 }
 
@@ -252,7 +253,7 @@ dvector *rumble_readconfig(const char *filename) {
     config = fopen(cfgfile, "r");
     if (config) {
 
-        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~*/
         int             p = 0;
         unsigned int    ignore = 0,
                         n = 0;
@@ -263,7 +264,7 @@ dvector *rumble_readconfig(const char *filename) {
                         ckey[129],
                         coper[3],
                         cval[129];
-        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+        /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
         for (n = 0; rumble_conf_tags[n].key; n++) rsdict(configFile, rumble_conf_tags[n].key, rumble_conf_tags[n].val);
         memset(ckey, 0, 129);
@@ -321,12 +322,12 @@ dvector *rumble_readconfig(const char *filename) {
                 exit(EXIT_FAILURE);
             }
         }
- 
+
         fclose(config);
     } else {
         rumble_debug("config", "ERROR: Could not open %s!", cfgfile);
         exit(EXIT_FAILURE);
     }
-    
+
     return (configFile);
 }

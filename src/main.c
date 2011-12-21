@@ -119,17 +119,21 @@ void ServiceMain(int argc, char **argv) {
     return;
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 static void signal_windows(int sig) {
-	rumble_debug("core", "Caught signal %d from system!\n", sig);
-	if (sig == SIGBREAK || sig == SIGINT) {
-		printf("User stopped the program.\n");
-	}
-	exit(SIGINT);
+    rumble_debug("core", "Caught signal %d from system!\n", sig);
+    if (sig == SIGBREAK || sig == SIGINT) {
+        printf("User stopped the program.\n");
+    }
+
+    exit(SIGINT);
 }
 
 #else
 #   include <execinfo.h>
-
 #   include <errno.h>
 #   include <ucontext.h>
 #   include <unistd.h>
@@ -237,7 +241,6 @@ void init_signals(void) {
     sigaction(SIGSEGV, &sigact, 0);
     sigaction(SIGSTKFLT, &sigact, 0);
 
-
     /*
      * sigaddset(&sigact.sa_mask, SIGBUS);
      */
@@ -311,6 +314,7 @@ int rumbleStart(void) {
     master->domains.rrw = rumble_rw_init();
     master->mailboxes.rrw = rumble_rw_init();
     master->mailboxes.list = dvector_init();
+    master->mailboxes.bags = cvector_init();
     master->services = cvector_init();
     pthread_mutex_init(&master->lua.mutex, 0);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
@@ -324,12 +328,10 @@ int rumbleStart(void) {
     rumble_database_load(master, 0);
     rumble_database_update_domains();
     printf("%-48s", "Launching core service...");
-    
     rumble_debug("startup", "Launching mailman service");
     svc = comm_registerService(master, "mailman", rumble_worker_init, 0, 1);
     comm_setServiceStack(svc, 1024 * 1024);
     rc = comm_startService(svc);
-    
     svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 128kb (should be enough) */
     if (rumble_config_int(master, "enablesmtp")) {
@@ -367,9 +369,6 @@ int rumbleStart(void) {
 
     rumble_master_init(master);
     rumble_modules_load(master);
-    
-    
-    
     if (rhdict(s_args, "--service")) {
         rumble_debug("startup", "--service enabled, going stealth.");
         return (EXIT_SUCCESS);
@@ -467,12 +466,12 @@ int main(int argc, char **argv) {
     init_signals();
 #else
     signal(SIGINT, &signal_windows);
-	signal(SIGBREAK, &signal_windows);
-	signal(SIGSEGV, &signal_windows);
-	signal(SIGTERM, &signal_windows);
-	signal(SIGABRT, &signal_windows);
-	signal(SIGILL, &signal_windows);
-	atexit(&cleanup);
+    signal(SIGBREAK, &signal_windows);
+    signal(SIGSEGV, &signal_windows);
+    signal(SIGTERM, &signal_windows);
+    signal(SIGABRT, &signal_windows);
+    signal(SIGILL, &signal_windows);
+    atexit(&cleanup);
 #endif
     if (rhdict(s_args, "--service")) {
         rumble_debug("startup", "--service detected, launching daemon process");

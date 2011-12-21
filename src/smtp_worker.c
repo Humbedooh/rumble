@@ -57,6 +57,7 @@ void get_smtp_response(sessionHandle *session, rumble_sendmail_response *res) {
             free(line);
         }
     }
+
     free(flag);
     if (res->replyCode == 500) ((rumbleService *) session->_svc)->traffic.rejections++;
 }
@@ -212,9 +213,9 @@ void rumble_prune_storage(const char *folder) {
                 unlink(filename);
             }
         }
+
         closedir(dir);
     }
-    
 
 #else
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -482,7 +483,6 @@ void *rumble_worker_process(void *m) {
                     free(res->replyServer);
                     free(res);
                     if (delivered <= 299) break;            /* yay! */
-                    
                 }
 
                 free(filename);
@@ -545,7 +545,8 @@ void *rumble_worker_init(void *T) {
     radbResult      *result;
     pthread_attr_t  attr;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    sleep(5); // wait for the others :>
+
+    sleep(5);   /* wait for the others :> */
     if (master->_core.mail->dbType == RADB_MYSQL) {
         statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= NOW() LIMIT 4";
     }
@@ -605,7 +606,7 @@ void *rumble_worker_init(void *T) {
                 mid = result->column[6].data.uint32;
                 radb_run_inject(master->_core.mail, "DELETE FROM queue WHERE id = %u", mid);
                 fflush(stdout);
-                if (!item->sender or !item->recipient) {
+                if (!item->sender or!item->recipient) {
                     printf("BAD: Sender or Recipient is invalid, discarding mail.\n");
                     if (item->recipient) rumble_free_address(item->recipient);
                     if (item->sender) rumble_free_address(item->recipient);
@@ -620,7 +621,6 @@ void *rumble_worker_init(void *T) {
                     pthread_mutex_unlock(&svc->mutex);
                 }
             }
-           
         } else {
 
             /*~~~~~~~~~~~~~~~~~~~~~~*/
@@ -633,11 +633,13 @@ void *rumble_worker_init(void *T) {
                 xsvc = comm_serviceHandle(svcs[K]);
                 if (xsvc) comm_addEntry(xsvc, 0, 100);
             }
+
             radb_cleanup(dbo);
             sleep(3);   /* sleep for 3 seconds if there's nothing to do right now. */
             dbo = radb_prepare(master->_core.mail, statement);
         }
     }
+
     radb_cleanup(dbo);
     rumble_flush_dictionary(badmx);
     dvector_destroy(badmx);

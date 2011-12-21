@@ -201,7 +201,8 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     char    moo[1024];
 #endif
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    if (!d) return 0;
+
+    if (!d) return (0);
     va_start(vl, d);
 #ifdef _CRTIMP      /* Windows CRT library has a nifty function for this */
     len = _vscprintf(d, vl) + 10;
@@ -213,9 +214,8 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
 #   endif
 #endif
     va_end(vl);
-    buffer = (char *) calloc(1, len+1);
+    buffer = (char *) calloc(1, len + 1);
     if (!buffer) merror();
-    
     va_start(vl, d);
     vsprintf(buffer, d, vl);
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
@@ -346,7 +346,6 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
 
     return (0);
 }
-
 
 /*
  =======================================================================================================================
