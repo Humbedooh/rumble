@@ -341,7 +341,7 @@ typedef struct
     mailman_letter      *letters;
     uint32_t            firstFree;
     rumble_readerwriter *lock;
-    char                subscribed;
+    uint32_t                subscribed;
     char inuse;
 } mailman_folder;
 typedef struct

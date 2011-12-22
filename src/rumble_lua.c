@@ -310,11 +310,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
     int                             uid = 0;
     rumble_mailbox                  *acc;
     mailman_bag       *bag;
-    rumble_folder    *folder;
-    rumble_letter                   *letter;
-    char                            tmp[256];
-    d_iterator                      diter,
-                                    liter;
+    mailman_folder    *folder;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (lua_type(L, 1) == LUA_TNUMBER) {
@@ -341,9 +337,19 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         rumble_debug("Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
             /* TODO: Make it delete the folders and letters! */
+			int i;
+			for (i = 0; i < bag->size; i++) {
+				folder = &bag->folders[i];
+				if (folder->inuse) {
+					mailman_update_folder(folder, bag->uid, 0); // Make sure we get all letters first
+					mailman_delete_folder(bag, folder); // Delete folder and its letters
+				}
+			}
         }
 
+		// In case there's some leftover mails from old times?
         radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE uid = %u", acc->uid);
+
         mailman_close_bag(bag);
         rumble_free_account(acc);
     }

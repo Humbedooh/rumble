@@ -362,7 +362,7 @@ void *rumble_worker_process(void *m) {
                         /* Start by making a copy of the letter */
                         fsize = rumble_copy_mail(master, item->fid, user->user, user->domain->name, (char **) &item->fid);
                         if (!item->fid || !fsize) {
-                            if (item->fid) free(item->fid);
+                            if (item->fid) free((void*)item->fid);
                             fprintf(stderr, "<smtp::worker> Bad mail file, aborting\n");
                             continue;
                         }
