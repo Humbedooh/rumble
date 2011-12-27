@@ -134,6 +134,7 @@
 #      include <lualib.h>
 #      include <lauxlib.h>
 #      include "rumble_lua.h"
+#define LUA_COMPAT_MODULE 1
 #   endif
 
 /*$3

@@ -292,7 +292,6 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
     uint32_t                        n,
                                     s,j;
     mailman_folder    *folder;
-    d_iterator                      iter;
     accountSession                  *pops = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -363,7 +362,6 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     int                             j,
                                     i,k,
                                     found;
-    d_iterator                      iter;
     accountSession                  *pops = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
