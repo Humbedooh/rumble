@@ -75,13 +75,13 @@ end
     <tr>
       <th colspan="3">Storage and folders</tr>
     <tr>
-      <td><strong>Mail storage folder:</strong></td>
+      <td><strong>Default mail storage folder:</strong></td>
       <td><label for="mailpath"></label>
       <input name="mailpath" type="text" id="mailpath" size="40" value="<?=Rumble.readConfig("storagefolder")?>" /></td>
       <td>&nbsp;</td>
     </tr>
     <tr>
-      <td><strong>Database folder:</strong></td>
+      <td><strong>Database folder (if SQLite3):</strong></td>
       <td><label for="dbpath"></label>
       <input name="dbpath" type="text" id="dbpath" size="40" value="<?=Rumble.readConfig("datafolder")?>"  /></td>
       <td>&nbsp;</td>
@@ -91,7 +91,7 @@ end
       <td>
       <input name="radio" type="radio" id="dbengine" value="sqlite3" checked="checked" />
         <label for="dbengine"></label>
-      sqlite3&nbsp;
+      SQLite3&nbsp;
       <input name="radio" type="radio" id="dbengine" value="mysql" />
         <label for="dbengine"></label>
       MySQL</td>

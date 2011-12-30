@@ -3,9 +3,9 @@
     This file is part of the Rumble Mail Server package.
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
+#ifndef RUMBLE_H
 
 #include "rumble_version.h"
-#ifndef RUMBLE_H
 #   define _HUGE   - 1
 #   define RUMBLE_H
 #   define RUMBLE_INITIAL_THREADS  25
@@ -13,9 +13,10 @@
 /* C<99 compatibility defs */
 #   if (__STDC_VERSION__ < 199901L)
 #      define inline  static
+#   endif
 
 /* pragma message("Non-C99 compliant compiler used, boooooo!") */
-#   endif
+
 #   define R_WINDOWS   0
 #   define R_POSIX     0
 #   define R_LINUX     0
@@ -151,6 +152,10 @@
 #   include <sqlite3.h>
 #   include "radb/radb.h"
 
+#   ifdef __cplusplus
+extern "C"
+{
+#   endif
 /*$5
  #######################################################################################################################
     FLAG DEFINITIONS
@@ -458,13 +463,17 @@ typedef struct
     char            *arg;       /* If it's of type alias, feed or mod, arg gives the args */
     char            *hash;      /* password hash */
 } rumble_mailbox;
-typedef struct
+
+/*! Email address structure used by SMTP, POP3 and IMAP services
+ * 
+ */
+typedef struct _address
 {
-    char    *user;
-    char    *domain;
-    char    *raw;
-    dvector *flags;
-    char    *_flags;
+    char    *user;              // user
+    char    *domain;            // domain name
+    char    *raw;               // email address in raw format
+    dvector *flags;             // BATV/VERP/Loop flags
+    char    *_flags;            // Raw flags
     char    *tag;           /* VERP or BATV tags */
 } address;
 typedef struct
@@ -694,10 +703,7 @@ typedef struct
     uint64_t    start;
     uint64_t    end;
 } rangePair;
-#   ifdef __cplusplus
-extern "C"
-{
-#   endif
+
 
 /*$5
  #######################################################################################################################
@@ -779,7 +785,7 @@ void                        comm_addEntry(rumbleService *svc, uint32_t bytes, ch
  =======================================================================================================================
  */
 
-uint32_t        rumble_domain_exists(const char *domain);
+uint32_t        rumble_domain_exists(const char *domain); //! Checks if the domain is a local domain
 uint32_t        rumble_account_exists_raw(const char *user, const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
 cvector         *rumble_domains_list(void);

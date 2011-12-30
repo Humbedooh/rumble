@@ -187,7 +187,6 @@
 			local stoppoint = {math.cos(stop), math.sin(stop) };
 
 			local longarc = (shareSize > 180 and 1) or 0;
-			print("group ", share[1], " has a share of ", shareSize);
 			local B = (( half > math.rad(0) and half <= math.rad(180)) and 12) or -2;
 			local A = ( (half > math.rad(270) or half <= math.rad(90)) and "start") or "end";
 			local C = math.random(345678,345678987);
@@ -267,7 +266,6 @@
 		obj.minValue = nil;
 		for k,v in pairs(obj.dataSeries) do
 			local aVal = nil;
-			print("Checking series no.", k);
 			for i, s in pairs(obj.lines) do
 				if (obj.minValue == nil or v.data[s] < obj.minValue) then obj.minValue = v.data[s]; end
 				if (obj.maxValue == nil or v.data[s] > obj.maxValue) then obj.maxValue = v.data[s]; end
@@ -286,6 +284,8 @@
 		end
 		if (obj.min) then obj.minValue = obj.min; end
 		if (obj.max) then obj.maxValue = obj.max; end
+		obj.minValue = obj.minValue or 1;
+		obj.maxValue = obj.maxValue or 0;
 		local f = false;
 		for k, t in pairs({1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000,10000000000}) do
 			for k, x in pairs({1,2,5}) do
@@ -313,9 +313,9 @@
 		local spacing = (w-50);
 		if (#obj.dataSeries > 1) then spacing = (w-25)/ (#obj.dataSeries); end
 		local colors = LibPie.makeColors(#obj.lines+#obj.bars+#obj.areas+cStart);
-		local zeroPoint = { y = h - 25, x = 25 };
+		local zeroPoint = { y = h - 25, x = 35 };
 		local pixelsPerPoint = 1;
-		local divisor = obj.divisor or 10;
+		local divisor = obj.divisor or 1;
 
 		-- Find min and max values
 		obj:minMax();
@@ -325,7 +325,6 @@
 		if (printf) then
 			--printf("Got max = %s, min = %s<br/>", obj.maxValue, obj.minValue);
 		else
-			print("Got max = ", obj.maxValue, " min = ", obj.minValue);
 			print("Spacing is ", spacing, " pixels (x ", #obj.dataSeries, " ppp is ", pixelsPerPoint, " pixels");
 
 
@@ -396,11 +395,11 @@
 				local value = ((i/5) * (obj.maxValue-obj.minValue))/divisor;
 				svg = svg .. string.format([[
 			<polyline transform="translate(%s,%s)" id="uline_%u" fill="none" stroke="black" stroke-width="0.667" points="%s,%s %s,%s"/>
-			]], X,Y,i, x, zeroPoint.y - (lineHeight*i), x+w-25, zeroPoint.y - (lineHeight*i));
+			]], X,Y,i, x, zeroPoint.y - (lineHeight*i), x+w-35, zeroPoint.y - (lineHeight*i));
 				if (obj.unitAnchor and (obj.unitAnchor == "right")) then
 					svg = svg .. string.format([[
 					<text transform="translate(%s,%s)"  id="utext_%u" fill="black" style="font-family: Arial, Helvetica, Sans-Serif; font-size: 12px;" stroke="none" text-anchor="start" x="%upx" y="%upx">%s %s</text>
-					]],X,Y, i, x+w-21, zeroPoint.y - (lineHeight*i) + 4, LibPie.comma(value), obj.units);
+					]],X,Y, i, x+w-31, zeroPoint.y - (lineHeight*i) + 4, LibPie.comma(value), obj.units);
 				else
 					svg = svg .. string.format([[
 					<text transform="translate(%s,%s)" id="utext_%u" fill="black" style="font-family: Arial, Helvetica, Sans-Serif; font-size: 12px;" stroke="none" text-anchor="end" x="%upx" y="%upx">%s %s - </text>
@@ -408,9 +407,6 @@
 				end
 			end
 		end
-
-
-		print(svg)
 		return svg;
 	end
 
@@ -457,15 +453,3 @@
 
 --end
 
-
-local mooh = LibPie:new(100,100);
-
-mooh:setGraphType(2, "bar");
-mooh:setGraphType(1, "area");
-mooh:setGraphType(3, "area");
-mooh:setGraphType(4, "line");
-
-mooh:addSeries("Yesterday", 1.5, 6.3, 4, 2);
-mooh:addSeries("Today", 2, 3, 4, 2);
-mooh:addSeries("Tomorrow", 5, 1, 4, 3);
-mooh:plot(800,200)

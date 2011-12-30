@@ -365,6 +365,11 @@ rumble_mailbox *rumble_account_data_auth(uint32_t uid, const char *user, const c
     rumble_domain_exists: Checks if a domain exists in the database. Returns 1 if true, 0 if false.
  =======================================================================================================================
  */
+
+/** Check if domain exists as a local domain
+/* @param domain The domain to be checked.
+ * @return 1 if domain exists, 0 otherwise.
+ */
 uint32_t rumble_domain_exists(const char *domain) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
@@ -389,6 +394,7 @@ uint32_t rumble_domain_exists(const char *domain) {
     rumble_rw_stop_read(rumble_database_master_handle->domains.rrw);
     return (rc);
 }
+
 
 /*
  =======================================================================================================================

@@ -97,7 +97,7 @@ void rumble_modules_load(masterHandle *master) {
                 ver = (*mcheck) ();
                 ver = (ver & 0xFFFFFF00) + (RUMBLE_VERSION & 0x000000FF);
                 x = EXIT_SUCCESS;
-                if (ver != RUMBLE_VERSION) {
+                if (ver > RUMBLE_VERSION || ver < RUMBLE_VERSION_REQUIRED) {
                     if (ver > RUMBLE_VERSION) {
                         rumble_debug("module",
                                      "Error: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",

@@ -371,11 +371,13 @@ int rumbleStart(void) {
     rumble_modules_load(master);
     if (rhdict(s_args, "--service")) {
         rumble_debug("startup", "--service enabled, going stealth.");
-        return (EXIT_SUCCESS);
+        shutUp = 1;
     }
 
     rumble_debug("startup", "Rumble is up and running, listening for incoming calls!");
-    sleep(999999);
+    while (1) {
+        sleep(999999);
+    }
     return (EXIT_SUCCESS);
 }
 
@@ -483,9 +485,12 @@ int main(int argc, char **argv) {
         /*~~~~~~~~~~~~~*/
 
         if (pid != 0) exit(EXIT_SUCCESS);
-        fclose(stdout);
+        
         setsid();
+        printf("Starting rumble v/%u.%u.%u as daemon\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+        fclose(stdout);
         rumbleStart();
+      
 #else
         ServiceTable[0].lpServiceName = "Rumble Mail Server";
         ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTIONA) ServiceMain;

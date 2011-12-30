@@ -196,6 +196,7 @@ rumbleService *comm_registerService(masterHandle *master, const char *svcName, v
         tentry->bytes = 0;
         tentry->hits = 0;
         tentry->when = 0;
+        tentry->rejections = 0;
         dvector_add(svc->trafficlog, tentry);
     }
 
@@ -233,6 +234,7 @@ void comm_addEntry(rumbleService *svc, uint32_t bytes, char rejected) {
             entry->bytes = 0;
             entry->hits = 0;
             entry->when = now;
+            entry->rejections = 0;
         }
 
         entry->bytes += bytes;

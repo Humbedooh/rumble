@@ -36,6 +36,31 @@ body {
 
 }
 
+input {
+	border: 1px solid #474B34;
+	background-color:#FCF7DA;
+}
+
+select {
+	border: 1px solid #474B34;
+	background-color:#FCF7DA;
+}
+
+.button {
+	background-color:#9BB4D9;
+}
+.form_key {
+	font-family:Arial, Helvetica, sans-serif;
+	float: left;
+	width: 200px;
+	font-weight:bold;
+}
+
+.form_value {
+	float: left;
+	width: 500px;
+}
+
 .header_stuff a {
 	padding-top: 4px !important;
 	text-height:auto;
@@ -53,11 +78,11 @@ border: none;
 
 
 a:link {
-color: #42413C;
+	color: #262D35;
 	text-decoration: underline;
 }
 a:visited {
-color: #42413C;
+color: #262D35;
 	text-decoration: underline;
 }
 a:hover, a:active, a:focus {
@@ -109,18 +134,26 @@ code {
 
 .elements {
 	width: 780px;
-	background-color: #333333;
+	background-color: #777;
 	font-family:Arial, Helvetica, sans-serif;
 	font-size: 10pt;
-	margin: 1px auto;
+	margin: 0px auto;
+	padding: 0px;
+	border: 1px solid #333;
+}
+
+.elements td {
+	border 0px;
+	margin: 0px;
+	padding: 0px;
 }
 
 .elements th {
-	margin: 1px;
-	background:#76ae01;
-	background-image:url(table_header_green.png);
+	margin: 0px;
+	background-image:url(table_header_ocean.png);
 	background-repeat:repeat-x;
-	height: 21px;
+	height: 23px;
+	padding: 0px;
 }
 
 .elements th.orange {

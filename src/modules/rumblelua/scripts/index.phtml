@@ -51,6 +51,7 @@ h1 {
   <br>
 <strong>Uptime:</strong> 
 <?
+if (my.debug) then session.info.uptime = math.random(86400,864000); end
 local days = math.floor(session.info.uptime/86400);
 local hours = math.floor(math.fmod(session.info.uptime,86400)/3600);
 local minutes = math.floor(math.fmod(session.info.uptime, 3600)/60);
@@ -60,7 +61,7 @@ local tacc, trej = 0,0;
 printf(string.format("%u day(s), %02u:%02u:%02u", days,  hours,minutes,seconds));
 ?>
 </p>
-<table width="700" class="elements" border="0">
+<table width="700" class="elements" border="0" cellpadding="2" cellspacing="1">
   <tr>
     <th width="109">Service</th>
     <th width="164">Status</th>
@@ -121,8 +122,9 @@ printf(string.format("%u day(s), %02u:%02u:%02u", days,  hours,minutes,seconds))
 
 
 
-</table>
-<table width="700" class="elements" border="0">
+</table><br />
+
+<table width="700" class="elements" border="0" cellspacing="1">
   <tr>
     <th>Notifications:</th>
   </tr>
@@ -153,7 +155,7 @@ end
 if (errors > 0) then
 	printf("%u error(s) were found<br/>", errors);
 else
-	printf("<img src='/icons/information.png' align='absmiddle'> No errors were found.");
+	printf("<img src='/icons/information.png' align='left'> &nbsp;No errors were found.");
 end
 ?>
 </td></tr></table><br />
@@ -190,7 +192,7 @@ if (t) then
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
-				rj = rj + v[3];
+
 	end
 end
 
@@ -201,7 +203,7 @@ if (t) then
 		poplog[i][1] = poplog[i][1] + v[1];
 		poplog[i][2] = poplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
-				rj = rj + v[3];
+
 	end
 end
 
@@ -212,8 +214,6 @@ if (t) then
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
 		rejections[i] = rejections[i] + v[3];
-				rj = rj + v[3];
-
 	end
 end
 
@@ -223,8 +223,6 @@ if (t) then
 		i = math.floor(k/D)+1;
 		smtplog[i][1] = smtplog[i][1] + v[1];
 		smtplog[i][2] = smtplog[i][2] + v[2];
-		rejections[i] = rejections[i] + v[3];
-		rj = rj + v[3];
 	end
 end
 
@@ -253,15 +251,15 @@ local maxBytes = (trafficChart:minMax())[2];
 
 
 local abbr = {1, "bytes"};
-if (maxBytes > 1024) then abbr = {1024, "KiB"}; end
+if (maxBytes > 1024) then abbr = {1000, "KiB"}; end
 if (maxBytes > 1024*1024) then abbr = {1000*1000, "MiB"}; end
 if (maxBytes > 1024*1024*1024) then abbr = {1000*1000*1000, "GiB"}; end
 trafficChart.units = abbr[2];
 trafficChart.divisor = abbr[1];
 trafficChart.unitAnchor = "right";
 
-local tc = trafficChart:plot(590,220,85,0,2);
-local sc = sessionChart:plot(590,220,85,0,3,2);
+local tc = trafficChart:plot(580,220,85,0,2);
+local sc = sessionChart:plot(580,220,85,0,3,2);
 
 local svg =  tc .. sc;
 
@@ -269,7 +267,7 @@ local f = io.open(session.path .. "/traffic_snapshot2.svg", "w");
 if (f) then
 	f:write([=[
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="704" height="220" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<svg width="694" height="220" version="1.1" xmlns="http://www.w3.org/2000/svg">
 	<defs>
 		<linearGradient id="backgroundGradient" gradientTransform="rotate(90)">
 			<stop offset="10%" stop-color="#e1e9a0" />
@@ -283,7 +281,7 @@ if (f) then
 		</style>
 	</defs>
 	<g id="background" fill="url(#backgroundGradient)" >
-		<rect x="0" y="0" width="704px" height="220px" stroke="black"/>
+		<rect x="0" y="0" width="794px" height="220px" stroke="black"/>
 	</g>
 	
 	
@@ -343,14 +341,14 @@ if (f) then
 end
 
 ?>
-<table class="elements" style="width: 800px;">
+<table class="elements" cellspacing="0" cellpadding="1" style="padding: 0px;">
 <tr>
   <th colspan="2"><? printf("Traffic history for the last %u hours:", my.howLong);?> [<a href="/?history=24">last day</a> | <a href="/?history=48">last two days</a> | <a href="/?history=168">last week</a>]</th></tr>
 <tr><td>
-  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="704" height="220"> </object></td><td><img src="../legend_traffic.png" width="96" height="221" /></td></tr>
+  <object data="/traffic_snapshot2.svg" type="image/svg+xml" width="694" height="220"> </object></td><td><img src="../legend_traffic.png" width="96" height="221" /></td></tr>
 </table>
 <p align="center">
-<table class="elements" style="width: 800px;">
+<table class="elements" style="width: 800px;" cellspacing="0" cellpadding="0">
 <tr><th>Traffic shares across services:</th></tr>
 <tr><td>
   <object data="/traffic_piechart_shares.svg" type="image/svg+xml" width="800" height="220"> </object>
