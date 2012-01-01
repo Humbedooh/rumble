@@ -134,6 +134,7 @@ for lib in sqlite3 gnutls openssl pthread crypto lua; do
 	if [ $files -lt 1 ]; then
 		echo "[31m[BAD][0m"
 		echo "Couldn't find lib$lib-dev, please install it before compiling.";
+		echo "You could try the following: sudo apt-get install libgnutls-dev libsqlite3-dev liblua5.1 libssl0.9.8"
 		exit
 	fi
 	echo "[32m[OK][0m"

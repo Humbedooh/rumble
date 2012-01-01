@@ -312,6 +312,7 @@ rumble_mailbox *rumble_account_data(uint32_t uid, const char *user, const char *
         /* Account type */
         tmp = strclone(dbr->column[4].data.string);
         rumble_string_lower(tmp);
+        printf("Mbox %s@%s is of type %s\n", acc->user, acc->domain->name, tmp);
         acc->type = RUMBLE_MTYPE_MBOX;
         if (!strcmp(tmp, "alias")) acc->type = RUMBLE_MTYPE_ALIAS;
         else if (!strcmp(tmp, "mod"))

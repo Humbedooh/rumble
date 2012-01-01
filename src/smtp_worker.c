@@ -341,6 +341,7 @@ void *rumble_worker_process(void *m) {
 
                 /*~~~~~~~~~~*/
                 size_t  fsize;
+                int knowType = 0;
                 /*~~~~~~~~~~*/
 
                 item->account = user;
@@ -356,7 +357,7 @@ void *rumble_worker_process(void *m) {
                                     *nfilename;
                         const char  *path;
                         /*~~~~~~~~~~~~~~~~~~~*/
-
+                        knowType = 1;
                         rumble_debug("mailman", "Delivering message %s to mailbox %s @ %s...", item->fid, user->user, user->domain->name);
 
                         /* Start by making a copy of the letter */
@@ -389,43 +390,50 @@ void *rumble_worker_process(void *m) {
                     }
 
                     if (user->type & RUMBLE_MTYPE_ALIAS) {
-
+                        knowType = 1;
                         /* mail alias */
+                        rumble_debug("mailman", "%s@%s is an alias, looking up arguments", user->user, user->domain->name);
                         if (strlen(user->arg)) {
 
                             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-                            char    *pch = strtok(user->arg, " ");
+                            char    *pch = strtok(user->arg, " ,;");
                             char    *email = (char *) calloc(1, 256);
+                            char    xemail[256];
                             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
                             while (pch != NULL) {
                                 memset(email, 0, 128);
                                 if (strlen(pch) >= 3) {
 
                                     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
                                     char    *loops = (char *) calloc(1, 4);
+                                    
                                     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                                     sprintf(loops, "%u", item->loops);
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
+                                        memset(xemail, 0, 256);
+                                        snprintf(xemail, 255, "<%s>", email);
+                                        rumble_debug("mailman", "Delivering message %s to alias %s...", item->fid, xemail);
                                         radb_run_inject(master->_core.mail,
                                                         "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%s,%s,%s,%s,%s)",
-                                                        loops, item->fid, item->sender->raw, email, item->flags);
+                                                        loops, item->fid, item->sender->raw, xemail, item->flags);
                                     }
                                 }
 
-                                pch = strtok(NULL, " ");
+                                pch = strtok(NULL, " ,;");
                             }
 
                             free(email);
                         }
-
+                        else {
+                            rumble_debug("mailman", "No arguments supplied for alias account!");
+                        }
                         /* done here! */
                     }
 
                     if (user->type & RUMBLE_MTYPE_MOD) {
-
+                        knowType = 1;
                         /* feed to module */
                         printf("<worker> Feeding mail to module %s\n", user->arg);
                         rumble_server_schedule_hooks(master, (sessionHandle *) item, RUMBLE_HOOK_FEED); /* hack, hack, hack */
@@ -433,18 +441,21 @@ void *rumble_worker_process(void *m) {
                     }
 
                     if (user->type & RUMBLE_MTYPE_FEED) {
-
+                        knowType = 1;
                         /*
                          * feed to program or url ;
                          * done here!
                          */
                     }
                 }
-
+                if (knowType == 0) {
+                    printf("I don't know what type of mailbox <%s@%s> is, ignoring mail :(\n", user->user, user->domain->name);
+                }
                 rumble_free_account(user);
             } else {
                 printf("I couldn't find %s :(\n", item->recipient->raw);
             }
+            
         } /* Foreign delivery? */ else {
 
             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/

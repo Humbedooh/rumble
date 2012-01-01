@@ -440,7 +440,7 @@ typedef struct
     uint32_t                brecv;
     char                    rejected;
 } clientHandle;
-#   define RUMBLE_LSTATES  25
+#   define RUMBLE_LSTATES  50
 
 /*
  -----------------------------------------------------------------------------------------------------------------------

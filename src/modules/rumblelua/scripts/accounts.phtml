@@ -50,7 +50,10 @@ if (http.form.user) then
 			acc.domain = domain;
 			acc.type = http.form.type or "mbox";
 			acc.password = (http.form.password or ""):SHA256();
-			acc.arguments = http.form.arguments or "";
+			if (http.form.type == "alias") then acc.arguments = http.form.alias; end
+			if (http.form.type == "mod") then acc.arguments = http.form.mod; end
+			if (http.form.type == "feed") then acc.arguments = http.form.feed; end
+			acc.arguments = acc.arguments or "";
 			Mailman.saveAccount(acc);
 			printf("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
 		end
@@ -87,9 +90,9 @@ Create a new account:</th>
 <input type="hidden" name="u" value="<?=http.form.u?>"/>
 <table width="700" border="0" cellpadding="1" cellspacing="0">
   <tr>
-    <td width="149" class="create_mailbox_tab" id="cr_mbox"><img src="..//icons/email.png" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mbox');">Email account</a></td>
-    <td width="150" class="create_mailbox_tab" id="cr_alias"><img src="../icons/email_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('alias');">Email alias</a></td>
-    <td width="173" class="create_mailbox_tab" id="cr_mod"><img src="../icons/plugin_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mod');">Feed to module</a></td>
+    <td width="184" class="create_mailbox_tab" id="cr_mbox"><img src="..//icons/email.png" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mbox');">Email account</a></td>
+    <td width="151" class="create_mailbox_tab" id="cr_alias"><img src="../icons/email_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('alias');">Email alias</a></td>
+    <td width="160" class="create_mailbox_tab" id="cr_mod"><img src="../icons/plugin_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mod');">Feed to module</a></td>
     <td colspan="2" class="create_mailbox_tab" id="cr_feed"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('feed');">Feed to program</a></td>
   </tr>
   <tr>
@@ -127,9 +130,9 @@ When a letter is received, Rumble will then run the program and send the letter 
     <td class="create_mailbox_tab_selected" colspan="4"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
     </tr>
   <tr  style="display:none;"id="cr_field_alias">
-    <td class="create_mailbox_tab_selected">Forwarding address:</td>
+    <td class="create_mailbox_tab_selected">Forwarding address(es):</td>
     <td class="create_mailbox_tab_selected" colspan="3"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
-    <td width="211" class="create_mailbox_tab_selected">&nbsp;</td>
+    <td width="186" class="create_mailbox_tab_selected">&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_mod">
     <td class="create_mailbox_tab_selected">Module to feed:</td>
@@ -140,7 +143,7 @@ When a letter is received, Rumble will then run the program and send the letter 
 			end
 			?> 
             </select>&nbsp;</td>
-    <td width="1" class="create_mailbox_tab_selected">&nbsp;</td>
+    <td width="9" class="create_mailbox_tab_selected">&nbsp;</td>
     <td class="create_mailbox_tab_selected">&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_feed">

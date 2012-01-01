@@ -1,3 +1,6 @@
+=====
+ABOUT
+=====
 Rumble is a mail server for SMTP, POP3 and IMAP4 with an extensive C/C++ and Lua API for scripting. 
 It comes with support for SSL/TLS, SQLite and MySQL and has a web-based administration and webmail feature.
 Additional includes modules feature greylisting, DNS blacklisting, SpamAssassin support and dynamic 
@@ -26,3 +29,31 @@ IMAP4:
 - UIDPLUS
 - LEMONADE compliance (CONDSTORE, IDLE)
 - STARTTLS
+
+
+==========
+INSTALLING
+==========
+
+If you've downloaded the source code, you can compile the program by running the following command:
+bash compile.sh
+
+Compiling the source requires the following libraries and headers to be installed:
+- libgnutls-dev
+- libsqlite3-dev
+- liblua5.1
+- libssl0.9.8
+
+If you can't or won't compile the program yourself, you can download the binary packages of Rumble instead
+at https://sourceforge.net/projects/rumbleserver/files/Linux%20binaries/
+
+
+
+=======
+RUNNING
+=======
+
+To run Rumble, simply copy the compiled binary and its files to an appropriate folder and run
+/path/to/rumble.
+
+To run the mail server as a daemon process (recommended), run: /path/to/rumble --service

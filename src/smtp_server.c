@@ -362,6 +362,9 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
             }
 
             /* Not local and no relaying allowed, return 530. */
+            
+            ((rumbleService*) session->_svc)->traffic.rejections++;
+            session->client->rejected = 1;
             dvector_pop(session->recipients);
             rumble_free_address(recipient);
             recipient = 0;
@@ -372,6 +375,8 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
         dvector_pop(session->recipients);
         rumble_free_address(recipient);
         recipient = 0;
+        ((rumbleService*) session->_svc)->traffic.rejections++;
+        session->client->rejected = 1;
         return (550);
     }
 

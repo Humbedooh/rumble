@@ -1,8 +1,8 @@
 /* Rumble_version.h */
 #ifndef RUMBLE_VERSION_H
 #   define RUMBLE_VERSION_H
-#   define RUMBLE_VERSION           0x002C0B97   /* Application version */
-#   define RUMBLE_VERSION_REQUIRED  0x002B0B97   /* Internal version for module checks */
+#   define RUMBLE_VERSION_REQUIRED           0x002B0B96   /* Internal version for module checks */
+#   define RUMBLE_VERSION                    0x002C0BA5   /* Application version */
 #   define RUMBLE_MAJOR             (RUMBLE_VERSION & 0xFF000000) >> 24
 #   define RUMBLE_MINOR             (RUMBLE_VERSION & 0x00FF0000) >> 16
 #   define RUMBLE_REV               (RUMBLE_VERSION & 0x0000FFFF)
