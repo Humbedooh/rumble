@@ -57,6 +57,27 @@ else
 	echo "[33m$gccver[0m"
 fi
 
+
+#apt and yum checks
+printf "%-32s" "Checking for apt..."
+haveApt=`apt-get -v`
+if [ $? -ne 0 ]; then
+	echo "[31mNO[0m"
+	exit
+else
+	echo "[33mYES[0m"
+fi
+
+printf "%-32s" "Checking for yum..."
+haveYum=`yum -v`
+if [ $? -ne 0 ]; then
+	echo "[31mNO[0m"
+	exit
+else
+	echo "[33mYES[0m"
+fi
+
+
 # SQL database support 
 cmysql=0
 libmysql=""
