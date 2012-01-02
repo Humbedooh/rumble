@@ -37,6 +37,7 @@ if (http.form.user) then
 			if (acc.type == "alias") then acc.arguments = http.form.alias; end
 			if (acc.type == "mod") then acc.arguments = http.form.mod; end
 			if (acc.type == "feed") then acc.arguments = http.form.feed; end
+			if (acc.type == "relay") then acc.arguments = http.form.relay; end
 			Mailman.saveAccount(acc);
 			printf("Account %s@%s successfully updated.", acc.name, acc.domain);
 			acc = nil;
@@ -53,6 +54,7 @@ if (http.form.user) then
 			if (http.form.type == "alias") then acc.arguments = http.form.alias; end
 			if (http.form.type == "mod") then acc.arguments = http.form.mod; end
 			if (http.form.type == "feed") then acc.arguments = http.form.feed; end
+			if (http.form.type == "relay") then acc.arguments = http.form.relay; end
 			acc.arguments = acc.arguments or "";
 			Mailman.saveAccount(acc);
 			printf("<tr><td><b><font color='darkgreen'>Account %s@%s has been created.</font></b></td></tr>", http.form.user, domain);
@@ -90,13 +92,15 @@ Create a new account:</th>
 <input type="hidden" name="u" value="<?=http.form.u?>"/>
 <table width="700" border="0" cellpadding="1" cellspacing="0">
   <tr>
-    <td width="184" class="create_mailbox_tab" id="cr_mbox"><img src="..//icons/email.png" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mbox');">Email account</a></td>
-    <td width="151" class="create_mailbox_tab" id="cr_alias"><img src="../icons/email_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('alias');">Email alias</a></td>
-    <td width="160" class="create_mailbox_tab" id="cr_mod"><img src="../icons/plugin_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mod');">Feed to module</a></td>
+    <td width="146" class="create_mailbox_tab" id="cr_mbox"><img src="..//icons/email.png" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mbox');">Email account</a></td>
+    <td width="125" class="create_mailbox_tab" id="cr_alias"><img src="../icons/email_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('alias');">Email alias</a></td>
+    <td width="138" class="create_mailbox_tab" id="cr_mod"><img src="../icons/plugin_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mod');">Feed to module</a></td>
     <td colspan="2" class="create_mailbox_tab" id="cr_feed"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('feed');">Feed to program</a></td>
+    <td colspan="2" class="create_mailbox_tab" id="cr_relay"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('relay');">Relay</a></td>
+
   </tr>
   <tr>
-    <td colspan="5" class="create_mailbox_tab_selected">
+    <td colspan="6" class="create_mailbox_tab_selected">
     <div style="display:none;" id="cr_desc_mbox">Enter the desired username and password below to create a standard mailbox.<br />
 The new mailbox will be ready for use instantly.</div>
     <div style="display:none;" id="cr_desc_alias">An alias is an email account that forwards all messages to a different account.<br />
@@ -120,39 +124,44 @@ When a letter is received, Rumble will then run the program and send the letter 
   </tr>
   <tr>
     <td class="create_mailbox_tab_selected">Account name:</td>
-    <td colspan="4" class="create_mailbox_tab_selected">
+    <td colspan="5" class="create_mailbox_tab_selected">
       <label for="user"></label>
       <input name="user" type="text" id="user" maxlength="92" autocomplete="off"/> @ <?=domain?>
     </td>
   </tr>
   <tr  style="display:none;"id="cr_field_mbox">
     <td class="create_mailbox_tab_selected">(new) Password:</td>
-    <td class="create_mailbox_tab_selected" colspan="4"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
+    <td class="create_mailbox_tab_selected" colspan="5"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
     </tr>
   <tr  style="display:none;"id="cr_field_alias">
     <td class="create_mailbox_tab_selected">Forwarding address(es):</td>
-    <td class="create_mailbox_tab_selected" colspan="3"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
-    <td width="186" class="create_mailbox_tab_selected">&nbsp;</td>
+    <td class="create_mailbox_tab_selected" colspan="4"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
+    <td width="121" class="create_mailbox_tab_selected">&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_mod">
     <td class="create_mailbox_tab_selected">Module to feed:</td>
-    <td class="create_mailbox_tab_selected" colspan="2"><select name="module">
+    <td class="create_mailbox_tab_selected" colspan="3"><select name="module">
             <?
 			for k,mod in pairs(Rumble.listModules()) do
 				printf("<option value=\"%s\">%s</option>", mod.file, mod.title);
 			end
 			?> 
             </select>&nbsp;</td>
-    <td width="9" class="create_mailbox_tab_selected">&nbsp;</td>
+    <td width="118" class="create_mailbox_tab_selected">&nbsp;</td>
     <td class="create_mailbox_tab_selected">&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_feed">
     <td class="create_mailbox_tab_selected">Program to feed:</td>
-    <td class="create_mailbox_tab_selected" colspan="3"><input name="feed" type="text" id="user4" size="48" maxlength="92" /></td>
+    <td class="create_mailbox_tab_selected" colspan="4"><input name="feed" type="text" id="user4" size="48" maxlength="92" /></td>
+    <td class="create_mailbox_tab_selected">&nbsp;</td>
+  </tr>
+  <tr  style="display:none;"id="cr_field_relay">
+    <td class="create_mailbox_tab_selected">Relay host:</td>
+    <td class="create_mailbox_tab_selected" colspan="4"><input name="relay" type="text" id="user4" size="48" maxlength="92" /></td>
     <td class="create_mailbox_tab_selected">&nbsp;</td>
   </tr>
   <tr>
-    <td colspan="5" class="create_mailbox_tab_selected"><input type="submit" name="Save account" id="Save account" value="Save account" />
+    <td colspan="6" class="create_mailbox_tab_selected"><input type="submit" name="Save account" id="Save account" value="Save account" />
       <input type="reset" name="Save account2" id="Save account2" value="Reset" 
       onclick="this.form.u.value=''; this.form.update.value='0';"
       /></td>
@@ -182,7 +191,7 @@ When a letter is received, Rumble will then run the program and send the letter 
    
    <script type="application/javascript">
 function changeForm(what) {
-	var list = new Array('smurf','mbox','alias','mod','feed','moresmurf');
+	var list = new Array('smurf','mbox','alias','mod','feed','relay');
 	document.forms['crform'].type.value = what;
 	for (i in list) {
 		var obj = document.getElementById('cr_' + list[i]);

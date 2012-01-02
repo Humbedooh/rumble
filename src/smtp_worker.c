@@ -284,6 +284,75 @@ void *rumble_sanitation_process(void *m) {
     return (0);
 }
 
+void rumble_deliver_foreign(mqueue* item, masterHandle* master, const char* host) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    dvector                     *mx;
+    mxRecord                    *mxr;
+    char                        *filename;
+    char                        tmp[512];
+    const char                  *statement;
+    uint32_t                    delivered = 500;
+    rumble_sendmail_response    *res;
+    d_iterator                  iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host <%s>.", item->fid, item->recipient->user,
+                    item->recipient->domain, host);
+    mx = comm_mxLookup(host);
+    if (!mx or!mx->size) {
+        rumble_debug("mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", host);
+        delivered = 450;
+    } else if (mx->size) {
+        filename = (char *) calloc(1, 256);
+        if (!filename) merror();
+        sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
+        foreach((mxRecord *), mxr, mx, iter) {
+            if (rhdict(badmx, mxr->host)) continue; /* ignore bogus MX records */
+            rumble_debug("mailman", "Trying %s (%u)...\n", mxr->host, mxr->preference);
+
+            /* Anything below 300 would be good here :> */
+            res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient);
+
+            /* get the best result from all servers we've tried */
+            delivered = (res->replyCode < delivered) ? res->replyCode : delivered;
+            rumble_debug("mailman", "MTA <%s> returned code %d (%s)", res->replyServer, delivered, res->replyMessage);
+            rumble_flush_dictionary(res->flags);
+            free(res->flags);
+            free(res->replyMessage);
+            free(res->replyServer);
+            free(res);
+            if (delivered <= 299) break;            /* yay! */
+        }
+
+        free(filename);
+    }
+
+    if (delivered >= 500) {
+
+        /* critical failure, giving up. */
+        rumble_debug("mailman", "Critical failure, giving up for now.", 0);
+    } else if (delivered >= 400) {
+
+        /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
+        rumble_debug("mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
+        sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
+        statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
+        if (master->_core.mail->dbType == RADB_MYSQL) {
+            statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s)";
+        }
+
+        radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
+        rumble_debug("mailman", "Mail %s queued", item->fid);
+        memset(tmp, 0, 256);
+    } else {
+        rumble_debug("mailman", "Mail %s delivered.", item->fid);
+    }
+
+    if (mx) comm_mxFree(mx);    /* Clean up DNS records. */
+    /* All done! */
+}
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -447,6 +516,15 @@ void *rumble_worker_process(void *m) {
                          * done here!
                          */
                     }
+                    
+                    if (user->type & RUMBLE_MTYPE_RELAY) {
+                        knowType = 1;
+                        rumble_deliver_foreign(item, master, user->arg);
+                        /*
+                         * feed to other server
+                         * done here!
+                         */
+                    }
                 }
                 if (knowType == 0) {
                     printf("I don't know what type of mailbox <%s@%s> is, ignoring mail :(\n", user->user, user->domain->name);
@@ -456,73 +534,7 @@ void *rumble_worker_process(void *m) {
                 printf("I couldn't find %s :(\n", item->recipient->raw);
             }
             
-        } /* Foreign delivery? */ else {
-
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-            dvector                     *mx;
-            mxRecord                    *mxr;
-            char                        *filename;
-            const char                  *statement;
-            uint32_t                    delivered = 500;
-            rumble_sendmail_response    *res;
-            d_iterator                  iter;
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
-            rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host.", item->fid, item->recipient->user,
-                         item->recipient->domain);
-            mx = comm_mxLookup(item->recipient->domain);
-            if (!mx or!mx->size) {
-                rumble_debug("mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", item->recipient->domain);
-                delivered = 450;
-            } else if (mx->size) {
-                filename = (char *) calloc(1, 256);
-                if (!filename) merror();
-                sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
-                foreach((mxRecord *), mxr, mx, iter) {
-                    if (rhdict(badmx, mxr->host)) continue; /* ignore bogus MX records */
-                    rumble_debug("mailman", "Trying %s (%u)...\n", mxr->host, mxr->preference);
-
-                    /* Anything below 300 would be good here :> */
-                    res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient);
-
-                    /* get the best result from all servers we've tried */
-                    delivered = (res->replyCode < delivered) ? res->replyCode : delivered;
-                    rumble_debug("mailman", "MTA <%s> returned code %d (%s)", res->replyServer, delivered, res->replyMessage);
-                    rumble_flush_dictionary(res->flags);
-                    free(res->flags);
-                    free(res->replyMessage);
-                    free(res->replyServer);
-                    free(res);
-                    if (delivered <= 299) break;            /* yay! */
-                }
-
-                free(filename);
-            }
-
-            if (delivered >= 500) {
-
-                /* critical failure, giving up. */
-                rumble_debug("mailman", "Critical failure, giving up for now.", 0);
-            } else if (delivered >= 400) {
-
-                /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
-                rumble_debug("mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
-                sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
-                statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
-                if (master->_core.mail->dbType == RADB_MYSQL) {
-                    statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s)";
-                }
-
-                radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
-                rumble_debug("mailman", "Mail %s queued", item->fid);
-                memset(tmp, 0, 256);
-            } else {
-                rumble_debug("mailman", "Mail %s delivered.", item->fid);
-            }
-
-            if (mx) comm_mxFree(mx);    /* Clean up DNS records. */
-            /* All done! */
-        }
+        } /* Foreign delivery? */ else rumble_deliver_foreign(item, master, item->recipient->domain);
 
         if (item->recipient) rumble_free_address(item->recipient);
         if (item->sender) rumble_free_address(item->sender);

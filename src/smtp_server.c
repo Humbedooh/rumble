@@ -564,7 +564,7 @@ ssize_t rumble_server_smtp_rset(masterHandle *master, sessionHandle *session, co
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
 
     /* Reset the session handle */
-    session->flags = 0;
+    session->flags = session->flags & RUMBLE_SMTP_HAS_EHLO; // don't lose the HELO/EHLO flag
     rumble_clean_session(session);
 
     /* Fire post-processing hooks. */
