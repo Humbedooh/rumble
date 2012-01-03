@@ -1,7 +1,9 @@
 <?
 if (not session.credentials.admin) then
-	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
-	stop();
+?>
+<div class='notification'>You need admin priveledges to access this page!</div>
+<?
+	return;
 else
 	my.config = getFile(session.path .. "/auth.cfg");
 	my.auth = {};

@@ -12,7 +12,7 @@ SMTP is the service that handles all incoming requests to send emails. It checks
 The Post Office Protocol version 3 is an old, but simple and stable method of retrieving emails. It consists of one single folder where all emails are stored, and you can either read them, delete them, or...do nothing.
 	]],
 	imap4 = [[ 
-The Internet Message Access Protocol is a more complex protocol than the simple POP3. It allows for multiple folders as well as flagging messages and searching among them. This is the prefered message retrieval service today. Rumble's IMAP service is compliant with most of the LEMONADE profile, which allows the server to be more optimized for handling communication with mobile devices such as phones and tablet PCs.
+The Internet Message Access Protocol is a more complex protocol than the simple POP3. It allows for multiple folders as well as flagging messages and searching among them. This is the prefered message retrieval service today. Rumbles IMAP service is compliant with most of the LEMONADE profile, which allows the server to be more optimized for handling communication with mobile devices such as phones and tablet PCs.
 	]]
 };
 if (descriptions[session.section]) then
@@ -23,7 +23,7 @@ end
 <?
 if (not session.credentials.admin) then
 	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
-	stop();
+	return;
 end
 local svc = session.section;
 my.svcinfo = Rumble.serviceInfo(svc);

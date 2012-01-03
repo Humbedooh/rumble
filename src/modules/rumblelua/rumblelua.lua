@@ -87,7 +87,7 @@ end
 
 
 --[[ parseHTTP: Parses a HTTP request into URL, headers and form data ]] --
-function parseHTTP(session)
+function _G.parseHTTP(session)
     local ret = { URL = "", headers = {}, form = {}};
     local formdata = "";
 
@@ -131,14 +131,17 @@ function parseHTTP(session)
     return ret;
 end
 
-function append(...) -- This is the printf() function for the <? code ?> snippets inside the PHTML files.
+function _G.append(...) -- This is the printf() function for the <? code ?> snippets inside the PHTML files.
     sess.contents = sess.contents .. string.format(...);
+end
+
+function _G.echo(msg)
+	sess.contents = sess.contents .. (msg or "");
 end
 
 
 -- acceptHTTP: The big service handling function.
 function acceptHTTP(session)
-
     local rnd = math.random(os.time());
 
     local servername = Rumble.readConfig("servername");
@@ -237,31 +240,22 @@ function acceptHTTP(session)
             session.atend = nil;
             _G.my = {};
             _G.rnd = rnd;
-            session.script = session.script:gsub("<%?(.-)%?>",
-                function(x)
-                    _G.session = session;
+            local Script = " <? local SC_START; ?> " .. session.script .. "<? local SC_END; ?>\n";
+			_G.my = {};
+			_G.rnd = rnd;
+			_G.printf = append;
+			session.script = Script:gsub("(.-)<%?(.-)%?>",
+				function(z,x)
+					_G.session = session;
 					if (string.sub(x, 1, 1) == "=") then
 						x = x:sub(2);
-						local ret, val = pcall(loadstring("return ("..x..")")); return val or x;
+						x = "echo("..x..");"
 					end
-                    local output = "";
-                    local _printf = printf;
-                    local xit = _G.exit;
-                    _G.stop = function() session.stop = true; session.atend = session.script:find("<?"..x.."?>",1,true) + output:len();end
-                    _G.exit = function() session.killed = true; return; end
-                    _G.printf = function(...) output = output .. string.format(...); end;
-                    if (not session.stop and x) then
-                        loadstring(x)();
-                    end
-                    _G.printf = _printf;
-                    _G.exit = xit;
+					return string.format("echo([=[%s]=]);\n %s", z, x);
+				end);
 
-                    session.pos = string.format("<!-- %#08X -->", math.random(1,999999));
-                    return output;
-                end);
-
-            if (session.atend) then session.script = session.script:sub(1,session.atend); end
-            session.contents = session.script:gsub("%[%%contents%%%]", session.script);
+			session.contents = "";
+			loadstring(session.script)();
         end
 
      end
@@ -288,8 +282,6 @@ function acceptHTTP(session)
 					x = x:sub(2);
 					local ret, val = pcall(loadstring("return ("..x..")")); return val or x;
 				end
-                _G.stop = function() session.stop = true; session.atend = session.output:find("<?"..x.."?>",1,true) + output:len();end
-                _G.exit = function() session.killed = true; return; end
                 _G.printf = function(...) output = output .. string.format(...); end;
                 if (not session.stop) then
                     loadstring(x)();

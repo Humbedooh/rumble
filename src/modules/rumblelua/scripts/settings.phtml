@@ -2,8 +2,8 @@
 
 <?
 if (not session.credentials.admin) then
-	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
-	stop();
+	echo("<div class='notification'>You need admin priveledges to access this page!</div>");
+	return
 end
 if (session.section and http.form.save and session.credentials.admin) then
 	printf("Saving " .. Rumble.readConfig("config-dir") .. "/rumble.conf");

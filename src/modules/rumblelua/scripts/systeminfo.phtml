@@ -4,8 +4,8 @@
 
 <?
 if (not session.credentials.admin) then
-	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
-	stop();
+	echo("<div class='notification'>You need admin priveledges to access this page!</div>");
+	return;
 end
 ?>
 <code>

@@ -139,7 +139,8 @@ local errors = 0;
 -- Check server name
 if (Rumble.readConfig("servername") == "mydomain.tld") then
 	errors = errors + 1;
-	printf("<div class='warning'><b>Warning:</b> Your hostname (mydomain.tld) is <font color='#a30'>incorrect</font>.<br/>Please go to the <a href='/settings'>server settings</a> page and correct this.</div>");
+?><div class='warning'><b>Warning:</b> Your hostname (mydomain.tld) is <font color='#a30'>incorrect</font>.<br/>Please go to the <a href='/settings'>server settings</a> page and correct this.</div>
+<?
 end
 
 -- Check writeability on default storage path

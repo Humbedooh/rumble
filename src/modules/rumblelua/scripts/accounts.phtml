@@ -5,7 +5,7 @@ acc = nil;
 update = "0";
 if (not (session.credentials.admin or session.credentials.domains[domain])) then
 	printf("<div class='notification'>You need admin priveledges to access this page!</div>");
-	stop();
+	return;
 end
 if (http.form.u) then
 	acc = Mailman.readAccount(tonumber(http.form.u));
