@@ -1440,7 +1440,7 @@ void *rumble_lua_handle_service(void *s) {
          */
 
         L = rumble_acquire_state();
-        lua_settop(L, 0);
+        //lua_settop(L, 0);
         lua_rawgeti(L, LUA_REGISTRYINDEX, svc->lua_handle);
 
         /*$2
@@ -1501,7 +1501,6 @@ void *rumble_lua_handle_service(void *s) {
 
         disconnect(session.client->socket);
         rumble_clean_session(sessptr);
-        lua_gc(L, LUA_GCCOLLECT, 0);
         rumble_release_state(L);
 
         /*$2

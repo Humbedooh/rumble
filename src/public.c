@@ -619,8 +619,11 @@ lua_State *rumble_acquire_state(void) {
 
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
-        if (!master->lua.states[x].working) {
+        if (!master->lua.states[x].working && master->lua.states[x].state) {
             master->lua.states[x].working = 1;
+#ifdef RUMBLE_MSC
+			printf("Opened Lua state no. %u\n", x);
+#endif
             L = (lua_State *) master->lua.states[x].state;
             found = 1;
             break;
@@ -645,11 +648,15 @@ void rumble_release_state(lua_State *X) {
     int             x;
     masterHandle    *master = public_master_handle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+	lua_gc(X, LUA_GCCOLLECT, 0);
+	
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         if (master->lua.states[x].state == X) {
             master->lua.states[x].working = 0;
+#ifdef RUMBLE_MSC
+			printf("Closed Lua state no. %u\n", x);
+#endif
             break;
         }
     }

@@ -482,7 +482,7 @@ void *rumble_worker_process(void *m) {
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
                                         memset(xemail, 0, 256);
-                                        snprintf(xemail, 255, "<%s>", email);
+                                        _snprintf(xemail, 255, "<%s>", email);
                                         rumble_debug("mailman", "Delivering message %s to alias %s...", item->fid, xemail);
                                         radb_run_inject(master->_core.mail,
                                                         "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%s,%s,%s,%s,%s)",

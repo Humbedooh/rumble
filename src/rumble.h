@@ -538,7 +538,7 @@ typedef struct
         struct
         {
             int     working;
-            void    *state;
+           lua_State* state;
         } states[RUMBLE_LSTATES];
         pthread_mutex_t mutex;
     } lua;

@@ -138,7 +138,7 @@ void rumble_modules_load(masterHandle *master) {
 
             for (x = 0; x < RUMBLE_LSTATES; x++) {
                 if (!master->lua.states[x].state) {
-                    master->lua.states[x].state = (void *) luaL_newstate();
+                    master->lua.states[x].state = luaL_newstate();
                     L = (lua_State *) master->lua.states[x].state;
                     lua_pushinteger(L, x);
                     luaL_ref(L, LUA_REGISTRYINDEX);
