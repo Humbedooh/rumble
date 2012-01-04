@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include "../radb/radb.h"
+#include "../radb/radb.cpp"
 
 // SHA256 Implementation:
 // jagatsastry.nitk@gmail.com 9th April  '09
