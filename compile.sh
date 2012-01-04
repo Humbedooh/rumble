@@ -218,7 +218,7 @@ if [ ! -e "src/radb/radb.h" ]; then
 		mkdir src/radb
 		wget --no-check-certificate -O src/radb/radb.c https://github.com/Humbedooh/radb/raw/master/radb.c
 		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.h
-		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.cpp
+		wget --no-check-certificate -O src/radb/radb.cpp https://github.com/Humbedooh/radb/raw/master/radb.cpp
 	else
 		echo "You don't have the RADB files in the src/radb folder, and I need wget to fetch them :("
 		echo "Please get RADB from https://github.com/Humbedooh/radb or install wget"
