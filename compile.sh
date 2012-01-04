@@ -215,6 +215,7 @@ fi
 if [ ! -e "src/radb/radb.h" ]; then
 	if [ $haveWget -eq 1 ]; then
 		echo "Downloading RADB package..."
+		mkdir src/radb
 		wget --no-check-certificate -O src/radb/radb.c https://github.com/Humbedooh/radb/raw/master/radb.c
 		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.h
 		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.cpp
