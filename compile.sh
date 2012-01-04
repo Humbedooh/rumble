@@ -209,6 +209,7 @@ if [ ! -e "src/radb/radb.h" ]; then
 		echo "Downloading RADB package..."
 		wget --no-check-certificate -O src/radb/radb.c https://github.com/Humbedooh/radb/raw/master/radb.c
 		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.h
+		wget --no-check-certificate -O src/radb/radb.h https://github.com/Humbedooh/radb/raw/master/radb.cpp
 	else
 		echo "You don't have the RADB files in the src/radb folder, and I need wget to fetch them :("
 		echo "Please get RADB from https://github.com/Humbedooh/radb or install wget"
@@ -262,6 +263,34 @@ fi
 
 ar -rvc build/librumble.a $l 
 ranlib build/librumble.a
+
+
+
+echo
+echo "----------------------------------------"
+echo "Compiling rumblectrl"
+echo "----------------------------------------"
+l=""
+for f in src/rumblectrl/*.cpp
+do
+	f=${f/.cpp/}
+	f=${f/src\/rumblectrl\//}
+	l="$l build/$f.opp"
+	echo   "[36m$f.c[0m"
+	gcc    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.opp src/rumblectrl/$f.cpp  -lsqlite3 $libmysql
+done
+
+gcc -o build/rumblectrl $l -lsqlite3
+if [[ $? -ne 0 ]]; then
+	echo "An error occured, trying to compile with static linkage instead";
+	gcc -static -o build/rumblectrl $l -lsqlite3
+	if [[ $? -ne 0 ]]; then
+		echo "Meh, that didn't work either - giving up!"
+		exit
+	fi
+fi
+
+
 
 echo
 echo "----------------------------------------"
