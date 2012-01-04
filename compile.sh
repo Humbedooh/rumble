@@ -57,6 +57,14 @@ else
 	echo "[33m$gccver[0m"
 fi
 
+printf "%-32s" "Checking for g++..."
+gccver=`g++ -dumpversion`
+if [ $? -ne 0 ]; then
+	echo "g++ wasn't found, rumblectrl will not be compiled."
+else
+	echo "[33m$gccver[0m"
+fi
+
 
 #apt and yum checks
 printf "%-32s" "Checking for apt..."
@@ -277,13 +285,13 @@ do
 	f=${f/src\/rumblectrl\//}
 	l="$l build/$f.opp"
 	echo   "[36m$f.c[0m"
-	gcc    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.opp src/rumblectrl/$f.cpp  -lsqlite3 $libmysql
+	g++    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.opp src/rumblectrl/$f.cpp  -lsqlite3 $libmysql
 done
 
-gcc -o build/rumblectrl $l -lsqlite3
+g++ -o build/rumblectrl $l -lsqlite3
 if [[ $? -ne 0 ]]; then
 	echo "An error occured, trying to compile with static linkage instead";
-	gcc -static -o build/rumblectrl $l -lsqlite3
+	g++ -static -o build/rumblectrl $l -lsqlite3
 	if [[ $? -ne 0 ]]; then
 		echo "Meh, that didn't work either - giving up!"
 		exit
