@@ -46,7 +46,7 @@ else
 	haveLocate=0
 fi
 
-
+gpp=0
 
 printf "%-32s" "Checking for gcc..."
 gccver=`gcc -dumpversion`
@@ -58,11 +58,12 @@ else
 fi
 
 printf "%-32s" "Checking for g++..."
-gccver=`g++ -dumpversion`
+gppver=`g++ -dumpversion`
 if [ $? -ne 0 ]; then
 	echo "g++ wasn't found, rumblectrl will not be compiled."
 else
 	echo "[33m$gccver[0m"
+	gpp=1
 fi
 
 
