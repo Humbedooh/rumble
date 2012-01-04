@@ -274,31 +274,31 @@ ar -rvc build/librumble.a $l
 ranlib build/librumble.a
 
 
+if [[ $gpp -ne 0]]; then
+	echo
+	echo "----------------------------------------"
+	echo "Compiling rumblectrl"
+	echo "----------------------------------------"
+	l=""
+	for f in src/rumblectrl/*.cpp
+	do
+		f=${f/.cpp/}
+		f=${f/src\/rumblectrl\//}
+		l="$l build/$f.opp"
+		echo   "[36m$f.c[0m"
+		g++    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.opp src/rumblectrl/$f.cpp  -lsqlite3 $libmysql
+	done
 
-echo
-echo "----------------------------------------"
-echo "Compiling rumblectrl"
-echo "----------------------------------------"
-l=""
-for f in src/rumblectrl/*.cpp
-do
-	f=${f/.cpp/}
-	f=${f/src\/rumblectrl\//}
-	l="$l build/$f.opp"
-	echo   "[36m$f.c[0m"
-	g++    $add -c -O2 -Wall -MMD -MP -MF build/$f.o.d -o build/$f.opp src/rumblectrl/$f.cpp  -lsqlite3 $libmysql
-done
-
-g++ -o build/rumblectrl $l -lsqlite3
-if [[ $? -ne 0 ]]; then
-	echo "An error occured, trying to compile with static linkage instead";
-	g++ -static -o build/rumblectrl $l -lsqlite3
+	g++ -o build/rumblectrl $l -lsqlite3
 	if [[ $? -ne 0 ]]; then
-		echo "Meh, that didn't work either - giving up!"
-		exit
+		echo "An error occured, trying to compile with static linkage instead";
+		g++ -static -o build/rumblectrl $l -lsqlite3
+		if [[ $? -ne 0 ]]; then
+			echo "Meh, that didn't work either - giving up!"
+			
+		fi
 	fi
 fi
-
 
 
 echo
