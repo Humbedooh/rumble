@@ -46,7 +46,7 @@ else
 	haveLocate=0
 fi
 
-gpp=0
+
 
 printf "%-32s" "Checking for gcc..."
 gccver=`gcc -dumpversion`
@@ -61,9 +61,10 @@ printf "%-32s" "Checking for g++..."
 gppver=`g++ -dumpversion`
 if [ $? -ne 0 ]; then
 	echo "g++ wasn't found, rumblectrl will not be compiled."
+	havegpp=0
 else
 	echo "[33m$gccver[0m"
-	gpp=1
+	havegpp=1
 fi
 
 
@@ -275,7 +276,7 @@ ar -rvc build/librumble.a $l
 ranlib build/librumble.a
 
 
-if [$gpp -ne 0]; then
+if [ $havegpp -eq 1 ]; then
 	echo
 	echo "----------------------------------------"
 	echo "Compiling rumblectrl"
