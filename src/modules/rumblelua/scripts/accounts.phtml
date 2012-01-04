@@ -157,7 +157,7 @@ When a letter is received, Rumble will then run the program and send the letter 
   </tr>
   <tr  style="display:none;"id="cr_field_relay">
     <td class="create_mailbox_tab_selected">Relay host:</td>
-    <td class="create_mailbox_tab_selected" colspan="4"><input name="relay" type="text" id="user4" size="48" maxlength="92" /></td>
+    <td class="create_mailbox_tab_selected" colspan="4"><input name="relay" type="text" id="relay" size="48" maxlength="92" /></td>
     <td class="create_mailbox_tab_selected">&nbsp;</td>
   </tr>
   <tr>
@@ -223,7 +223,7 @@ if (acc and acc.type) then
 	document.forms['crform'].user.value = "%s";
 	document.forms['crform'].alias.value = "%s";
 	document.forms['crform'].feed.value = "%s";
-	document.forms['crform'].mod.value = "%s";
+	document.forms['crform'].relay.value = "%s";
 	]], acc.name, acc.arguments, acc.arguments, acc.arguments);
 end 
 ?>

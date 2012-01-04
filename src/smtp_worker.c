@@ -577,7 +577,7 @@ void *rumble_worker_init(void *T) {
     pthread_attr_t  attr;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    sleep(5);   /* wait for the others :> */
+    sleep(3);   /* wait for the others :> */
     if (master->_core.mail->dbType == RADB_MYSQL) {
         statement = "SELECT time, loops, fid, sender, recipient, flags, id FROM queue WHERE time <= NOW() LIMIT 4";
     }
