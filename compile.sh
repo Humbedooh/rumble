@@ -275,7 +275,7 @@ ar -rvc build/librumble.a $l
 ranlib build/librumble.a
 
 
-if [[ $gpp -ne 0]]; then
+if [$gpp -ne 0]; then
 	echo
 	echo "----------------------------------------"
 	echo "Compiling rumblectrl"
