@@ -22,7 +22,7 @@ void                rumble_rw_start_read(rumble_readerwriter *rrw);
 void                rumble_rw_stop_read(rumble_readerwriter *rrw);
 void                rumble_rw_start_write(rumble_readerwriter *rrw);
 void                rumble_rw_stop_write(rumble_readerwriter *rrw);
-void rumble_rw_destroy(rumble_readerwriter *rrw);
+void                rumble_rw_destroy(rumble_readerwriter *rrw);
 char                base64_encode_value(char value_in);
 int                 base64_encode_block(const char *plaintext_in, size_t length_in, char *code_out, base64_encodestate *state_in);
 int                 base64_encode_blockend(char *code_out, base64_encodestate *state_in);

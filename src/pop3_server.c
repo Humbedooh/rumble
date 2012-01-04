@@ -9,6 +9,7 @@
 #include "reply_codes.h"
 #include "private.h"
 #include "mailman.h"
+
 /*
  =======================================================================================================================
     Main loop
@@ -129,10 +130,9 @@ void *rumble_pop3_init(void *T) {
         free(arg);
         free(cmd);
         rumble_clean_session(sessptr);
-        mailman_commit(pops->bag, pops->folder, 1);    /* Delete letters marked "expunged" to prevent IMAP mixup */
+        mailman_commit(pops->bag, pops->folder, 1); /* Delete letters marked "expunged" to prevent IMAP mixup */
         rumble_free_account(pops->account);
         mailman_close_bag(pops->bag);
-        
 
         /* Update the thread stats */
         pthread_mutex_lock(&(svc->mutex));
@@ -241,7 +241,8 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
             } else {
                 rumble_debug("pop3", "%s's request for %s@%s was granted\n", session->client->addr, usr, dmn);
                 session->flags |= RUMBLE_POP3_HAS_AUTH;
-                pops->bag = mailman_get_bag(pops->account->uid, strlen(pops->account->domain->path) ? pops->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
+                pops->bag = mailman_get_bag(pops->account->uid,
+                                            strlen(pops->account->domain->path) ? pops->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
                 pops->folder = 0;   /* 0 = INBOX */
                 return (104);
             }
@@ -257,19 +258,20 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    mailman_letter                   *letter;
-    uint32_t                        i,j;
-    mailman_folder    *folder ;
-    accountSession                  *pops = (accountSession *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    mailman_letter  *letter;
+    uint32_t        i,
+                    j;
+    mailman_folder  *folder;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rcsend(session, "+OK\r\n");
     rumble_rw_start_read(pops->bag->lock);
     folder = mailman_get_folder(pops->bag, "INBOX");
     i = 0;
-    for(j=0;j<folder->size;j++) {
+    for (j = 0; j < folder->size; j++) {
         letter = &folder->letters[j];
         if (!letter->inuse) continue;
         i++;
@@ -287,13 +289,14 @@ ssize_t rumble_server_pop3_list(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    mailman_letter                   *letter;
-    uint32_t                        n,
-                                    s,j;
-    mailman_folder    *folder;
-    accountSession                  *pops = (accountSession *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    mailman_letter  *letter;
+    uint32_t        n,
+                    s,
+                    j;
+    mailman_folder  *folder;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     printf("Doing stat\n");
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
@@ -307,7 +310,7 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
     n = 0;
     s = 0;
     printf("summing up\n");
-    for(j=0;j<folder->size;j++) {
+    for (j = 0; j < folder->size; j++) {
         letter = &folder->letters[j];
         if (!letter->inuse) continue;
         n++;
@@ -326,19 +329,20 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    mailman_letter                   *letter;
-    uint32_t                        i,j;
-    mailman_folder    *folder;
-    accountSession                  *pops = (accountSession *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    mailman_letter  *letter;
+    uint32_t        i,
+                    j;
+    mailman_folder  *folder;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     rcsend(session, "+OK\r\n");
     rumble_rw_start_read(pops->bag->lock);
     folder = mailman_get_folder(pops->bag, "INBOX");
     i = 0;
-    for(j=0;j<folder->size;j++) {
+    for (j = 0; j < folder->size; j++) {
         letter = &folder->letters[j];
         if (!letter->inuse) continue;
         i++;
@@ -356,14 +360,15 @@ ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    mailman_letter                   *letter;
-    mailman_folder    *folder;
-    int                             j,
-                                    i,k,
-                                    found;
-    accountSession                  *pops = (accountSession *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    mailman_letter  *letter;
+    mailman_folder  *folder;
+    int             j,
+                    i,
+                    k,
+                    found;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     i = atoi(parameters);
@@ -371,7 +376,7 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     rumble_rw_start_write(pops->bag->lock);
     folder = mailman_get_folder(pops->bag, "INBOX");
     j = 0;
-    for(k=0;k<folder->size;k++) {
+    for (k = 0; k < folder->size; k++) {
         letter = &folder->letters[k];
         if (!letter->inuse) continue;
         j++;
@@ -394,15 +399,16 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    mailman_letter                   *letter;
-    char                            buffer[2049];
-    FILE                            *fp;
-    int                             j,
-                                    i,k;
-    mailman_folder    *folder;
-    accountSession                  *pops = (accountSession *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    mailman_letter  *letter;
+    char            buffer[2049];
+    FILE            *fp;
+    int             j,
+                    i,
+                    k;
+    mailman_folder  *folder;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     fp = 0;
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
@@ -410,7 +416,7 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
     rumble_rw_start_read(pops->bag->lock);
     folder = mailman_get_folder(pops->bag, "INBOX");
     j = 0;
-    for(k=0;k<folder->size;k++) {
+    for (k = 0; k < folder->size; k++) {
         letter = &folder->letters[k];
         if (!letter->inuse) continue;
         j++;
@@ -434,11 +440,10 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n", i);
 
         /* Might as well delete the letter if it doesn't exist :( */
-        
         rumble_rw_start_write(pops->bag->lock);
         folder = mailman_get_folder(pops->bag, "INBOX");
         j = 0;
-        for(k=0;k<folder->size;k++) {
+        for (k = 0; k < folder->size; k++) {
             letter = &folder->letters[k];
             if (!letter->inuse) continue;
             j++;
@@ -460,16 +465,17 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
  */
 ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char                            buffer[2049];
-    FILE                            *fp;
-    int                             i,
-                                    lines,
-                                    j,k;
-    mailman_folder    *folder;
-    mailman_letter                   *letter;
-    accountSession                  *pops = (accountSession *) session->_svcHandle;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char            buffer[2049];
+    FILE            *fp;
+    int             i,
+                    lines,
+                    j,
+                    k;
+    mailman_folder  *folder;
+    mailman_letter  *letter;
+    accountSession  *pops = (accountSession *) session->_svcHandle;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     fp = 0;
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
@@ -477,7 +483,7 @@ ssize_t rumble_server_pop3_top(masterHandle *master, sessionHandle *session, con
         rumble_rw_start_read(pops->bag->lock);
         folder = mailman_get_folder(pops->bag, "INBOX");
         j = 0;
-        for(k=0;k<folder->size;k++) {
+        for (k = 0; k < folder->size; k++) {
             letter = &folder->letters[k];
             if (!letter->inuse) continue;
             j++;

@@ -284,7 +284,11 @@ void *rumble_sanitation_process(void *m) {
     return (0);
 }
 
-void rumble_deliver_foreign(mqueue* item, masterHandle* master, const char* host) {
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     dvector                     *mx;
@@ -298,7 +302,7 @@ void rumble_deliver_foreign(mqueue* item, masterHandle* master, const char* host
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host <%s>.", item->fid, item->recipient->user,
-                    item->recipient->domain, host);
+                 item->recipient->domain, host);
     mx = comm_mxLookup(host);
     if (!mx or!mx->size) {
         rumble_debug("mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", host);
@@ -362,7 +366,6 @@ void *rumble_worker_process(void *m) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     rumbleService   *svc = (rumbleService *) m;
     mqueue          *item;
-    char            *tmp;
     rumble_mailbox  *user;
     ssize_t         rc;
     masterHandle    *master = svc->master;
@@ -376,7 +379,6 @@ void *rumble_worker_process(void *m) {
     sess->_svc = svc;
     if (!sess) merror();
     sess->_master = (masterHandle *) svc->master;
-    tmp = (char *) calloc(1, 256);
     while (1) {
         pthread_mutex_lock(&svc->mutex);
         pthread_cond_wait(&svc->cond, &svc->mutex);
@@ -408,10 +410,10 @@ void *rumble_worker_process(void *m) {
             user = rumble_account_data(0, item->recipient->user, item->recipient->domain);
             if (user) {
 
-                /*~~~~~~~~~~*/
+                /*~~~~~~~~~~~~~~~~~*/
                 size_t  fsize;
-                int knowType = 0;
-                /*~~~~~~~~~~*/
+                int     knowType = 0;
+                /*~~~~~~~~~~~~~~~~~*/
 
                 item->account = user;
 
@@ -426,13 +428,14 @@ void *rumble_worker_process(void *m) {
                                     *nfilename;
                         const char  *path;
                         /*~~~~~~~~~~~~~~~~~~~*/
+
                         knowType = 1;
                         rumble_debug("mailman", "Delivering message %s to mailbox %s @ %s...", item->fid, user->user, user->domain->name);
 
                         /* Start by making a copy of the letter */
                         fsize = rumble_copy_mail(master, item->fid, user->user, user->domain->name, (char **) &item->fid);
                         if (!item->fid || !fsize) {
-                            if (item->fid) free((void*)item->fid);
+                            if (item->fid) free((void *) item->fid);
                             fprintf(stderr, "<smtp::worker> Bad mail file, aborting\n");
                             continue;
                         }
@@ -460,6 +463,7 @@ void *rumble_worker_process(void *m) {
 
                     if (user->type & RUMBLE_MTYPE_ALIAS) {
                         knowType = 1;
+
                         /* mail alias */
                         rumble_debug("mailman", "%s@%s is an alias, looking up arguments", user->user, user->domain->name);
                         if (strlen(user->arg)) {
@@ -469,20 +473,24 @@ void *rumble_worker_process(void *m) {
                             char    *email = (char *) calloc(1, 256);
                             char    xemail[256];
                             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
                             while (pch != NULL) {
                                 memset(email, 0, 128);
                                 if (strlen(pch) >= 3) {
 
                                     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
                                     char    *loops = (char *) calloc(1, 4);
-                                    
                                     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
                                     sprintf(loops, "%u", item->loops);
                                     if (sscanf(pch, "%256c", email)) {
                                         rumble_string_lower(email);
                                         memset(xemail, 0, 256);
+#ifdef RUMBLE_MSC
                                         _snprintf(xemail, 255, "<%s>", email);
+#else
+                                        snprintf(xemail, 255, "<%s>", email);
+#endif
                                         rumble_debug("mailman", "Delivering message %s to alias %s...", item->fid, xemail);
                                         radb_run_inject(master->_core.mail,
                                                         "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%s,%s,%s,%s,%s)",
@@ -494,15 +502,16 @@ void *rumble_worker_process(void *m) {
                             }
 
                             free(email);
-                        }
-                        else {
+                        } else {
                             rumble_debug("mailman", "No arguments supplied for alias account!");
                         }
+
                         /* done here! */
                     }
 
                     if (user->type & RUMBLE_MTYPE_MOD) {
                         knowType = 1;
+
                         /* feed to module */
                         printf("<worker> Feeding mail to module %s\n", user->arg);
                         rumble_server_schedule_hooks(master, (sessionHandle *) item, RUMBLE_HOOK_FEED); /* hack, hack, hack */
@@ -511,31 +520,30 @@ void *rumble_worker_process(void *m) {
 
                     if (user->type & RUMBLE_MTYPE_FEED) {
                         knowType = 1;
+
                         /*
                          * feed to program or url ;
                          * done here!
                          */
                     }
-                    
+
                     if (user->type & RUMBLE_MTYPE_RELAY) {
                         knowType = 1;
                         rumble_deliver_foreign(item, master, user->arg);
-                        /*
-                         * feed to other server
-                         * done here!
-                         */
+
+                        /* feed to other server done here! */
                     }
                 }
+
                 if (knowType == 0) {
                     printf("I don't know what type of mailbox <%s@%s> is, ignoring mail :(\n", user->user, user->domain->name);
                 }
+
                 rumble_free_account(user);
             } else {
                 printf("I couldn't find %s :(\n", item->recipient->raw);
             }
-            
         } /* Foreign delivery? */ else rumble_deliver_foreign(item, master, item->recipient->domain);
-
         if (item->recipient) rumble_free_address(item->recipient);
         if (item->sender) rumble_free_address(item->sender);
         if (item->fid) free((char *) item->fid);

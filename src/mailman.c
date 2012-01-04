@@ -9,20 +9,22 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include "mailman.h"
-
 extern masterHandle *rumble_database_master_handle;
 
-
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 mailman_folder *mailman_new_folder(mailman_bag *bag) {
 
-    /*~~*/
+    /*~~~~~~*/
     int i,
-        f,x=0;
-    /*~~*/
+        f,
+        x = 0;
+    /*~~~~~~*/
 
     if (!bag) return (0);
     f = 0;
-    
 
     /* Look for an empty slot to add the folder */
     for (i = bag->firstFree; i < bag->size; i++) {
@@ -34,9 +36,9 @@ mailman_folder *mailman_new_folder(mailman_bag *bag) {
     }
 
     if (!x) {
-        bag->folders = (mailman_folder *) realloc((void*) bag->folders, (bag->size + 8) * sizeof(mailman_folder));
+        bag->folders = (mailman_folder *) realloc((void *) bag->folders, (bag->size + 8) * sizeof(mailman_folder));
         if (!bag->folders) printf("WTF?!\n");
-        for (i = bag->size-1; i < (bag->size + 8); i++) {
+        for (i = bag->size - 1; i < (bag->size + 8); i++) {
             bag->folders[i].inuse = 0;
         }
 
@@ -64,6 +66,7 @@ mailman_bag *mailman_new_bag(uint32_t uid, const char *path) {
     mailman_folder  *inbox;
     mailman_bag     *bag = (mailman_bag *) malloc(sizeof(mailman_bag));
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     bag->uid = uid;
     bag->lock = rumble_rw_init();
     bag->sessions = 1;
@@ -84,18 +87,16 @@ mailman_bag *mailman_new_bag(uint32_t uid, const char *path) {
  =======================================================================================================================
  =======================================================================================================================
  */
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
 mailman_letter *mailman_new_letter(mailman_folder *folder) {
-  
 
-    /*~~*/
+    /*~~~~~~*/
     int i,
-        f,x=0;
-    /*~~*/
-	  if (!folder) return (0);
+        f,
+        x = 0;
+    /*~~~~~~*/
+
+    if (!folder) return (0);
+
     /* Look for an empty spot first */
     for (i = folder->firstFree; i < folder->size; i++) {
         if (folder->letters[i].inuse == 0) {
@@ -108,14 +109,15 @@ mailman_letter *mailman_new_letter(mailman_folder *folder) {
 
     if (!x) {
         folder->letters = (mailman_letter *) realloc(folder->letters, (sizeof(mailman_letter)) * (folder->size + 33));
-        for (i = folder->size-1; i < folder->size + 32; i++) {
+        for (i = folder->size - 1; i < folder->size + 32; i++) {
             folder->letters[i].inuse = 0;
         }
 
         f = folder->size;
-        folder->firstFree = f+1;
+        folder->firstFree = f + 1;
         folder->size += 32;
     }
+
     return (&folder->letters[f]);
 }
 
@@ -123,7 +125,7 @@ mailman_letter *mailman_new_letter(mailman_folder *folder) {
  =======================================================================================================================
  =======================================================================================================================
  */
- void mailman_free_folder(mailman_folder *folder) {
+void mailman_free_folder(mailman_folder *folder) {
     if (!folder || !folder->inuse) return;
     if (!folder) return;
     if (folder->letters) free(folder->letters);
@@ -140,25 +142,26 @@ mailman_letter *mailman_new_letter(mailman_folder *folder) {
  */
 void mailman_free_bag(mailman_bag *bag) {
 
-    /*~~*/
-    int i;
-	mailman_bag *rbag = 0;
+    /*~~~~~~~~~~~~~~~~~~*/
+    int         i;
+    mailman_bag *rbag = 0;
     c_iterator  iter;
-    /*~~*/
+    /*~~~~~~~~~~~~~~~~~~*/
+
     if (!bag) return;
-    
     for (i = 0; i < bag->size; i++) {
         mailman_free_folder(&bag->folders[i]);
     }
-    free(bag->folders);
-	rumble_rw_destroy(bag->lock);
 
+    free(bag->folders);
+    rumble_rw_destroy(bag->lock);
     cforeach((mailman_bag *), rbag, rumble_database_master_handle->mailboxes.bags, iter) {
         if (rbag == bag) {
-			cvector_delete(&iter);
+            cvector_delete(&iter);
             break;
         }
     }
+
     free(bag);
 }
 
@@ -179,12 +182,13 @@ void mailman_close_bag(mailman_bag *bag) {
  =======================================================================================================================
  =======================================================================================================================
  */
- void mailman_add_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
+void mailman_add_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
     int             i;
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
+
     if (!folder) return;
     if (stop == 0) stop = start;
     rumble_rw_start_write(folder->lock);
@@ -213,12 +217,13 @@ void mailman_close_bag(mailman_bag *bag) {
  =======================================================================================================================
  =======================================================================================================================
  */
- void mailman_remove_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
+void mailman_remove_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
     int             i;
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
+
     if (!folder) return;
     if (stop == 0) stop = start;
     rumble_rw_start_write(folder->lock);
@@ -247,12 +252,13 @@ void mailman_close_bag(mailman_bag *bag) {
  =======================================================================================================================
  =======================================================================================================================
  */
- void mailman_set_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
+void mailman_set_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
     int             i;
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
+
     if (!folder) return;
     if (stop == 0) stop = start;
     rumble_rw_start_write(folder->lock);
@@ -260,7 +266,6 @@ void mailman_close_bag(mailman_bag *bag) {
         letter = &folder->letters[i];
         if (letter->inuse) {
             if (UID) {
-                
                 if (letter->id >= start && letter->id <= stop) {
                     letter->flags = flags;
                     letter->updated = 1;
@@ -290,6 +295,7 @@ void mailman_update_folders(mailman_bag *bag) {
     mailman_folder  *folder;
     int             i;
     /*~~~~~~~~~~~~~~~~~~~~*/
+
     dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", bag->uid);
     while ((dbr = radb_step(dbo))) {
         folder = 0;
@@ -303,7 +309,7 @@ void mailman_update_folders(mailman_bag *bag) {
         if (!folder) {
             folder = mailman_new_folder(bag);
             folder->fid = dbr->column[0].data.uint64;
-			folder->subscribed = dbr->column[2].data.int32;
+            folder->subscribed = dbr->column[2].data.int32;
             memset(folder->name, 0, 64);
             strncpy(folder->name, dbr->column[1].data.string, 64);
         }
@@ -326,17 +332,17 @@ void mailman_update_folder(mailman_folder *folder, uint32_t uid, uint64_t lastID
                     f,
                     lid;
     /*~~~~~~~~~~~~~~~~~~~~*/
+
     dbo = radb_prepare(rumble_database_master_handle->_core.mail,
-                       "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u AND folder = %l", uid,
-                       folder->fid);
+                       "SELECT id, fid, size, delivered, flags, folder FROM mbox WHERE uid = %u AND folder = %l", uid, folder->fid);
     while ((dbr = radb_step(dbo))) {
         f = 0;
-        
         lid = dbr->column[0].data.int64;
         for (i = 0; i < folder->size; i++) {
             if (folder->letters[i].inuse) {
                 if (lid == folder->letters[i].id) {
-                    f++; break;
+                    f++;
+                    break;
                 }
             }
         }
@@ -354,6 +360,7 @@ void mailman_update_folder(mailman_folder *folder, uint32_t uid, uint64_t lastID
             f = 0;
         }
     }
+
     radb_cleanup(dbo);
 }
 
@@ -367,6 +374,7 @@ mailman_folder *mailman_get_folder(mailman_bag *bag, const char *name) {
     mailman_folder  *folder = 0;
     int             i;
     /*~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     if (!bag || !name) return (0);
     rumble_rw_start_read(bag->lock);
     for (i = 0; i < bag->size; i++) {
@@ -437,6 +445,7 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
     char            filename[512];
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     printf("mailman_commit()\n");
     if (!bag or!folder) return;
     rumble_debug("mailman", "Updating #%u's folder <%s>", bag->uid, folder->name);
@@ -445,7 +454,10 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
     for (i = 0; i < folder->size; i++) {
         letter = &folder->letters[i];
         if (letter->inuse) {
-            //printf("Letter %lu has flags <%08X>, looking for <%08X>\n", letter->id, letter->flags, RUMBLE_LETTER_DELETED);
+
+            /*
+             * printf("Letter %lu has flags <%08X>, looking for <%08X>\n", letter->id, letter->flags, RUMBLE_LETTER_DELETED);
+             */
             if ((expungeOnly && (letter->flags & RUMBLE_LETTER_EXPUNGE)) || (!expungeOnly && (letter->flags & RUMBLE_LETTER_DELETED))) {
                 printf("Deleting letter no. %lu\n", letter->id);
                 radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);
@@ -478,6 +490,7 @@ FILE *mailman_open_letter(mailman_bag *bag, mailman_folder *folder, uint64_t id)
     mailman_letter  *letter = 0;
     int             i;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     for (i = 0; i < folder->size; i++) {
         if (folder->letters[i].inuse && folder->letters[i].id == id) {
             letter = &folder->letters[i];
@@ -501,7 +514,7 @@ void mailman_copy_letter(
     mailman_folder  *destFolder,
     uint64_t        start,
     uint64_t        stop,
-    uint32_t            UID) {
+    uint32_t        UID) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int             i;
@@ -512,6 +525,7 @@ void mailman_copy_letter(
                     *out;
     char            buffer[4096];
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     printf("mailman_copy_letter()\n");
     if (!sourceFolder || !destFolder || !bag) return;
     if (stop == 0) stop = start;
@@ -543,9 +557,7 @@ void mailman_copy_letter(
                                         "INSERT INTO mbox (id,uid, fid, folder, size, flags) VALUES (NULL,%u, %s, %l, %u, %u)", bag->uid,
                                         fid, destFolder->fid, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
                     }
-
-                }
-                else {
+                } else {
                     rumble_debug("mailman", "Couldn't create copy of letter at %s, aborting.", filename);
                 }
 
@@ -561,14 +573,14 @@ void mailman_copy_letter(
  =======================================================================================================================
  =======================================================================================================================
  */
-mailman_bag* mailman_get_bag(uint32_t uid, const char *path) {
+mailman_bag *mailman_get_bag(uint32_t uid, const char *path) {
 
     /*~~~~~~~~~~~~~~~~~~*/
-    int         f = 0;
     mailman_bag *bag = 0;
     mailman_bag *rbag = 0;
     c_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~*/
+
     cforeach((mailman_bag *), bag, rumble_database_master_handle->mailboxes.bags, iter) {
         if (bag->uid == uid) {
             rumble_rw_start_write(bag->lock);
@@ -821,7 +833,7 @@ rumble_parsed_letter *rumble_mailman_readmail_private(FILE *fp, const char *boun
 
                     /*
                      * printf(".");
-                     * New body, malloc i
+                     * New body, malloc
                      */
                     if (!letter->body) {
                         letter->body = (char *) calloc(1, llen + 1);

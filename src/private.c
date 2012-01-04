@@ -158,11 +158,15 @@ rumble_readerwriter *rumble_rw_init(void) {
     return (rrw);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
 void rumble_rw_destroy(rumble_readerwriter *rrw) {
-	pthread_mutex_destroy(&rrw->mutex);
-	pthread_cond_destroy(&rrw->reading);
-	pthread_cond_destroy(&rrw->writing);
-	free(rrw);
+    pthread_mutex_destroy(&rrw->mutex);
+    pthread_cond_destroy(&rrw->reading);
+    pthread_cond_destroy(&rrw->writing);
+    free(rrw);
 }
 
 /*

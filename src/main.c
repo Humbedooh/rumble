@@ -186,17 +186,15 @@ static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
     } else {
         if (!alreadyDead) {
 
-            /*~~~~~~~~~~~~~~~~~~~~~~~*/
-            void            *array[50];
-            char            **messages;
-            int             size,
-                            i;
-            sig_ucontext_t  *uc;
-            ucontext_t      *context;
-            /*~~~~~~~~~~~~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~~~~~*/
+            void        *array[50];
+            char        **messages;
+            int         size,
+                        i;
+            ucontext_t  *context;
+            /*~~~~~~~~~~~~~~~~~~~*/
 
             alreadyDead++;
-            uc = (sig_ucontext_t *) ucontext;
             context = (ucontext_t *) ucontext;
             rumble_debug("debug", "Caught signal %d (%s), address is %p\n", sig, strsignal(sig), info->si_addr);
             rumble_debug("debug", "PID=%d \n", getpid());
@@ -232,7 +230,7 @@ void init_signals(void) {
     sigact.sa_sigaction = signal_handler;
     sigemptyset(&sigact.sa_mask);
     sigact.sa_flags = SA_RESTART | SA_SIGINFO;
-    if (sigaction(SIGKILL, &sigact, 0) < 0) printf("Couldn't lock onto SIGKILL\n");
+    sigaction(SIGKILL, &sigact, 0);
     sigaction(SIGINT, &sigact, 0);
 
     /*
@@ -357,7 +355,7 @@ int rumbleStart(void) {
     }
 
     svc = comm_registerService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
-    comm_setServiceStack(svc, 512 * 1024); /* Set stack size for service to 512kb (should be enough) */
+    comm_setServiceStack(svc, 512 * 1024);  /* Set stack size for service to 512kb (should be enough) */
     if (rumble_config_int(master, "enableimap4")) {
         rumble_debug("core", "Launching IMAP4 service...");
         rc = comm_startService(svc);
@@ -378,6 +376,7 @@ int rumbleStart(void) {
     while (1) {
         sleep(999999);
     }
+
     return (EXIT_SUCCESS);
 }
 
@@ -463,7 +462,6 @@ int main(int argc, char **argv) {
         rsdict(s_args, "execpath", r_path);
     }
 
-    rumble_debug("startup", "Parsing exec arguments");
 #ifndef RUMBLE_MSC
     init_signals();
 #else
@@ -476,7 +474,6 @@ int main(int argc, char **argv) {
     atexit(&cleanup);
 #endif
     if (rhdict(s_args, "--service")) {
-        rumble_debug("startup", "--service detected, launching daemon process");
         shutUp = 1;
 
         /*~~~~~~~~~~~~~*/
@@ -485,12 +482,10 @@ int main(int argc, char **argv) {
         /*~~~~~~~~~~~~~*/
 
         if (pid != 0) exit(EXIT_SUCCESS);
-        
         setsid();
         printf("Starting rumble v/%u.%u.%u as daemon\n", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
         fclose(stdout);
         rumbleStart();
-      
 #else
         ServiceTable[0].lpServiceName = "Rumble Mail Server";
         ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTIONA) ServiceMain;

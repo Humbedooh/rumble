@@ -14,12 +14,14 @@ void rumble_args_free(rumble_args *d) {
     /*~~~~~~~~~~*/
     uint32_t    p;
     /*~~~~~~~~~~*/
-	if (!d) return;
-	if (d->argc && d->argv) {
-		for (p = 0; p < d->argc; p++) {
-	        if(d->argv[p]) free(d->argv[p]);
-	    }
-	}
+
+    if (!d) return;
+    if (d->argc && d->argv) {
+        for (p = 0; p < d->argc; p++) {
+            if (d->argv[p]) free(d->argv[p]);
+        }
+    }
+
     free(d->argv);
     free(d);
 }
@@ -47,7 +49,7 @@ rumble_args *rumble_read_words(const char *d) {
     ret->argc = 0;
     if (!d || !strlen(d)) {
         free(ret->argv);
-		ret->argv = 0;
+        ret->argv = 0;
         return (ret);
     }
 
@@ -622,7 +624,7 @@ lua_State *rumble_acquire_state(void) {
         if (!master->lua.states[x].working && master->lua.states[x].state) {
             master->lua.states[x].working = 1;
 #ifdef RUMBLE_MSC
-			printf("Opened Lua state no. %u\n", x);
+            printf("Opened Lua state no. %u\n", x);
 #endif
             L = (lua_State *) master->lua.states[x].state;
             found = 1;
@@ -648,14 +650,14 @@ void rumble_release_state(lua_State *X) {
     int             x;
     masterHandle    *master = public_master_handle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-	lua_gc(X, LUA_GCCOLLECT, 0);
-	
+
+    lua_gc(X, LUA_GCCOLLECT, 0);
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         if (master->lua.states[x].state == X) {
             master->lua.states[x].working = 0;
 #ifdef RUMBLE_MSC
-			printf("Closed Lua state no. %u\n", x);
+            printf("Closed Lua state no. %u\n", x);
 #endif
             break;
         }

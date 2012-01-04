@@ -11,7 +11,7 @@ if (http.form.username and not file.exists(session.path .. "/auth.cfg")) then
             file:write(http.form.username .. ":" .. pass .. ":*\r\n");
             file:close();
             session:send("HTTP/1.1 302 Moved\r\nLocation: /\r\n\r\n");
-            exit();
+            return;
         else
         	printf("<b>Error: </b>Could not write to file <i>auth.cfg</i>. Please check permissions!");
         end

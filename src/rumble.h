@@ -3,9 +3,9 @@
     This file is part of the Rumble Mail Server package.
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
-#ifndef RUMBLE_H
 
-#include "rumble_version.h"
+#ifndef RUMBLE_H
+#   include "rumble_version.h"
 #   define _HUGE   - 1
 #   define RUMBLE_H
 #   define RUMBLE_INITIAL_THREADS  25
@@ -16,7 +16,6 @@
 #   endif
 
 /* pragma message("Non-C99 compliant compiler used, boooooo!") */
-
 #   define R_WINDOWS   0
 #   define R_POSIX     0
 #   define R_LINUX     0
@@ -135,7 +134,7 @@
 #      include <lualib.h>
 #      include <lauxlib.h>
 #      include "rumble_lua.h"
-#define LUA_COMPAT_MODULE 1
+#      define LUA_COMPAT_MODULE   1
 #   endif
 
 /*$3
@@ -151,11 +150,11 @@
 /* include <mysql.h> */
 #   include <sqlite3.h>
 #   include "radb/radb.h"
-
 #   ifdef __cplusplus
 extern "C"
 {
 #   endif
+
 /*$5
  #######################################################################################################################
     FLAG DEFINITIONS
@@ -331,7 +330,7 @@ typedef struct
 
 typedef struct
 {
-    uint32_t inuse;
+    uint32_t    inuse;
     uint64_t    id;
     uint32_t    flags;
     uint32_t    size;
@@ -347,8 +346,8 @@ typedef struct
     mailman_letter      *letters;
     uint32_t            firstFree;
     rumble_readerwriter *lock;
-    uint32_t                subscribed;
-    char inuse;
+    uint32_t            subscribed;
+    char                inuse;
 } mailman_folder;
 typedef struct
 {
@@ -464,16 +463,18 @@ typedef struct
     char            *hash;      /* password hash */
 } rumble_mailbox;
 
-/*! Email address structure used by SMTP, POP3 and IMAP services
- * 
+/*
+ -----------------------------------------------------------------------------------------------------------------------
+    ! Email address structure used by SMTP, POP3 and IMAP services
+ -----------------------------------------------------------------------------------------------------------------------
  */
 typedef struct _address
 {
-    char    *user;              // user
-    char    *domain;            // domain name
-    char    *raw;               // email address in raw format
-    dvector *flags;             // BATV/VERP/Loop flags
-    char    *_flags;            // Raw flags
+    char    *user;          /* user */
+    char    *domain;        /* domain name */
+    char    *raw;           /* email address in raw format */
+    dvector *flags;         /* BATV/VERP/Loop flags */
+    char    *_flags;        /* Raw flags */
     char    *tag;           /* VERP or BATV tags */
 } address;
 typedef struct
@@ -537,8 +538,8 @@ typedef struct
     {
         struct
         {
-            int     working;
-           lua_State* state;
+            int         working;
+            lua_State   *state;
         } states[RUMBLE_LSTATES];
         pthread_mutex_t mutex;
     } lua;
@@ -704,7 +705,6 @@ typedef struct
     uint64_t    end;
 } rangePair;
 
-
 /*$5
  #######################################################################################################################
     FUNCTION PROTOTYPES
@@ -785,7 +785,7 @@ void                        comm_addEntry(rumbleService *svc, uint32_t bytes, ch
  =======================================================================================================================
  */
 
-uint32_t        rumble_domain_exists(const char *domain); //! Checks if the domain is a local domain
+uint32_t        rumble_domain_exists(const char *domain);   /* ! Checks if the domain is a local domain */
 uint32_t        rumble_account_exists_raw(const char *user, const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
 cvector         *rumble_domains_list(void);
@@ -802,9 +802,9 @@ void            rumble_domain_free(rumble_domain *domain);          /* cleanup f
  =======================================================================================================================
  */
 
-rumble_parsed_letter            *rumble_mailman_readmail_private(FILE *fp, const char *boundary, int depth);
-rumble_parsed_letter            *rumble_mailman_readmail(const char *filename);
-void                            rumble_mailman_free_parsed_letter(rumble_parsed_letter *letter);
+rumble_parsed_letter    *rumble_mailman_readmail_private(FILE *fp, const char *boundary, int depth);
+rumble_parsed_letter    *rumble_mailman_readmail(const char *filename);
+void                    rumble_mailman_free_parsed_letter(rumble_parsed_letter *letter);
 
 /*$5
  #######################################################################################################################
