@@ -87,7 +87,7 @@ rumble_args *rumble_splitstring(const char *d, char delimiter) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char        *s,
                 *buffer;
-    ssize_t     a,
+    size_t      a,
                 b,
                 c,
                 x,
@@ -143,7 +143,7 @@ void rumble_scan_ranges(rangePair *ranges, const char *line) {
     rumble_args *rangeList;
     size_t      first,
                 last;
-    int         x,
+    uint32_t    x,
                 y;
     /*~~~~~~~~~~~~~~~~~~~*/
 

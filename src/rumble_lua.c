@@ -36,7 +36,7 @@ static BOOL IsWow64(void) {
     /*
      * IsWow64Process is not available on all supported versions of Windows. ;
      * Use GetModuleHandle to get a handle to the DLL that contains the function ;
-     * and GetProcAddress to get a pointer to the function if available.
+     * and GetProcAddress to get a pointer to the function if available
      */
     fnIsWow64Process = (LPFN_ISWOW64PROCESS) GetProcAddress(GetModuleHandle(TEXT("kernel32")), "IsWow64Process");
     if (NULL != fnIsWow64Process) {
@@ -335,10 +335,10 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         rumble_debug("Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
 
-            /*~~*/
+            /*~~~~~~~~~~*/
             /* TODO: Make it delete the folders and letters! */
-            int i;
-            /*~~*/
+            uint32_t    i;
+            /*~~~~~~~~~~*/
 
             for (i = 0; i < bag->size; i++) {
                 folder = &bag->folders[i];

@@ -17,11 +17,11 @@ extern masterHandle *rumble_database_master_handle;
  */
 mailman_folder *mailman_new_folder(mailman_bag *bag) {
 
-    /*~~~~~~*/
-    int i,
-        f,
-        x = 0;
-    /*~~~~~~*/
+    /*~~~~~~~~~~~~~~*/
+    int         f,
+                x = 0;
+    uint32_t    i;
+    /*~~~~~~~~~~~~~~*/
 
     if (!bag) return (0);
     f = 0;
@@ -89,11 +89,11 @@ mailman_bag *mailman_new_bag(uint32_t uid, const char *path) {
  */
 mailman_letter *mailman_new_letter(mailman_folder *folder) {
 
-    /*~~~~~~*/
-    int i,
-        f,
-        x = 0;
-    /*~~~~~~*/
+    /*~~~~~~~~~~~~~~*/
+    int         f,
+                x = 0;
+    uint32_t    i;
+    /*~~~~~~~~~~~~~~*/
 
     if (!folder) return (0);
 
@@ -143,7 +143,7 @@ void mailman_free_folder(mailman_folder *folder) {
 void mailman_free_bag(mailman_bag *bag) {
 
     /*~~~~~~~~~~~~~~~~~~*/
-    int         i;
+    uint32_t    i;
     mailman_bag *rbag = 0;
     c_iterator  iter;
     /*~~~~~~~~~~~~~~~~~~*/
@@ -185,7 +185,7 @@ void mailman_close_bag(mailman_bag *bag) {
 void mailman_add_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
-    int             i;
+    uint32_t        i;
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
@@ -220,7 +220,7 @@ void mailman_add_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uin
 void mailman_remove_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
-    int             i;
+    uint32_t        i;
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
@@ -255,7 +255,7 @@ void mailman_remove_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, 
 void mailman_set_flags(mailman_folder *folder, uint32_t flags, uint32_t UID, uint64_t start, uint64_t stop) {
 
     /*~~~~~~~~~~~~~~~~~~~~*/
-    int             i;
+    uint32_t        i;
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
@@ -293,7 +293,7 @@ void mailman_update_folders(mailman_bag *bag) {
     radbObject      *dbo;
     radbResult      *dbr;
     mailman_folder  *folder;
-    int             i;
+    uint32_t        i;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     dbo = radb_prepare(rumble_database_master_handle->_core.db, "SELECT id, name, subscribed FROM folders WHERE uid = %u", bag->uid);
@@ -328,9 +328,9 @@ void mailman_update_folder(mailman_folder *folder, uint32_t uid, uint64_t lastID
     radbObject      *dbo;
     radbResult      *dbr;
     mailman_letter  *letter;
-    int             i,
-                    f,
+    int             f,
                     lid;
+    uint32_t        i;
     /*~~~~~~~~~~~~~~~~~~~~*/
 
     dbo = radb_prepare(rumble_database_master_handle->_core.mail,
@@ -372,7 +372,7 @@ mailman_folder *mailman_get_folder(mailman_bag *bag, const char *name) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~*/
     mailman_folder  *folder = 0;
-    int             i;
+    uint32_t        i;
     /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!bag || !name) return (0);
@@ -405,7 +405,7 @@ void mailman_rename_folder(mailman_folder *folder, const char *name) {
 void mailman_delete_folder(mailman_bag *bag, mailman_folder *folder) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             i,
+    uint32_t        i,
                     f;
     char            filename[512];
     mailman_letter  *letter;
@@ -440,8 +440,8 @@ void mailman_delete_folder(mailman_bag *bag, mailman_folder *folder) {
 void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             i,
-                    f;
+    uint32_t        i;
+    int             f;
     char            filename[512];
     mailman_letter  *letter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -488,7 +488,7 @@ FILE *mailman_open_letter(mailman_bag *bag, mailman_folder *folder, uint64_t id)
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char            filename[256];
     mailman_letter  *letter = 0;
-    int             i;
+    uint32_t        i;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     for (i = 0; i < folder->size; i++) {
@@ -517,7 +517,7 @@ void mailman_copy_letter(
     uint32_t        UID) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    int             i;
+    uint32_t        i;
     mailman_letter  *letter;
     char            *fid,
                     filename[256];
@@ -544,7 +544,7 @@ void mailman_copy_letter(
                     else {
 
                         /*~~~~~~~~*/
-                        ssize_t len;
+                        size_t  len;
                         /*~~~~~~~~*/
 
                         while (!feof(in)) {
