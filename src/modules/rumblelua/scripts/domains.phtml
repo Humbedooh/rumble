@@ -135,7 +135,7 @@
 	table.sort(domains);
 	for k,v in pairs(domains) do    
 		d = true;
-        if (session.credentials.admin or session.credentials.domains[k]) then
+        if (session.credentials.admin or session.credentials.domains[v]) then
             printf("<tr><td><img src='/icons/house.png' align='absmiddle'/>&nbsp;<a href='/accounts:%s'><strong>%s</strong></a></td><td><a href=\"/domains:%s\"><img title='Edit domain' src='/icons/report_edit.png' align='absmiddle'/></a>  <a href=\"/domains?domain=%s&delete=true\"><img title='Delete domain' src='/icons/delete.png' align='absmiddle'/></a></td></tr>",v,v,v,v);
         end
     end

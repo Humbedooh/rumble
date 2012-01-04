@@ -651,7 +651,7 @@ void rumble_release_state(lua_State *X) {
     masterHandle    *master = public_master_handle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    lua_gc(X, LUA_GCCOLLECT, 0);
+    
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         if (master->lua.states[x].state == X) {

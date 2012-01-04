@@ -1505,6 +1505,7 @@ void *rumble_lua_handle_service(void *s) {
 
         disconnect(session.client->socket);
         rumble_clean_session(sessptr);
+		lua_gc(L, LUA_GCCOLLECT, 0);
         rumble_release_state(L);
 
         /*$2
