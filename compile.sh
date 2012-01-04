@@ -63,18 +63,20 @@ printf "%-32s" "Checking for apt..."
 haveApt=`apt-get -v`
 if [ $? -ne 0 ]; then
 	echo "[31mNO[0m"
-	exit
+	haveApt=0
 else
-	echo "[33mYES[0m"
+	echo "[32mYES[0m"
+	haveApt=1
 fi
 
 printf "%-32s" "Checking for yum..."
 haveYum=`yum -v`
 if [ $? -ne 0 ]; then
 	echo "[31mNO[0m"
-	exit
+	haveYum=0
 else
-	echo "[33mYES[0m"
+	echo "[32mYES[0m"
+	haveYum=1
 fi
 
 
@@ -112,8 +114,14 @@ for lib in sqlite3 gnutls gcrypt ssl pthread crypto lua resolv; do
 	fi
 	if [ $files -lt 2 ]; then
 		echo "[31m[BAD][0m"
-		echo "Couldn't find lib$lib, please install it before compiling.";
-		exit
+		echo "Couldn't find lib$lib, attempting to install it.";
+		if [ $haveApt -gt 0 ]; then
+			apt-get install libgnutls-dev libsqlite3-dev liblua5.1 libssl0.9.8
+		else
+			if [ $haveYum -gt 0 ]; then
+				yum install libgnutls-dev libsqlite3-dev liblua5.1 libssl0.9.8
+			fi
+		fi
 	fi
 	echo "[32m[OK][0m"
 done
@@ -154,9 +162,13 @@ for lib in sqlite3 gnutls openssl pthread crypto lua; do
 	fi
 	if [ $files -lt 1 ]; then
 		echo "[31m[BAD][0m"
-		echo "Couldn't find lib$lib-dev, please install it before compiling.";
-		echo "You could try the following: sudo apt-get install libgnutls-dev libsqlite3-dev liblua5.1 libssl0.9.8"
-		exit
+		echo "Couldn't find lib$lib-dev, I'll try installing it for you.";
+		if [ $haveApt -eq 1 ]; then
+			apt-get install libgnutls-dev libsqlite3-dev liblua5.1 libssl0.9.8
+		fi
+		if [ $haveYum -eq 1 ]; then
+			yum install libgnutls-dev libsqlite3-dev liblua5.1 libssl0.9.8
+		fi
 	fi
 	echo "[32m[OK][0m"
 done
