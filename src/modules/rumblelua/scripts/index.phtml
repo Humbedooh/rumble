@@ -1,5 +1,4 @@
-<? dofile("modules/rumblelua/libpie.lua"); ?>
-<? my.debug = false; ?>
+<? dofile("modules/rumblelua/libpie.lua"); my.debug = false; ?>
 <style type="text/css">
 h1 {
 	font-size: 24px;
@@ -40,7 +39,7 @@ h1 {
 <h1><img src="../rumble_icon.png" alt="server" width="87" height="80" hspace="5" align="left">Server info</h1>
 <p><strong>Server version: </strong>Rumble for
 
-  <?=session.info.os?> (<?
+  <?=session.info.os ?> (<?
   if ((type(session.info.arch) == "string") and session.info.arch == "WoW64") then
   	printf("WoW64");
   else
@@ -88,7 +87,7 @@ printf(string.format("%u day(s), %02u:%02u:%02u", days,  hours,minutes,seconds))
 		end
 		if (svc == nil) then
 			printf("Error: Couldn't retrieve info on service %s!", v);
-			stop();
+			return;
 		end
 		local status = (svc.enabled == 1 and "Running") or (svc.enabled == 0 and "Stopped") or "Paused";
 		local icon = "<img src='/icons/service_" .. status:lower() .. ".png' align='absmiddle' />";
