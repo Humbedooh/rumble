@@ -115,7 +115,8 @@ void ServiceMain(int argc, char **argv) {
 
     /* The worker loop of a service */
     while (ServiceStatus.dwCurrentState == SERVICE_RUNNING) {
-        Sleep(999);
+        Sleep(60);
+        cleanup();
     }
 
     rumble_debug("startup", "EXIT: Program halted by services, shutting down.");
@@ -413,7 +414,8 @@ int rumbleStart(void) {
 
     rumble_debug("startup", "Rumble is up and running, listening for incoming calls!");
     while (1) {
-        sleep(999999);
+        cleanup();
+        sleep(60);
     }
 
     return (EXIT_SUCCESS);
@@ -554,17 +556,18 @@ void cleanup(void) {
     const char      *entry;
     /*~~~~~~~~~~~~~~~~~~~*/
 
-    rumble_debug("exit", "Cleaning up and writing log file.");
     if (sysLog) {
+        rewind(sysLog);
         obj = debugLog->last;
         while (obj) {
             entry = (char *) obj->object;
             if (entry && strlen(entry)) {
-                fprintf(sysLog, "%s\r\n", entry);
+                fprintf(sysLog, "%s", entry);
             }
 
             obj = obj->prev;
         }
+        fflush(sysLog);
     }
 
     /*
