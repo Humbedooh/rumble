@@ -17,202 +17,283 @@
 #include<fstream>
 #include<exception>
 #include<string>
+#include<string.h>
+#include <sys/types.h>
+#include <stdio.h>
 using namespace std;
 
-typedef unsigned int uint;
+#ifndef uint8
+#define uint8  unsigned char
+#endif
+
+#ifndef uint32
+#define uint32 unsigned long int
+#endif
 
 
-string fromDecimal(uint n, int b)
+/*--------------------------------------------------------------------------------------------------------*/
+typedef struct
 {
-	string chars="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	string result="";
-	while(n>0)
-	{
-		result=chars.at(n%b)+result;
-		n/=b;
-	}
+    uint32 total[2];
+    uint32 state[8];
+    uint8 buffer[64];
+}
+sha256_context;
 
-	return result;
+#define GET_UINT32(n,b,i)                       \
+{                                               \
+    (n) = ( (uint32) (b)[(i)    ] << 24 )       \
+        | ( (uint32) (b)[(i) + 1] << 16 )       \
+        | ( (uint32) (b)[(i) + 2] <<  8 )       \
+        | ( (uint32) (b)[(i) + 3]       );      \
 }
 
-	uint K[]=
-	{   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-   0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-   0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-   0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-   0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-   0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
-   
-    void makeblock(vector<uint>& ret, string p_msg)
-	{
-		uint cur=0;
-		int ind=0;
-		for(uint i=0; i<p_msg.size(); i++)
-		{
-			cur = (cur<<8) | (unsigned char)p_msg[i];
-			  
-			if(i%4==3)
-			{
-				ret.at(ind++)=cur;
-				cur=0;
-			}
-		}
-	}
-   
-class Block
-{
-	public:
-	vector<uint> msg;
-	
-	Block():msg(16, 0) { }
+#define PUT_UINT32(n,b,i)                       \
+{                                               \
+    (b)[(i)    ] = (uint8) ( (n) >> 24 );       \
+    (b)[(i) + 1] = (uint8) ( (n) >> 16 );       \
+    (b)[(i) + 2] = (uint8) ( (n) >>  8 );       \
+    (b)[(i) + 3] = (uint8) ( (n)       );       \
+}
 
-			
-	Block(string p_msg):msg(16, 0)
-	{ 
-		makeblock(msg, p_msg);
-	}
-	
+void sha256_starts( sha256_context *ctx )
+{
+    ctx->total[0] = 0;
+    ctx->total[1] = 0;
+
+    ctx->state[0] = 0x6A09E667;
+    ctx->state[1] = 0xBB67AE85;
+    ctx->state[2] = 0x3C6EF372;
+    ctx->state[3] = 0xA54FF53A;
+    ctx->state[4] = 0x510E527F;
+    ctx->state[5] = 0x9B05688C;
+    ctx->state[6] = 0x1F83D9AB;
+    ctx->state[7] = 0x5BE0CD19;
+}
+
+void sha256_process( sha256_context *ctx, uint8 data[64] )
+{
+    uint32 temp1, temp2, W[64];
+    uint32 A, B, C, D, E, F, G, H;
+
+    GET_UINT32( W[0],  data,  0 );
+    GET_UINT32( W[1],  data,  4 );
+    GET_UINT32( W[2],  data,  8 );
+    GET_UINT32( W[3],  data, 12 );
+    GET_UINT32( W[4],  data, 16 );
+    GET_UINT32( W[5],  data, 20 );
+    GET_UINT32( W[6],  data, 24 );
+    GET_UINT32( W[7],  data, 28 );
+    GET_UINT32( W[8],  data, 32 );
+    GET_UINT32( W[9],  data, 36 );
+    GET_UINT32( W[10], data, 40 );
+    GET_UINT32( W[11], data, 44 );
+    GET_UINT32( W[12], data, 48 );
+    GET_UINT32( W[13], data, 52 );
+    GET_UINT32( W[14], data, 56 );
+    GET_UINT32( W[15], data, 60 );
+
+#define  SHR(x,n) ((x & 0xFFFFFFFF) >> n)
+#define ROTR(x,n) (SHR(x,n) | (x << (32 - n)))
+
+#define S0(x) (ROTR(x, 7) ^ ROTR(x,18) ^  SHR(x, 3))
+#define S1(x) (ROTR(x,17) ^ ROTR(x,19) ^  SHR(x,10))
+
+#define S2(x) (ROTR(x, 2) ^ ROTR(x,13) ^ ROTR(x,22))
+#define S3(x) (ROTR(x, 6) ^ ROTR(x,11) ^ ROTR(x,25))
+
+#define F0(x,y,z) ((x & y) | (z & (x | y)))
+#define F1(x,y,z) (z ^ (x & (y ^ z)))
+
+#define R(t)                                    \
+(                                               \
+    W[t] = S1(W[t -  2]) + W[t -  7] +          \
+           S0(W[t - 15]) + W[t - 16]            \
+)
+
+#define P(a,b,c,d,e,f,g,h,x,K)                  \
+{                                               \
+    temp1 = h + S3(e) + F1(e,f,g) + K + x;      \
+    temp2 = S2(a) + F0(a,b,c);                  \
+    d += temp1; h = temp1 + temp2;              \
+}
+
+    A = ctx->state[0];
+    B = ctx->state[1];
+    C = ctx->state[2];
+    D = ctx->state[3];
+    E = ctx->state[4];
+    F = ctx->state[5];
+    G = ctx->state[6];
+    H = ctx->state[7];
+
+    P( A, B, C, D, E, F, G, H, W[ 0], 0x428A2F98 );
+    P( H, A, B, C, D, E, F, G, W[ 1], 0x71374491 );
+    P( G, H, A, B, C, D, E, F, W[ 2], 0xB5C0FBCF );
+    P( F, G, H, A, B, C, D, E, W[ 3], 0xE9B5DBA5 );
+    P( E, F, G, H, A, B, C, D, W[ 4], 0x3956C25B );
+    P( D, E, F, G, H, A, B, C, W[ 5], 0x59F111F1 );
+    P( C, D, E, F, G, H, A, B, W[ 6], 0x923F82A4 );
+    P( B, C, D, E, F, G, H, A, W[ 7], 0xAB1C5ED5 );
+    P( A, B, C, D, E, F, G, H, W[ 8], 0xD807AA98 );
+    P( H, A, B, C, D, E, F, G, W[ 9], 0x12835B01 );
+    P( G, H, A, B, C, D, E, F, W[10], 0x243185BE );
+    P( F, G, H, A, B, C, D, E, W[11], 0x550C7DC3 );
+    P( E, F, G, H, A, B, C, D, W[12], 0x72BE5D74 );
+    P( D, E, F, G, H, A, B, C, W[13], 0x80DEB1FE );
+    P( C, D, E, F, G, H, A, B, W[14], 0x9BDC06A7 );
+    P( B, C, D, E, F, G, H, A, W[15], 0xC19BF174 );
+    P( A, B, C, D, E, F, G, H, R(16), 0xE49B69C1 );
+    P( H, A, B, C, D, E, F, G, R(17), 0xEFBE4786 );
+    P( G, H, A, B, C, D, E, F, R(18), 0x0FC19DC6 );
+    P( F, G, H, A, B, C, D, E, R(19), 0x240CA1CC );
+    P( E, F, G, H, A, B, C, D, R(20), 0x2DE92C6F );
+    P( D, E, F, G, H, A, B, C, R(21), 0x4A7484AA );
+    P( C, D, E, F, G, H, A, B, R(22), 0x5CB0A9DC );
+    P( B, C, D, E, F, G, H, A, R(23), 0x76F988DA );
+    P( A, B, C, D, E, F, G, H, R(24), 0x983E5152 );
+    P( H, A, B, C, D, E, F, G, R(25), 0xA831C66D );
+    P( G, H, A, B, C, D, E, F, R(26), 0xB00327C8 );
+    P( F, G, H, A, B, C, D, E, R(27), 0xBF597FC7 );
+    P( E, F, G, H, A, B, C, D, R(28), 0xC6E00BF3 );
+    P( D, E, F, G, H, A, B, C, R(29), 0xD5A79147 );
+    P( C, D, E, F, G, H, A, B, R(30), 0x06CA6351 );
+    P( B, C, D, E, F, G, H, A, R(31), 0x14292967 );
+    P( A, B, C, D, E, F, G, H, R(32), 0x27B70A85 );
+    P( H, A, B, C, D, E, F, G, R(33), 0x2E1B2138 );
+    P( G, H, A, B, C, D, E, F, R(34), 0x4D2C6DFC );
+    P( F, G, H, A, B, C, D, E, R(35), 0x53380D13 );
+    P( E, F, G, H, A, B, C, D, R(36), 0x650A7354 );
+    P( D, E, F, G, H, A, B, C, R(37), 0x766A0ABB );
+    P( C, D, E, F, G, H, A, B, R(38), 0x81C2C92E );
+    P( B, C, D, E, F, G, H, A, R(39), 0x92722C85 );
+    P( A, B, C, D, E, F, G, H, R(40), 0xA2BFE8A1 );
+    P( H, A, B, C, D, E, F, G, R(41), 0xA81A664B );
+    P( G, H, A, B, C, D, E, F, R(42), 0xC24B8B70 );
+    P( F, G, H, A, B, C, D, E, R(43), 0xC76C51A3 );
+    P( E, F, G, H, A, B, C, D, R(44), 0xD192E819 );
+    P( D, E, F, G, H, A, B, C, R(45), 0xD6990624 );
+    P( C, D, E, F, G, H, A, B, R(46), 0xF40E3585 );
+    P( B, C, D, E, F, G, H, A, R(47), 0x106AA070 );
+    P( A, B, C, D, E, F, G, H, R(48), 0x19A4C116 );
+    P( H, A, B, C, D, E, F, G, R(49), 0x1E376C08 );
+    P( G, H, A, B, C, D, E, F, R(50), 0x2748774C );
+    P( F, G, H, A, B, C, D, E, R(51), 0x34B0BCB5 );
+    P( E, F, G, H, A, B, C, D, R(52), 0x391C0CB3 );
+    P( D, E, F, G, H, A, B, C, R(53), 0x4ED8AA4A );
+    P( C, D, E, F, G, H, A, B, R(54), 0x5B9CCA4F );
+    P( B, C, D, E, F, G, H, A, R(55), 0x682E6FF3 );
+    P( A, B, C, D, E, F, G, H, R(56), 0x748F82EE );
+    P( H, A, B, C, D, E, F, G, R(57), 0x78A5636F );
+    P( G, H, A, B, C, D, E, F, R(58), 0x84C87814 );
+    P( F, G, H, A, B, C, D, E, R(59), 0x8CC70208 );
+    P( E, F, G, H, A, B, C, D, R(60), 0x90BEFFFA );
+    P( D, E, F, G, H, A, B, C, R(61), 0xA4506CEB );
+    P( C, D, E, F, G, H, A, B, R(62), 0xBEF9A3F7 );
+    P( B, C, D, E, F, G, H, A, R(63), 0xC67178F2 );
+
+    ctx->state[0] += A;
+    ctx->state[1] += B;
+    ctx->state[2] += C;
+    ctx->state[3] += D;
+    ctx->state[4] += E;
+    ctx->state[5] += F;
+    ctx->state[6] += G;
+    ctx->state[7] += H;
+}
+
+void sha256_update( sha256_context *ctx, uint8 *input, uint32 length )
+{
+    uint32 left, fill;
+
+    if( ! length ) return;
+
+    left = ctx->total[0] & 0x3F;
+    fill = 64 - left;
+
+    ctx->total[0] += length;
+    ctx->total[0] &= 0xFFFFFFFF;
+
+    if( ctx->total[0] < length )
+        ctx->total[1]++;
+
+    if( left && length >= fill )
+    {
+        memcpy( (void *) (ctx->buffer + left),
+                (void *) input, fill );
+        sha256_process( ctx, ctx->buffer );
+        length -= fill;
+        input  += fill;
+        left = 0;
+    }
+
+    while( length >= 64 )
+    {
+        sha256_process( ctx, input );
+        length -= 64;
+        input  += 64;
+    }
+
+    if( length )
+    {
+        memcpy( (void *) (ctx->buffer + left),
+                (void *) input, length );
+    }
+}
+
+static uint8 sha256_padding[64] =
+{
+ 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
-	
 
-void split(vector<Block>& blks, string& msg)
+void sha256_finish( sha256_context *ctx, uint8 digest[32] )
 {
-	for(uint i=0; i<msg.size(); i+=64)
-	{
-           
-try
-{
-		 makeblock(blks[i/64].msg, msg.substr(i, 64));
-      }
-      catch(...)
-      {
+    uint32 last, padn;
+    uint32 high, low;
+    uint8 msglen[8];
 
-                         }
-	}
-}
-	
+    high = ( ctx->total[0] >> 29 )
+         | ( ctx->total[1] <<  3 );
+    low  = ( ctx->total[0] <<  3 );
 
-string mynum(uint x)
-{
- string ret;
-  for(uint i=0; i<4; i++)
-  ret+=char(0);
-  
-  for(uint i=4; i>=1; i--)	//big endian machine assumed
-  {
-          ret += ((char*)(&x))[i-1];
-  }
-  return ret;
-}
-  
+    PUT_UINT32( high, msglen, 0 );
+    PUT_UINT32( low,  msglen, 4 );
 
-#define shr(x,n) ((x & 0xFFFFFFFF) >> n)
-#define rotr(x,n) (shr(x,n) | (x << (32 - n)))
+    last = ctx->total[0] & 0x3F;
+    padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
 
-uint ch(uint x, uint y, uint z)
-{
- return (x&y) ^ (~x&z);
+    sha256_update( ctx, sha256_padding, padn );
+    sha256_update( ctx, msglen, 8 );
+
+    PUT_UINT32( ctx->state[0], digest,  0 );
+    PUT_UINT32( ctx->state[1], digest,  4 );
+    PUT_UINT32( ctx->state[2], digest,  8 );
+    PUT_UINT32( ctx->state[3], digest, 12 );
+    PUT_UINT32( ctx->state[4], digest, 16 );
+    PUT_UINT32( ctx->state[5], digest, 20 );
+    PUT_UINT32( ctx->state[6], digest, 24 );
+    PUT_UINT32( ctx->state[7], digest, 28 );
 }
 
-uint maj(uint x, uint y, uint z)
-{
- return (x&y) ^ (y&z) ^ (z&x);
+char* rumble_SHA256(const char* digest) {
+    sha256_context ctx;
+    char            *ret = (char *) calloc(1, 72);
+    unsigned char sha256sum[33];
+    unsigned int x;
+    
+    sha256_starts( &ctx );
+    sha256_update( &ctx, (uint8 *) digest, strlen(digest) );
+    sha256_finish( &ctx, sha256sum );
+    
+    for (x = 0; x < 32; x++) sprintf((char *) (ret + (x * 2)), "%02x", sha256sum[x]);
+    free(sha256sum);
+    return (ret);
 }
 
-uint fn0(uint x)
-{
- return rotr(x, 2) ^ rotr(x, 13) ^ rotr(x, 22);
-}
-
-uint fn1(uint x)
-{
- return rotr(x, 6) ^ rotr(x, 11) ^ rotr(x, 25);
-}
-
-uint sigma0(uint x)
-{
-	return rotr(x, 7) ^ rotr(x, 18) ^ shr(x, 3);
-}
-
-uint sigma1(uint x)
-{
-	return rotr(x, 17) ^ rotr(x, 19) ^ shr(x, 10);
-}
-
-
-
-
- 
-
-string SHA256(const char* input)
-{
-	string msg_arr, msg, output;
-	msg_arr = input;
-	msg=msg_arr;
-	msg_arr += (char)(1<<7);
-	uint cur_len = msg.size()*8 + 8;
-	uint reqd_len = ((msg.size()*8)/512+1) *512;
-	uint pad_len = reqd_len - cur_len - 64;
-	
-	string pad(pad_len/8, char(0));
-	msg_arr += pad;
-	string len_str(mynum(msg.size()*8));
-	msg_arr = msg_arr + len_str;
-	
-	uint num_blk = msg_arr.size()*8/512;
-	vector<Block> M(num_blk, Block());
-	split(M, msg_arr);
-	
-		uint H[]={0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f,  	0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
-		
-		for(uint i=0; i<num_blk; i++)
-		{
-			vector<uint> W(64, 0);
-			for(uint t=0; t<16; t++)
-			{
-				W[t] = M[i].msg[t];
-			}
-			
-			
-			for(uint t=16; t<64; t++)
-			{
-				W[t] = sigma1(W[t-2]) + W[t-7] + sigma0(W[t-15]) + W[t-16];
-			}
-			
-			uint work[8];
-			for(uint i=0; i<8; i++)
-			work[i] = H[i];
-                
-			for(uint t=0; t<64; t++)
-			{
-
-				uint t1, t2;
-				t1 = work[7] + fn1(work[4]) + ch(work[4], work[5], work[6]) + K[t] + W[t];
-				t2 = fn0(work[0]) + maj(work[0], work[1], work[2]);
-				work[7] = work[6];
-				work[6] = work[5];
-				work[5] = work[4];
-				work[4] = work[3] + t1; 
-				work[3] = work[2]; 
-				work[2] = work[1];
-				work[1] = work[0];
-				work[0] = t1 + t2;
-	
-			}
-			
-			for(uint i=0; i<8; i++)
-			{
-			H[i] = work[i] + H[i];
-            }
-		}
-		
-		 for(uint i=0; i<8; i++)
-		 output = output + fromDecimal(H[i], 16);
-
-		 return output;
-}
+/*--------------------------------------------------------------------------------------------------------*/
 
 #define A_ADD   1
 #define A_DEL   2
@@ -240,6 +321,7 @@ int main(int argc, char** argv) {
     memset(uPass, 0, 512);
     memset(uType, 0, 512);
     memset(uArgs, 0, 512);
+    printf("SHA256: %s\n", rumble_SHA256("Mooh"));
     for (i = 0; i < argc; i++) {
         if (!strcmp(argv[i], "--help")) needHelp = 1;
         if (!strcmp(argv[i], "-h")) needHelp = 1;
@@ -314,7 +396,7 @@ int main(int argc, char** argv) {
                 dbo = db->prepare("SELECT `id` FROM `domains` WHERE domain = %s LIMIT 1", uDomain);
                 if (!dbo->fetch_row()) { printf("Error: Invalid domain name specified!\n"); needHelp = 1; break; }
                 if (!strlen(uType)) sprintf(uType, "mbox");
-                db->run_inject("INSERT INTO `accounts` (domain, user, password, type, arg) VALUES (%s,%s,%s,%s, %s)", uDomain, uName, SHA256(uPass).c_str(), uType, uArgs);
+                db->run_inject("INSERT INTO `accounts` (domain, user, password, type, arg) VALUES (%s,%s,%s,%s, %s)", uDomain, uName, SHA256(uPass), uType, uArgs);
                 break;
             case A_UEDIT:
                 if (!strlen(uDomain)) { printf("Error: Invalid domain name specified!\n"); needHelp = 1; break;}
@@ -323,7 +405,7 @@ int main(int argc, char** argv) {
                 dbo = db->prepare("SELECT `id` FROM `domains` WHERE domain = %s LIMIT 1", uDomain);
                 if (!dbo->fetch_row()) { printf("Error: Invalid domain name specified!\n"); needHelp = 1; break; }
                 if (!strlen(uType)) sprintf(uType, "mbox");
-                db->run_inject("UPDATE `accounts` SET password = %s, type = %s, arg = %s WHERE domain = %s AND user = %s", SHA256(uPass).c_str(), uType, uArgs, uDomain, uName);
+                db->run_inject("UPDATE `accounts` SET password = %s, type = %s, arg = %s WHERE domain = %s AND user = %s", SHA256(uPass), uType, uArgs, uDomain, uName);
                 break;
             case A_UDEL:
                 if (!strlen(uDomain)) { printf("Error: Invalid domain name specified!\n"); needHelp = 1; }

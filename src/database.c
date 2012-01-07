@@ -344,7 +344,7 @@ rumble_mailbox *rumble_account_data_auth(uint32_t uid, const char *user, const c
 
     acc = rumble_account_data(0, user, domain);
     if (acc) {
-        hash = rumble_sha256((const unsigned char *) pass);
+        hash = rumble_sha256((const char *) pass);
         if (!strcmp(hash, acc->hash)) {
             rumble_debug("core", "Account %s successfully logged in.", user);
             free(hash);

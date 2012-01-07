@@ -428,7 +428,7 @@ static int rumble_lua_sha256(lua_State *L) {
 
     luaL_checktype(L, 1, LUA_TSTRING);
     string = lua_tostring(L, 1);
-    output = rumble_sha256((const unsigned char *) string);
+    output = rumble_sha256((const char *) string);
     lua_settop(L, 0);
     lua_pushstring(L, output);
     free(output);

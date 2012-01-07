@@ -7,6 +7,10 @@
 #include "private.h"
 #include "rumble_version.h"
 #include <signal.h>
+#ifndef RUMBLE_MSC
+#include <sys/types.h>
+#include <pwd.h> 
+#endif
 static void         cleanup(void);
 extern masterHandle *rumble_database_master_handle;
 extern masterHandle *public_master_handle;
@@ -293,6 +297,11 @@ int rumbleStart(void) {
     int             rc,
                     x;
     rumbleService   *svc;
+#ifndef RUMBLE_MSC
+    struct passwd*     runAsEntry;
+    __uid_t             runAsUID = 999999;
+#endif
+    const char      *runAsName;
     /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     srand(time(NULL));
@@ -322,6 +331,7 @@ int rumbleStart(void) {
 
     srand(time(0));
     rumble_config_load(master, s_args);
+    
     if (rhdict(s_args, "execpath")) rsdict(master->_core.conf, "execpath", rrdict(s_args, "execpath"));
     rumble_database_load(master, 0);
     rumble_database_update_domains();
@@ -367,6 +377,35 @@ int rumbleStart(void) {
 
     rumble_master_init(master);
     rumble_modules_load(master);
+    
+/*$3 Change into running as RunAs user after creating sockets and setting up the server */
+    #ifndef RUMBLE_MSC
+    runAsName = rhdict(master->_core.conf, "runas") ? rrdict(master->_core.conf, "runas") : "";
+    if (strlen(runAsName)) {
+        if (!strcmp(runAsName, "root")) runAsUID = 0;
+        else {
+            runAsEntry = getpwnam(runAsName);
+            if (runAsEntry && runAsEntry->pw_uid) {
+                runAsUID = runAsEntry->pw_uid;
+            }
+        }
+        if (runAsUID != 999999) {
+            rumble_debug("core", "Running as user: %s", runAsName);
+            if (setuid(runAsUID)) {
+                rumble_debug("core", "Error: Could not set process UID to %u!", runAsEntry->pw_uid);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else {
+            rumble_debug("core", "I couldn't find the user to run as: %s", runAsName);
+            exit(EXIT_FAILURE);
+        }
+    }
+    else rumble_debug("core", "no run-as directive set, running as root(?)");
+    #endif
+/* $3 End RunAs directive */
+    
+    
     if (rhdict(s_args, "--service")) {
         rumble_debug("startup", "--service enabled, going stealth.");
         shutUp = 1;

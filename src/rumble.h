@@ -733,8 +733,7 @@ void                        rumble_release_state(lua_State *X);
 lua_State                   *rumble_acquire_state(void);
 size_t                      rumble_file_exists(const char *filename);
 void                        rumble_test(void);
-char                        *rumble_sha160(const unsigned char *d); /* SHA1 digest (40 byte hex string) */
-char                        *rumble_sha256(const unsigned char *d); /* SHA-256 digest (64 byte hex string) */
+char                        *rumble_sha256(const char *d); /* SHA-256 digest (64 byte hex string) */
 char                        *rumble_decode_base64(const char *src);
 char                        *rumble_encode_base64(const char *src, size_t len);
 int                         rumble_unbase64(unsigned char *dest, const unsigned char *src, size_t srclen);

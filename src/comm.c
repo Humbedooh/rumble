@@ -81,6 +81,7 @@ socketHandle comm_init(masterHandle *m, const char *port) {
         return (0);
     }
 
+    
     /* Loop through all the results and bind to the first we can */
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {

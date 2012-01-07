@@ -88,7 +88,7 @@ void *rumble_imap_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%32s %32s %1000[^\r\n]", extra_data, cmd, parameters)) {
                 rumble_string_upper(cmd);
-                rumble_debug("imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
+                //rumble_debug("imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
                 if (!strcmp(cmd, "UID")) {
 
                     /* Set UID flag if requested */

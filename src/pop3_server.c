@@ -229,7 +229,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
     if (sscanf(rrdict(session->dict, "user"), "%127[^@]@%127c", usr, dmn) == 2) {
         rumble_debug("pop3", "%s requested access to %s@%s\n", session->client->addr, usr, dmn);
         if ((pops->account = rumble_account_data(0, usr, dmn))) {
-            tmp = rumble_sha256((const unsigned char *) parameters);
+            tmp = rumble_sha256((const char *) parameters);
             n = strcmp(tmp, pops->account->hash);
             free(tmp);
             if (n) {
