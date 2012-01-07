@@ -305,7 +305,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                 if (pass[strlen(pass) - 1] == 4) pass[strlen(pass) - 1] = 0;    /* remove EOT character if present. */
                 addr = rumble_parse_mail_address(tmp);
                 if (addr) {
-                    rumble_debug("imap4", "%s requested access to %s@%s via AUTHENTICATE\n", session->client->addr, addr->user, addr->domain);
+                    rumble_debug("imap4", "%s requested access to %s@%s via AUTHENTICATE", session->client->addr, addr->user, addr->domain);
                     imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
                     if (imap->account) {
                         rcprintf(session, "%s OK Welcome!\r\n", extra_data);

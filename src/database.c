@@ -91,7 +91,7 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
     }
 
     /* Check for the 'flags' column in the domain db */
-    rumble_debug("db", "Checking for 0.35+ db structure\r\n");
+    rumble_debug("db", "Checking for 0.35+ db structure");
     rc = 0;
     dbo = radb_prepare(master->_core.db, "PRAGMA table_info (domains)");
     while ((dbr = radb_step(dbo))) {
@@ -102,9 +102,9 @@ void rumble_database_load_sqlite(masterHandle *master, FILE *runlog) {
     }
 
     if (!rc) {
-        rumble_debug("core", "db structure is deprecated, updating\n");
+        rumble_debug("core", "db structure is deprecated, updating");
         rc = radb_do(master->_core.db, "ALTER TABLE \"domains\" ADD COLUMN \"flags\" INTEGER NOT NULL  DEFAULT 0");
-    } else rumble_debug("core", "db structure is up to date!\n");
+    } else rumble_debug("core", "db structure is up to date!");
     rumble_debug("db", "Database successfully initialized");
     radb_cleanup(dbo);
 }

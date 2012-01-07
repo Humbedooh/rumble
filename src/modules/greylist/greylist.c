@@ -67,7 +67,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
     } else strncpy(block, session->client->addr, 19);   /* IPv6 */
     tmp = (char *) calloc(1, strlen(session->sender->raw) + strlen(junk) + strlen(block) + 1);
     sprintf(tmp, "%s%s%s", session->sender->raw, junk, block);
-    str = rumble_sha160((const unsigned char *) tmp);
+    str = rumble_sha256((const unsigned char *) tmp);
     free(tmp);
     free(block);
     n = -1;
