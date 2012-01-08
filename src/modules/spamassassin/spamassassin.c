@@ -8,22 +8,7 @@ int             sa_spamscore, sa_modifyifspam, sa_modifyifham, sa_deleteifspam, 
 char            sa_host[512];
 char            sa_exec[512];
 masterHandle    *myMaster;
-typedef struct
-{
-    const char  *key;
-    const char  *val;
-} _cft;
-static _cft                 sa_conf_tags[] =
-{
-    { "windows", R_WINDOWS ? "1" : "" },
-    { "unix", R_POSIX && !R_CYGWIN ? "1" : "" },
-    { "linux", R_LINUX ? "1" : "" },
-    { "cygwin", R_CYGWIN ? "1" : "" },
-    { "x64", R_ARCH == 64 ? "1" : "" },
-    { "x86", R_ARCH == 32 ? "1" : "" },
-    { "architecture", R_ARCH == 32 ? "32" : "64" },
-    { 0, 0 }
-};
+
 rumblemodule_config_struct  myConfig[] =
 {
     { "SpamScore", 2, "At which score should emails be considered spam?", RCS_NUMBER, &sa_spamscore },
@@ -233,7 +218,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     myMaster = (masterHandle *) master;
     if (sa_enabled) {
         rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_CUE_SMTP_DATA + RUMBLE_HOOK_AFTER, sa_check);
-    } else rumble_debug("SpamAssassin", "This module is currently disabled via spamassassin.conf!\r\n");
+    } else rumble_debug(master, "SpamAssassin", "This module is currently disabled via spamassassin.conf!\r\n");
     return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */
 }
 
