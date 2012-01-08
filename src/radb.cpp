@@ -8,7 +8,7 @@
 #ifndef _SQLITE3_H_
 #   define _SQLITE3_H_
 #endif
-
+using namespace std;
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -310,7 +310,7 @@ int radb_inject_vl(radbObject *dbo, va_list args) {
 #endif
 #ifdef MYSQL_CLIENT
     if (dbo->master->dbType == RADB_MYSQL) {
-        bindings = calloc(sizeof(MYSQL_BIND), at ? at + 1 : 1);
+        bindings = (MYSQL_BIND*) calloc(sizeof(MYSQL_BIND), at ? at + 1 : 1);
         dbo->inputBindings = bindings;
         for (at = 0; dbo->inputs[at]; at++) {
             bindings[at].is_null = 0;
@@ -467,8 +467,8 @@ void radb_prepare_result(radbObject *dbo) {
         if (meta) {
             dbo->result = (radbResult *) malloc(sizeof(radbResult));
             dbo->result->items = meta->field_count;
-            dbo->result->column = calloc(sizeof(radbItem), dbo->result->items ? dbo->result->items : 1);
-            bindings = calloc(sizeof(MYSQL_BIND), dbo->result->items);
+            dbo->result->column = (radbItem*) calloc(sizeof(radbItem), dbo->result->items ? dbo->result->items : 1);
+            bindings = (MYSQL_BIND*) calloc(sizeof(MYSQL_BIND), dbo->result->items);
             for (i = 0; i < dbo->result->items; i++) {
                 bindings[i].buffer = (void *) dbo->result->column[i].data.string;
                 dbo->result->column[i].type = (meta->fields[i].type >= MYSQL_TYPE_VARCHAR) ? 1 : 2;
@@ -490,8 +490,8 @@ void radb_prepare_result(radbObject *dbo) {
 
         count = sqlite3_column_count((sqlite3_stmt *) dbo->state);
         if (!count) return;
-        dbo->result = malloc(sizeof(radbResult));
-        dbo->result->column = calloc(sizeof(radbItem), count);
+        dbo->result = (radbResult*) malloc(sizeof(radbResult));
+        dbo->result->column = (radbItem*) calloc(sizeof(radbItem), count);
         dbo->result->items = count;
         dbo->result->bindings = 0;
     }
@@ -604,12 +604,12 @@ radbMaster *radb_init_mysql(unsigned threads, const char *host, const char *user
                 ok = 1;
     my_bool     yes = 1;
     MYSQL       *m;
-    radbMaster  *radbm = malloc(sizeof(radbMaster));
+    radbMaster  *radbm = (radbMaster*) malloc(sizeof(radbMaster));
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     radbm->dbType = RADB_MYSQL;
     radbm->pool.count = threads;
-    radbm->pool.children = calloc(threads, sizeof(radbChild));
+    radbm->pool.children = (radbChild*) calloc(threads, sizeof(radbChild));
     for (i = 0; i < threads; i++) {
         radbm->pool.children[i].handle = mysql_init(0);
         m = (MYSQL *) radbm->pool.children[i].handle;
@@ -727,7 +727,7 @@ radbResult *radb_fetch_row_mysql(radbObject *dbo) {
 radbMaster *radb_init_sqlite(const char *file) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    radbMaster  *radbm = malloc(sizeof(radbMaster));
+    radbMaster  *radbm = (radbMaster*) malloc(sizeof(radbMaster));
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     radbm->dbType = RADB_SQLITE3;
@@ -806,7 +806,7 @@ radbo::radbo(void)
  =======================================================================================================================
  =======================================================================================================================
  */
-inline void radbo::cleanup(void) {
+ void radbo::cleanup(void) {
     radb_cleanup(this->dbo);
     this->dbo = 0;
 }
@@ -823,7 +823,7 @@ radbo::~radbo(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline int radbo::query(void) {
+ int radbo::query(void) {
     return (radb_query(this->dbo));
 }
 
@@ -831,7 +831,7 @@ inline int radbo::query(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline radbResult *radbo::fetch_row(void) {
+ radbResult *radbo::fetch_row(void) {
     return (radb_fetch_row(this->dbo));
 }
 
@@ -839,7 +839,7 @@ inline radbResult *radbo::fetch_row(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline int radbo::inject(...) {
+ int radbo::inject(...) {
 
     /*~~~~~~~*/
     int     rc;
@@ -856,7 +856,7 @@ inline int radbo::inject(...) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline void radb::disconnect(void) {
+ void radb::disconnect(void) {
     if (this->dbm) radb_close(this->dbm);
     this->dbm = 0;
 }
@@ -874,7 +874,7 @@ radb::~radb(void) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline int radb::run(const char *statement) {
+ int radb::run(const char *statement) {
     return (radb_run(this->dbm, statement));
 }
 
@@ -882,7 +882,7 @@ inline int radb::run(const char *statement) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline int radb::run_inject(const char *statement, ...) {
+ int radb::run_inject(const char *statement, ...) {
 
     /*~~~~~~~~~~~~~~~~~*/
     va_list     vl;
@@ -905,7 +905,7 @@ inline int radb::run_inject(const char *statement, ...) {
  =======================================================================================================================
  =======================================================================================================================
  */
-inline radbo *radb::prepare(const char *statement, ...) {
+ radbo *radb::prepare(const char *statement, ...) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
     va_list vl;
@@ -917,4 +917,9 @@ inline radbo *radb::prepare(const char *statement, ...) {
     va_end(vl);
     return (dbo);
 }
+ 
+ void radb::init_sqlite(const char* filename) {
+     this->dbm = radb_init_sqlite(filename);
+     return;
+ }
 #endif

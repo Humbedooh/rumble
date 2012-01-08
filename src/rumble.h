@@ -149,7 +149,7 @@
 
 /* include <mysql.h> */
 #   include <sqlite3.h>
-#   include "radb/radb.h"
+#   include "radb.h"
 #   ifdef __cplusplus
 extern "C"
 {
