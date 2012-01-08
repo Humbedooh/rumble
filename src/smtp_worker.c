@@ -519,12 +519,64 @@ void *rumble_worker_process(void *m) {
                     }
 
                     if (user->type & RUMBLE_MTYPE_FEED) {
+
+                        /*~~~~~~~~~~~~~~~~~~~~~~~*/
+                        int     x = 0;
+                        char    tempfile[L_tmpnam];
+                        char    buffer[2001];
+                        char    argument[2048];
+                        char *filename;
+                        const char* path;
+                        FILE* fp;
+                        /*~~~~~~~~~~~~~~~~~~~~~~~*/
                         knowType = 1;
+                        path = rumble_config_str(master, "storagefolder");
+                        filename = (char *) calloc(1, strlen(path) + 26);
+                        sprintf(filename, "%s/%s", path, item->fid);
+                        
+                        rumble_debug("mailman", "Feeding email to program <%s>", user->arg);
+                        
+                        memset(tempfile, 0, L_tmpnam);
+                        tmpnam(tempfile);
+                #ifdef RUMBLE_MSC
+                        sprintf(buffer, "< \"%s\" > \"%s\"", filename, tempfile);
+                        printf("Executing: %s\n", buffer);
+                        x = execl(sa_exec, buffer, 0);
 
                         /*
-                         * feed to program or url ;
-                         * done here!
-                         */
+                        * ShellExecuteA( NULL, "open", sa_exec,buffer, "",SW_SHOW);
+                        */
+                #else
+                        sprintf(buffer, "%s < %s > %s", user->arg, filename, tempfile);
+                        printf("Executing: %s\n", buffer);
+                        system(buffer);
+                #endif
+                        free(filename);
+                        fp = fopen(tempfile, "rb");
+                        if (fp) {
+                            size_t i;
+                            if (!fgets(buffer, 2000, fp)) memset(buffer, 0, 2000);
+                            while (strlen(buffer) > 2) {
+                                i = strlen(buffer);
+                                //printf("%s", buffer);
+                                memset(argument, 0, 2048);
+                                if (buffer[i-1] == '\n') buffer[i-1] = 0;
+                                if (buffer[i-2] == '\r') buffer[i-2] = 0;
+                                if (sscanf(buffer, "R-FORWARD=%256c", argument)) {
+                                    rumble_debug("mailman", "Forwarding letter to %s\n", argument);
+                                    radb_run_inject(master->_core.mail,
+                                        "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%u,%s,%s,%s,%s)",
+                                        1, item->fid, item->sender->raw, argument, item->flags);
+                                }
+                                if (sscanf(buffer, "R-REPLY=%256c", argument)) {
+                                    rumble_debug("mailman", "Replying with message file <%s>\n", argument);
+                                }
+                                if (!fgets(buffer, 2000, fp)) break;
+                            }
+
+                            fclose(fp);
+                        }
+                        unlink(tempfile);
                     }
 
                     if (user->type & RUMBLE_MTYPE_RELAY) {

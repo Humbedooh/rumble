@@ -59,8 +59,9 @@ void ControlHandler(DWORD request) {
  =======================================================================================================================
  */
 int InitService(void) {
+	ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
+	SetServiceStatus(hStatus, &ServiceStatus);
     rumbleStart();
-    ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     SetServiceStatus(hStatus, &ServiceStatus);
     return (0);
 }
@@ -78,7 +79,7 @@ void ServiceMain(int argc, char **argv) {
     shutUp = 1;
     rumble_debug("startup", "Running as a Windows Service");
     ServiceStatus.dwServiceType = SERVICE_WIN32;
-    ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
+    ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
     ServiceStatus.dwWin32ExitCode = 0;
     ServiceStatus.dwServiceSpecificExitCode = 0;
@@ -413,6 +414,12 @@ int rumbleStart(void) {
     }
 
     rumble_debug("startup", "Rumble is up and running, listening for incoming calls!");
+#ifdef RUMBLE_MSC
+	if (rhdict(s_args, "--service")) {
+		cleanup();
+		return 0;
+	}
+#endif
     while (1) {
         cleanup();
         sleep(60);

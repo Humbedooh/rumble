@@ -30,6 +30,7 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     int                 sockfd; /* our socket! yaaay. */
     struct addrinfo     hints;
     int                 yes = 1;
+    const char*         bindTo = 0;
 #ifdef RUMBLE_WINSOCK
     struct sockaddr_in  x;
     WSADATA             wsaData;
@@ -57,7 +58,11 @@ socketHandle comm_init(masterHandle *m, const char *port) {
 
     x.sin_family = hints.ai_family;
     x.sin_port = htons(atoi(port));
-    x.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+    if ( rhdict(m->_core.conf, "bindtoaddress") ) bindTo = rrdict(m->_core.conf, "bindtoaddress");
+    if (bindTo && strcmp(bindTo, "0.0.0.0")) {
+        x.sin_addr.s_addr = inet_addr(bindTo);
+    }
+    else x.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
     if (bind(sockfd, (struct sockaddr *) &x, sizeof(x)) == SOCKET_ERROR) {
         disconnect(sockfd);
         fprintf(stderr, "Server: failed to bind: %d\n", WSAGetLastError());
@@ -75,8 +80,8 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     struct addrinfo *servinfo,
                     *p;
     /*~~~~~~~~~~~~~~~~~~~~~~*/
-
-    if ((rv = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
+    if ( rhdict(m->_core.conf, "bindtoaddress")) bindTo = rrdict(m->_core.conf, "bindtoaddress");
+    if ((rv = getaddrinfo(bindTo, port, &hints, &servinfo)) != 0) {
         rumble_debug("comm.c", "ERROR: getaddrinfo: %s\n", gai_strerror(rv));
         return (0);
     }
@@ -154,10 +159,12 @@ socketHandle comm_open(masterHandle *m, const char *host, unsigned short port) {
     char            portc[10];
     struct addrinfo *servinfo,
                     *p;
+    const char *bindTo = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(portc, "%u", port);
-    if ((rv = getaddrinfo(NULL, portc, &hints, &servinfo)) != 0) {
+    if ( rhdict(m->_core.conf, "outgoingbindtoaddress")) bindTo = rrdict(m->_core.conf, "outgoingbindtoaddress");
+    if ((rv = getaddrinfo(bindTo, portc, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return (0);
     }
