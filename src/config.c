@@ -51,7 +51,7 @@ static int rumble_compare_value(dvector *config, const char *key, const char *op
 void rumble_config_load(masterHandle *master, dvector *args) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char                *paths[3] = { "config", "/var/rumble/config", "g:/home/vaps/rumble/config" };
+    char                *paths[4] = { "config", "/var/rumble/config", "/etc/rumble/config", "/rumble/config"};
     char                *cfgfile;
     const char          *cfgpath;
     FILE                *config;
@@ -78,7 +78,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
         int x = 0;
         /*~~~~~~*/
 
-        for (x = 0; x < 3; x++) {
+        for (x = 0; x < 4; x++) {
             sprintf(cfgfile, "%s/rumble.conf", paths[x]);
             config = fopen(cfgfile, "r");
             if (config) {
