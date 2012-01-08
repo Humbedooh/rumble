@@ -64,7 +64,7 @@ void *rumble_imap_init(void *T) {
         session.sender = 0;
         pops->bag = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        rumble_debug("imap4", "Accepted connection from %s on IMAP4", session.client->addr);
+        rumble_debug(NULL, "imap4", "Accepted connection from %s on IMAP4", session.client->addr);
 #endif
 
         /* Check for hooks on accept() */
@@ -88,7 +88,7 @@ void *rumble_imap_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%32s %32s %1000[^\r\n]", extra_data, cmd, parameters)) {
                 rumble_string_upper(cmd);
-                //rumble_debug("imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
+                //rumble_debug(NULL, "imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
                 if (!strcmp(cmd, "UID")) {
 
                     /* Set UID flag if requested */
@@ -100,7 +100,7 @@ void *rumble_imap_init(void *T) {
                 }
 
                 /*
-                 * rumble_debug("imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
+                 * rumble_debug(NULL, "imap4", "%s said: <%s> %s %s", session.client->addr, extra_data, cmd, parameters);
                  * ;
                  * printf("Selected folder is: %"PRId64 "\r\n", pops->folder);
                  */
@@ -121,7 +121,7 @@ void *rumble_imap_init(void *T) {
 
         /* Cleanup */
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        rumble_debug("imap4", "Closing connection to %s on IMAP4", session.client->addr);
+        rumble_debug(NULL, "imap4", "Closing connection to %s on IMAP4", session.client->addr);
 #endif
         if (rc == 421) {
 
@@ -211,16 +211,16 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
         sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
         if (addr) {
-            rumble_debug("imap4", "%s requested access to %s@%s via LOGIN\n", session->client->addr, addr->user, addr->domain);
+            rumble_debug(NULL, "imap4", "%s requested access to %s@%s via LOGIN\n", session->client->addr, addr->user, addr->domain);
             imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
             if (imap->account) {
-                rumble_debug("imap4", "%s's request for %s@%s was granted\n", session->client->addr, addr->user, addr->domain);
+                rumble_debug(NULL, "imap4", "%s's request for %s@%s was granted\n", session->client->addr, addr->user, addr->domain);
                 rcprintf(session, "%s OK Welcome!\r\n", extra_data);
                 imap->folder = 0;
                 imap->bag = mailman_get_bag(imap->account->uid,
                                             strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
             } else {
-                rumble_debug("imap4", "%s's request for %s@%s was denied (wrong pass?)\n", session->client->addr, addr->user, addr->domain);
+                rumble_debug(NULL, "imap4", "%s's request for %s@%s was denied (wrong pass?)\n", session->client->addr, addr->user, addr->domain);
                 rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
                 session->client->rejected = 1;
             }
@@ -305,7 +305,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                 if (pass[strlen(pass) - 1] == 4) pass[strlen(pass) - 1] = 0;    /* remove EOT character if present. */
                 addr = rumble_parse_mail_address(tmp);
                 if (addr) {
-                    rumble_debug("imap4", "%s requested access to %s@%s via AUTHENTICATE", session->client->addr, addr->user, addr->domain);
+                    rumble_debug(NULL, "imap4", "%s requested access to %s@%s via AUTHENTICATE", session->client->addr, addr->user, addr->domain);
                     imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
                     if (imap->account) {
                         rcprintf(session, "%s OK Welcome!\r\n", extra_data);
@@ -870,13 +870,13 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
         FILE    *fp = 0;
         /*~~~~~~~~~~~~~~*/
 
-        rumble_debug("imap4", "Append required, making up new filename");
+        rumble_debug(NULL, "imap4", "Append required, making up new filename");
         fid = rumble_create_filename();
         sf = imap->bag->path;
         filename = (char *) calloc(1, strlen(sf) + 36);
         if (!filename) merror();
         sprintf(filename, "%s/%s.msg", sf, fid);
-        rumble_debug("imap4", "Storing new message of size %u in folder", size);
+        rumble_debug(NULL, "imap4", "Storing new message of size %u in folder", size);
         fp = fopen(filename, "wb");
         if (fp) {
 
@@ -885,7 +885,7 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
             char    OK = 1;
             /*~~~~~~~~~~~*/
 
-            rumble_debug("imap4", "Writing to file %s", filename);
+            rumble_debug(NULL, "imap4", "Writing to file %s", filename);
             rcprintf(session, "%s OK Appending!\r\n", extra_data);  /* thunderbird bug?? yes it is! */
             while (readBytes < size) {
                 line = rumble_comm_read_bytes(session, size > 1024 ? 1024 : size);
@@ -901,13 +901,13 @@ ssize_t rumble_server_imap_append(masterHandle *master, sessionHandle *session, 
 
             fclose(fp);
             if (!OK) {
-                rumble_debug("imap4", "An error occured while reading file from client");
+                rumble_debug(NULL, "imap4", "An error occured while reading file from client");
                 unlink(filename);
             } else {
-                rumble_debug("imap4", "File written OK");
+                rumble_debug(NULL, "imap4", "File written OK");
                 radb_run_inject(master->_core.mail, "INSERT INTO mbox (id,uid, fid, size, flags, folder) VALUES (NULL,%u, %s, %u,%u, %l)",
                                 imap->account->uid, fid, size, flags, folder->fid);
-                rumble_debug("imap4", "Added message no. #%s to folder %llu of user %u", fid, folder->fid, imap->account->uid);
+                rumble_debug(NULL, "imap4", "Added message no. #%s to folder %llu of user %u", fid, folder->fid, imap->account->uid);
             }
         }
 

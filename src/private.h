@@ -17,6 +17,7 @@ void                rumble_database_load(masterHandle *master, FILE *runlog);
 masterHandle        *rumble_get_master(void);
 void                rumble_tag_file(FILE *fp, const char *host, const char *fid, const char *usr, const char *dmn);
 size_t              rumble_copy_mail(masterHandle *master, const char *fid, const char *usr, const char *dmn, char **pfid);
+size_t              rumble_mail_from_file(masterHandle *master, const char *oldfile, char **newfile);
 rumble_readerwriter *rumble_rw_init(void);
 void                rumble_rw_start_read(rumble_readerwriter *rrw);
 void                rumble_rw_stop_read(rumble_readerwriter *rrw);

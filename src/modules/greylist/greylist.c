@@ -47,7 +47,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
     /* Create the SHA1 hash that corresponds to the triplet. */
     recipient = session->recipients->size ? (address *) session->recipients->first : 0;
     if (!recipient) {
-        rumble_debug("module", "<greylist> No recipients found! (server bug?)");
+        rumble_debug(NULL, "module", "<greylist> No recipients found! (server bug?)");
         return (RUMBLE_RETURN_FAILURE);
     }
 
@@ -104,7 +104,7 @@ ssize_t rumble_greylist(sessionHandle *session, const char *junk) {
     /* If the check failed, we tell the client to hold off for 15 minutes. */
     if (n < GREYLIST_MIN_AGE) {
         rcprintf(session, "451 4.7.1 Grey-listed for %u seconds. See http://www.greylisting.org\r\n", GREYLIST_MIN_AGE - n);
-        rumble_debug("module", "Mail from %s for %s greylisted for %u seconds.\r\n", session->client->addr, junk, GREYLIST_MIN_AGE - n);
+        rumble_debug(NULL, "module", "Mail from %s for %s greylisted for %u seconds.\r\n", session->client->addr, junk, GREYLIST_MIN_AGE - n);
         ((rumbleService *) session->_svc)->traffic.rejections++;
         session->client->rejected = 1;
         return (RUMBLE_RETURN_IGNORE);  /* Tell rumble to ignore the command quietly. */

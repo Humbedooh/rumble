@@ -543,6 +543,10 @@ typedef struct
         } states[RUMBLE_LSTATES];
         pthread_mutex_t mutex;
     } lua;
+    struct {
+        FILE* logfile;
+        dvector* logvector;
+    } debug;
 } masterHandle;
 typedef struct
 {
@@ -773,8 +777,8 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *sender,
                                 address         *recipient
                             );
-void                        rumble_debug(const char *svc, const char *msg, ...);
-void                        rumble_vdebug(const char *svc, const char *msg, va_list args);
+void                        rumble_debug(masterHandle*m, const char *svc, const char *msg, ...);
+void                        rumble_vdebug(masterHandle* m, const char *svc, const char *msg, va_list args);
 dvector                     *rumble_readconfig(const char *filename);
 void                        comm_addEntry(rumbleService *svc, uint32_t bytes, char rejected);
 
@@ -822,7 +826,7 @@ void                    rumble_mailman_free_parsed_letter(rumble_parsed_letter *
 #   define rcread      rumble_comm_read
 #   define merror() { \
         fprintf(stderr, "Memory allocation failed, this is bad!\n"); \
-        rumble_debug("core", "Memory allocation failed at %s, aborting!\n", rumble_mtime()); \
+        rumble_debug(NULL, "core", "Memory allocation failed at %s, aborting!\n", rumble_mtime()); \
         exit(1); \
     }
 #   define and     &&

@@ -263,3 +263,45 @@ void rumble_rw_stop_write(rumble_readerwriter *rrw)
     pthread_cond_broadcast(&rrw->writing);
     pthread_mutex_unlock(&rrw->mutex);
 }
+
+
+size_t              rumble_mail_from_file(masterHandle *master, const char *oldfile, char **fid) {
+    size_t length = 0;
+    FILE *in, *out;
+    char buffer[2048];
+    const char* path;
+    char* newfile = calloc(1,256);
+    *fid = rumble_create_filename();
+    path = rumble_config_str(master, "storagefolder");
+    sprintf(newfile, "%s/%s", path, *fid);
+    in = fopen(oldfile, "r");
+    out = fopen(newfile, "wb");
+#ifdef RUMBLE_DEBUG_STORAGE
+    printf("Copying %s to file %s...\n", oldfile, newfile);
+#endif
+    free(newfile);
+    if (!in || !out) {
+        rumble_debug(NULL, "mailman", "Couldn't copy file <%s>", oldfile);
+        if (in) fclose(in);
+        if (out) fclose(out);
+        *fid = 0;
+        return (0);
+    } else {
+        while (!feof(in)) {
+
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            size_t  rc = fread(buffer, 1, 2048, in);
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
+            if (rc < 0) break;
+            if (!fwrite(buffer, rc, 1, out)) break;
+        }
+
+        fseek(out, 0, SEEK_END);
+        length = ftell(out);
+        rewind(out);
+        fclose(out);
+        fclose(in);
+    }
+    return length;
+}

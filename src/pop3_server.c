@@ -60,7 +60,7 @@ void *rumble_pop3_init(void *T) {
         session._svc = svc;
         session.client->rejected = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        rumble_debug("pop3", "Accepted connection from %s on POP3", session.client->addr);
+        rumble_debug(NULL, "pop3", "Accepted connection from %s on POP3", session.client->addr);
 #endif
 
         /* Check for hooks on accept() */
@@ -87,7 +87,7 @@ void *rumble_pop3_init(void *T) {
                 rumble_string_upper(cmd);
 
                 /*
-                 * rumble_debug("pop3", "%s said: %s %s", session.client->addr, cmd, arg);
+                 * rumble_debug(NULL, "pop3", "%s said: %s %s", session.client->addr, cmd, arg);
                  */
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
@@ -111,7 +111,7 @@ void *rumble_pop3_init(void *T) {
 
         /* Cleanup */
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-        rumble_debug("pop3", "Closing connection from %s on POP3", session.client->addr);
+        rumble_debug(NULL, "pop3", "Closing connection from %s on POP3", session.client->addr);
 #endif
         if (rc == 421) rumble_comm_send(sessptr, rumble_pop3_reply_code(103));  /* timeout! */
         else rumble_comm_send(sessptr, rumble_pop3_reply_code(102));            /* bye! */
@@ -227,19 +227,19 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
     memset(usr, 0, 128);
     memset(dmn, 0, 128);
     if (sscanf(rrdict(session->dict, "user"), "%127[^@]@%127c", usr, dmn) == 2) {
-        rumble_debug("pop3", "%s requested access to %s@%s\n", session->client->addr, usr, dmn);
+        rumble_debug(NULL, "pop3", "%s requested access to %s@%s\n", session->client->addr, usr, dmn);
         if ((pops->account = rumble_account_data(0, usr, dmn))) {
             tmp = rumble_sha256((const char *) parameters);
             n = strcmp(tmp, pops->account->hash);
             free(tmp);
             if (n) {
-                rumble_debug("pop3", "%s's request for %s@%s was denied (wrong password)\n", session->client->addr, usr, dmn);
+                rumble_debug(NULL, "pop3", "%s's request for %s@%s was denied (wrong password)\n", session->client->addr, usr, dmn);
                 rumble_free_account(pops->account);
                 free(pops->account);
                 pops->account = 0;
                 return (106);
             } else {
-                rumble_debug("pop3", "%s's request for %s@%s was granted\n", session->client->addr, usr, dmn);
+                rumble_debug(NULL, "pop3", "%s's request for %s@%s was granted\n", session->client->addr, usr, dmn);
                 session->flags |= RUMBLE_POP3_HAS_AUTH;
                 pops->bag = mailman_get_bag(pops->account->uid,
                                             strlen(pops->account->domain->path) ? pops->account->domain->path : rrdict(master->_core.conf, "storagefolder"));

@@ -156,14 +156,14 @@ void rumble_config_load(masterHandle *master, dvector *args) {
                     rumble_string_lower(key);
                     if (!strcmp(key, "comment")) {
                         printf("%s\r\n", value);
-                        rumble_debug("config", "%s", value);
+                        rumble_debug(NULL, "config", "%s", value);
                     } else rsdict(master->_core.conf, key, value);
                 } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(master->_core.conf, key, value);
                 }
             } else {
-                rumble_debug("config", "ERROR: Could not read %s!", cfgfile);
+                rumble_debug(NULL, "config", "ERROR: Could not read %s!", cfgfile);
                 free(cfgfile);
                 exit(EXIT_FAILURE);
             }
@@ -171,7 +171,7 @@ void rumble_config_load(masterHandle *master, dvector *args) {
 
         fclose(config);
     } else {
-        rumble_debug("config", "ERROR: Could not open %s!", cfgfile);
+        rumble_debug(NULL, "config", "ERROR: Could not open %s!", cfgfile);
         free(cfgfile);
         exit(EXIT_FAILURE);
     }
@@ -226,7 +226,7 @@ uint32_t rumble_config_int(masterHandle *master, const char *key) {
 dvector *rumble_readconfig(const char *filename) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char                *paths[3] = { "config", "/var/rumble/config", "g:/home/vaps/rumble/config" };
+    char                *paths[3] = { "config", "/var/rumble/config", "/rumble/config" };
     char                cfgfile[1024];
     FILE                *config;
     rumbleKeyValuePair  *el;
@@ -311,21 +311,21 @@ dvector *rumble_readconfig(const char *filename) {
                     rumble_string_lower(key);
                     if (!strcmp(key, "comment")) {
                         printf("%s\r\n", value);
-                        rumble_debug("config", "%s", value);
+                        rumble_debug(NULL, "config", "%s", value);
                     } else rsdict(configFile, key, value);
                 } else if (sscanf(line, "%*[ \t]%511[^# \t]%*[ \t]%511[^\r\n]", key, value) == 2 && !ignore) {
                     rumble_string_lower(key);
                     rsdict(configFile, key, value);
                 }
             } else {
-                rumble_debug("config", "ERROR: Could not read %s!", cfgfile);
+                rumble_debug(NULL, "config", "ERROR: Could not read %s!", cfgfile);
                 exit(EXIT_FAILURE);
             }
         }
 
         fclose(config);
     } else {
-        rumble_debug("config", "ERROR: Could not open %s!", cfgfile);
+        rumble_debug(NULL, "config", "ERROR: Could not open %s!", cfgfile);
         exit(EXIT_FAILURE);
     }
 

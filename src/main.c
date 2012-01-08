@@ -77,7 +77,7 @@ void ServiceMain(int argc, char **argv) {
     /*~~~~~~*/
 
     shutUp = 1;
-    rumble_debug("startup", "Running as a Windows Service");
+    rumble_debug(NULL, "startup", "Running as a Windows Service");
     ServiceStatus.dwServiceType = SERVICE_WIN32;
     ServiceStatus.dwCurrentState = SERVICE_RUNNING;
     ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
@@ -89,17 +89,17 @@ void ServiceMain(int argc, char **argv) {
     if (hStatus == (SERVICE_STATUS_HANDLE) 0) {
 
         /* Registering Control Handler failed */
-        rumble_debug("startup", "ERROR: Couldn't register as a Windows service");
+        rumble_debug(NULL, "startup", "ERROR: Couldn't register as a Windows service");
         return;
     }
 
-    rumble_debug("startup", "Successfully registered as service, running main processes");
+    rumble_debug(NULL, "startup", "Successfully registered as service, running main processes");
 
     /* Initialize Service */
     error = InitService();
-    rumble_debug("startup", "Returned from main process");
+    rumble_debug(NULL, "startup", "Returned from main process");
     if (error) {
-        rumble_debug("startup", "ERROR: rumbleStart() returned badly, shutting down.");
+        rumble_debug(NULL, "startup", "ERROR: rumbleStart() returned badly, shutting down.");
 
         /* Initialization failed */
         ServiceStatus.dwCurrentState = SERVICE_STOPPED;
@@ -108,7 +108,7 @@ void ServiceMain(int argc, char **argv) {
         return;
     }
 
-    rumble_debug("startup", "Sending SERVICE_RUNNING status to Windows Services");
+    rumble_debug(NULL, "startup", "Sending SERVICE_RUNNING status to Windows Services");
 
     /* We report the running status to SCM. */
     ServiceStatus.dwCurrentState = SERVICE_RUNNING;
@@ -120,7 +120,7 @@ void ServiceMain(int argc, char **argv) {
         cleanup();
     }
 
-    rumble_debug("startup", "EXIT: Program halted by services, shutting down.");
+    rumble_debug(NULL, "startup", "EXIT: Program halted by services, shutting down.");
     exit(EXIT_SUCCESS);
     return;
 }
@@ -130,7 +130,7 @@ void ServiceMain(int argc, char **argv) {
  =======================================================================================================================
  */
 static void signal_windows(int sig) {
-    rumble_debug("core", "Caught signal %d from system!\n", sig);
+    rumble_debug(NULL, "core", "Caught signal %d from system!\n", sig);
     if (sig == SIGBREAK || sig == SIGINT) {
         printf("User stopped the program.\n");
     }
@@ -202,12 +202,12 @@ static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
 
             alreadyDead++;
             context = (ucontext_t *) ucontext;
-            rumble_debug("debug", "Caught signal %d (%s), address is %p\n", sig, strsignal(sig), info->si_addr);
-            rumble_debug("debug", "PID=%d \n", getpid());
-            rumble_debug("debug", "signo=%d/%s\n", sig, strsignal(sig));
-            rumble_debug("debug", "code=%d (not always applicable)\n", info->si_code);
-            rumble_debug("debug", "\nContext: 0x%08lx\n", (unsigned long) ucontext);
-            rumble_debug("debug", "Register stuff:\n    gs: 0x%08x   fs: 0x%08x   es: 0x%08x   ds: 0x%08x\n"
+            rumble_debug(NULL, "debug", "Caught signal %d (%s), address is %p\n", sig, strsignal(sig), info->si_addr);
+            rumble_debug(NULL, "debug", "PID=%d \n", getpid());
+            rumble_debug(NULL, "debug", "signo=%d/%s\n", sig, strsignal(sig));
+            rumble_debug(NULL, "debug", "code=%d (not always applicable)\n", info->si_code);
+            rumble_debug(NULL, "debug", "\nContext: 0x%08lx\n", (unsigned long) ucontext);
+            rumble_debug(NULL, "debug", "Register stuff:\n    gs: 0x%08x   fs: 0x%08x   es: 0x%08x   ds: 0x%08x\n"
                          "   edi: 0x%08x  esi: 0x%08x  ebp: 0x%08x  esp: 0x%08x\n""   ebx: 0x%08x  edx: 0x%08x  ecx: 0x%08x  eax: 0x%08x\n"
                      "  trap:   %8u  err: 0x%08x  cs: 0x%08x\n", context->uc_mcontext.gregs[23], context->uc_mcontext.gregs[22],
                          context->uc_mcontext.gregs[24], context->uc_mcontext.gregs[25], context->uc_mcontext.gregs[7],
@@ -220,7 +220,7 @@ static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
 
             /* skip first stack frame (points here) */
             for (i = 1; i < size && messages != NULL; ++i) {
-                rumble_debug("debug", "[backtrace]: (%d) %s\n", i, messages[i]);
+                rumble_debug(NULL, "debug", "[backtrace]: (%d) %s\n", i, messages[i]);
             }
 
             cleanup();
@@ -312,7 +312,7 @@ int rumbleStart(void) {
     rumble_database_master_handle = master;
     public_master_handle = master;
     comm_master_handle = master;
-    rumble_debug("startup", "Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
+    rumble_debug(NULL, "startup", "Starting Rumble Mail Server (v/%u.%02u.%04u)", RUMBLE_MAJOR, RUMBLE_MINOR, RUMBLE_REV);
     master->_core.uptime = time(0);
     lua_callback = rumble_lua_callback;
     master->_core.modules = dvector_init();
@@ -325,6 +325,8 @@ int rumbleStart(void) {
     master->mailboxes.list = dvector_init();
     master->mailboxes.bags = cvector_init();
     master->services = cvector_init();
+    master->debug.logfile = sysLog;
+    master->debug.logvector = debugLog;
     pthread_mutex_init(&master->lua.mutex, 0);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         master->lua.states[x].state = 0;
@@ -338,17 +340,17 @@ int rumbleStart(void) {
     rumble_database_load(master, 0);
     rumble_database_update_domains();
     printf("%-48s", "Launching core service...");
-    rumble_debug("startup", "Launching mailman service");
+    rumble_debug(NULL, "startup", "Launching mailman service");
     svc = comm_registerService(master, "mailman", rumble_worker_init, 0, 1);
     comm_setServiceStack(svc, 128 * 1024);
     rc = comm_startService(svc);
     svc = comm_registerService(master, "smtp", rumble_smtp_init, rumble_config_str(master, "smtpport"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 128 * 1024);  /* Set stack size for service to 128kb (should be enough) */
     if (rumble_config_int(master, "enablesmtp")) {
-        rumble_debug("core", "Launching SMTP service");
+        rumble_debug(NULL, "core", "Launching SMTP service");
         rc = comm_startService(svc);
         if (!rc) {
-            rumble_debug("core", "ABORT: Couldn't create socket for service!");
+            rumble_debug(NULL, "core", "ABORT: Couldn't create socket for service!");
             exit(EXIT_SUCCESS);
         }
     }
@@ -356,10 +358,10 @@ int rumbleStart(void) {
     svc = comm_registerService(master, "pop3", rumble_pop3_init, rumble_config_str(master, "pop3port"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 256 * 1024);  /* Set stack size for service to 256kb (should be enough) */
     if (rumble_config_int(master, "enablepop3")) {
-        rumble_debug("core", "Launching POP3 service...");
+        rumble_debug(NULL, "core", "Launching POP3 service...");
         rc = comm_startService(svc);
         if (!rc) {
-            rumble_debug("core", "ABORT: Couldn't create socket for service!");
+            rumble_debug(NULL, "core", "ABORT: Couldn't create socket for service!");
             exit(EXIT_SUCCESS);
         }
 
@@ -369,10 +371,10 @@ int rumbleStart(void) {
     svc = comm_registerService(master, "imap4", rumble_imap_init, rumble_config_str(master, "imap4port"), RUMBLE_INITIAL_THREADS);
     comm_setServiceStack(svc, 512 * 1024);  /* Set stack size for service to 512kb (should be enough) */
     if (rumble_config_int(master, "enableimap4")) {
-        rumble_debug("core", "Launching IMAP4 service...");
+        rumble_debug(NULL, "core", "Launching IMAP4 service...");
         rc = comm_startService(svc);
         if (!rc) {
-            rumble_debug("startup", "ABORT: Couldn't create socket for service!");
+            rumble_debug(NULL, "startup", "ABORT: Couldn't create socket for service!");
             exit(EXIT_SUCCESS);
         }
     }
@@ -392,28 +394,28 @@ int rumbleStart(void) {
             }
         }
         if (runAsUID != 999999) {
-            rumble_debug("core", "Running as user: %s", runAsName);
+            rumble_debug(NULL, "core", "Running as user: %s", runAsName);
             if (setuid(runAsUID)) {
-                rumble_debug("core", "Error: Could not set process UID to %u!", runAsEntry->pw_uid);
+                rumble_debug(NULL, "core", "Error: Could not set process UID to %u!", runAsEntry->pw_uid);
                 exit(EXIT_FAILURE);
             }
         }
         else {
-            rumble_debug("core", "I couldn't find the user to run as: %s", runAsName);
+            rumble_debug(NULL, "core", "I couldn't find the user to run as: %s", runAsName);
             exit(EXIT_FAILURE);
         }
     }
-    else rumble_debug("core", "no run-as directive set, running as root(?)");
+    else rumble_debug(NULL, "core", "no run-as directive set, running as root(?)");
     #endif
 /* $3 End RunAs directive */
     
     
     if (rhdict(s_args, "--service")) {
-        rumble_debug("startup", "--service enabled, going stealth.");
+        rumble_debug(NULL, "startup", "--service enabled, going stealth.");
         shutUp = 1;
     }
 
-    rumble_debug("startup", "Rumble is up and running, listening for incoming calls!");
+    rumble_debug(NULL, "startup", "Rumble is up and running, listening for incoming calls!");
 #ifdef RUMBLE_MSC
 	if (rhdict(s_args, "--service")) {
 		cleanup();
@@ -501,12 +503,13 @@ int main(int argc, char **argv) {
         printf("Error: Couldn't open rumble_status.log for writing.\r\nEither rumble is already running, or I don't have access to write to this folder.\r\n");
         exit(0);
     }
+    
 
     fprintf(sysLog, "---------------------------------------------------\r\n");
     fprintf(sysLog, "New instance of Rumble started, clearing log file.\r\n");
     fprintf(sysLog, "---------------------------------------------------\r\n");
     if (strlen(r_path)) {
-        rumble_debug("startup", "Entering directory: %s", r_path);
+        rumble_debug(NULL, "startup", "Entering directory: %s", r_path);
         rsdict(s_args, "execpath", r_path);
     }
 

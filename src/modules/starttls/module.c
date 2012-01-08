@@ -119,7 +119,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     rumbleService                       *svc;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    printf("Initializing GNUTLS (this may take a while)...  ");
+    rumble_debug(master, "gnutls", "Initializing GNUTLS (this may take a while)...  ");
     fflush(stdout);
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";

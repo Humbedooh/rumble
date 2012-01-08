@@ -559,7 +559,7 @@ size_t rumble_file_exists(const char *filename)
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_vdebug(const char *svc, const char *msg, va_list args) {
+void rumble_vdebug(masterHandle* m, const char *svc, const char *msg, va_list args) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
     time_t          rawtime;
@@ -568,16 +568,17 @@ void rumble_vdebug(const char *svc, const char *msg, va_list args) {
                     txt[130];
     char            *dstring;
     dvector_element *obj;
+    dvector* debug;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
-
-    if (debugLog) {
-        dstring = (char *) debugLog->last->object;
-        obj = debugLog->last;
-        obj->next = debugLog->first;
+    debug = m ? m->debug.logvector : debugLog;
+    if (debug) {
+        dstring = (char *) debug->last->object;
+        obj = debug->last;
+        obj->next = debug->first;
         obj->prev->next = 0;
-        debugLog->last = obj->prev;
-        debugLog->first->prev = obj;
-        debugLog->first = obj;
+        debug->last = obj->prev;
+        debug->first->prev = obj;
+        debug->first = obj;
         obj->prev = 0;
         time(&rawtime);
         timeinfo = gmtime(&rawtime);
@@ -594,15 +595,16 @@ void rumble_vdebug(const char *svc, const char *msg, va_list args) {
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_debug(const char *svc, const char *msg, ...) {
+void rumble_debug(masterHandle* m, const char *svc, const char *msg, ...) {
 
     /*~~~~~~~*/
     va_list vl;
+    dvector* debug;
     /*~~~~~~~*/
-
-    if (debugLog) {
+    debug = m ? m->debug.logvector : debugLog;
+    if (debug) {
         va_start(vl, msg);
-        rumble_vdebug(svc, msg, vl);
+        rumble_vdebug(m, svc, msg, vl);
     }
 }
 

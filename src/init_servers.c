@@ -28,7 +28,7 @@ void rumble_master_init(masterHandle *master) {
      */
 
     if (svc) {
-        rumble_debug("core", "Adding SMTP commands and capabilities");
+        rumble_debug(NULL, "core", "Adding SMTP commands and capabilities");
         rumble_service_add_command(svc, "MAIL", rumble_server_smtp_mail);
         rumble_service_add_command(svc, "RCPT", rumble_server_smtp_rcpt);
         rumble_service_add_command(svc, "HELO", rumble_server_smtp_helo);
@@ -73,7 +73,7 @@ void rumble_master_init(masterHandle *master) {
      */
 
     if (svc) {
-        rumble_debug("core", "Adding POP3 commands and capabilities");
+        rumble_debug(NULL, "core", "Adding POP3 commands and capabilities");
         rumble_service_add_command(svc, "CAPA", rumble_server_pop3_capa);
         rumble_service_add_command(svc, "USER", rumble_server_pop3_user);
         rumble_service_add_command(svc, "PASS", rumble_server_pop3_pass);
@@ -110,7 +110,7 @@ void rumble_master_init(masterHandle *master) {
 
     svc = comm_serviceHandle("imap4");
     if (svc) {
-        rumble_debug("core", "Adding IMAP4 commands and capabilities");
+        rumble_debug(NULL, "core", "Adding IMAP4 commands and capabilities");
         rumble_service_add_command(svc, "LOGIN", rumble_server_imap_login);
         rumble_service_add_command(svc, "LOGOUT", rumble_server_imap_logout);
         rumble_service_add_command(svc, "NOOP", rumble_server_imap_noop);

@@ -332,7 +332,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
         sprintf(stmt, "DELETE FROM accounts WHERE id = %u", acc->uid);
         radb_run(rumble_database_master_handle->_core.db, stmt);
         bag = mailman_get_bag(acc->uid, acc->domain->path);
-        rumble_debug("Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
+        rumble_debug(NULL, "Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
 
             /*~~~~~~~~~~*/
@@ -1221,7 +1221,7 @@ static int rumble_lua_saveaccount(lua_State *L) {
                             "INSERT INTO ACCOUNTS (id,user,domain,type,password,arg) VALUES (NULL,%s,%s,%s,%s,%s)", user, domain, mtype,
                             password, arguments);
             lua_pushboolean(L, 1);
-            rumble_debug("Lua", "Created new account: <%s@%s>", user, domain);
+            rumble_debug(NULL, "Lua", "Created new account: <%s@%s>", user, domain);
         } else lua_pushboolean(L, 0);
     } else {
         lua_pushboolean(L, 0);
@@ -1258,7 +1258,7 @@ static int rumble_lua_createdomain(lua_State *L) {
                         domain, path, flags);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
-        rumble_debug("Lua", "Created new domain: %s", domain);
+        rumble_debug(NULL, "Lua", "Created new domain: %s", domain);
     } else lua_pushboolean(L, 0);
     return (1);
 }
@@ -1286,7 +1286,7 @@ static int rumble_lua_deletedomain(lua_State *L) {
         radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM domains WHERE domain = %s", domain);
         rumble_database_update_domains();
         lua_pushboolean(L, 1);
-        rumble_debug("Lua", "Deleted domain: %s", domain);
+        rumble_debug(NULL, "Lua", "Deleted domain: %s", domain);
     } else lua_pushboolean(L, 0);
     return (1);
 }

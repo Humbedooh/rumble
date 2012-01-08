@@ -412,7 +412,7 @@ void mailman_delete_folder(mailman_bag *bag, mailman_folder *folder) {
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!bag or!folder) return;
-    rumble_debug("mailman", "Deleting account #%u's folder <%s>", bag->uid, folder->name);
+    rumble_debug(NULL, "mailman", "Deleting account #%u's folder <%s>", bag->uid, folder->name);
     rumble_rw_start_write(folder->lock);
     radb_run_inject(rumble_database_master_handle->_core.db, "DELETE FROM folders WHERE id = %l", folder->fid);
     radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE uid = %u AND folder = %l", bag->uid, folder->fid);
@@ -430,7 +430,7 @@ void mailman_delete_folder(mailman_bag *bag, mailman_folder *folder) {
 
     mailman_free_folder(folder);
     rumble_rw_stop_write(bag->lock);
-    rumble_debug("mailman", "Deleted %u letters.", f);
+    rumble_debug(NULL, "mailman", "Deleted %u letters.", f);
 }
 
 /*
@@ -448,7 +448,7 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
 
     printf("mailman_commit()\n");
     if (!bag or!folder) return;
-    rumble_debug("mailman", "Updating #%u's folder <%s>", bag->uid, folder->name);
+    rumble_debug(NULL, "mailman", "Updating #%u's folder <%s>", bag->uid, folder->name);
     rumble_rw_start_write(folder->lock);
     f = 0;
     for (i = 0; i < folder->size; i++) {
@@ -476,7 +476,7 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
     }
 
     rumble_rw_stop_write(bag->lock);
-    rumble_debug("mailman", "Deleted %u letters.", f);
+    rumble_debug(NULL, "mailman", "Deleted %u letters.", f);
 }
 
 /*
@@ -534,7 +534,7 @@ void mailman_copy_letter(
         letter = &sourceFolder->letters[i];
         if (letter->inuse) {
             if ((UID && (letter->id >= start && letter->id <= stop)) || (!UID && (i + 1 >= start && i < i))) {
-                rumble_debug("mailman", "Copying letter %lu to folder %lu", letter->id, destFolder->fid);
+                rumble_debug(NULL, "mailman", "Copying letter %lu to folder %lu", letter->id, destFolder->fid);
                 fid = rumble_create_filename();
                 sprintf(filename, "%s/%s.msg", bag->path, fid);
                 in = mailman_open_letter(bag, sourceFolder, letter->id);
@@ -558,7 +558,7 @@ void mailman_copy_letter(
                                         fid, destFolder->fid, letter->size, letter->flags | RUMBLE_LETTER_RECENT);
                     }
                 } else {
-                    rumble_debug("mailman", "Couldn't create copy of letter at %s, aborting.", filename);
+                    rumble_debug(NULL, "mailman", "Couldn't create copy of letter at %s, aborting.", filename);
                 }
 
                 free(fid);
@@ -591,9 +591,9 @@ mailman_bag *mailman_get_bag(uint32_t uid, const char *path) {
         }
     }
 
-    if (rbag) rumble_debug("mailman", "Using already opened bag");
+    if (rbag) rumble_debug(NULL, "mailman", "Using already opened bag");
     if (!rbag) {
-        rumble_debug("mailman", "Making new bag struct");
+        rumble_debug(NULL, "mailman", "Making new bag struct");
         rbag = mailman_new_bag(uid, path);
         cvector_add(rumble_database_master_handle->mailboxes.bags, rbag);
     }

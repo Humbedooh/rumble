@@ -301,11 +301,11 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
     d_iterator                  iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    rumble_debug("mailman", "mail %s: %s@%s is a foreign user, finding host <%s>.", item->fid, item->recipient->user,
+    rumble_debug(NULL, "mailman", "mail %s: %s@%s is a foreign user, finding host <%s>.", item->fid, item->recipient->user,
                  item->recipient->domain, host);
     mx = comm_mxLookup(host);
     if (!mx or!mx->size) {
-        rumble_debug("mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", host);
+        rumble_debug(NULL, "mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", host);
         delivered = 450;
     } else if (mx->size) {
         filename = (char *) calloc(1, 256);
@@ -313,14 +313,14 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
         sprintf(filename, "%s/%s", rrdict(master->_core.conf, "storagefolder"), item->fid);
         foreach((mxRecord *), mxr, mx, iter) {
             if (rhdict(badmx, mxr->host)) continue; /* ignore bogus MX records */
-            rumble_debug("mailman", "Trying %s (%u)...\n", mxr->host, mxr->preference);
+            rumble_debug(NULL, "mailman", "Trying %s (%u)...\n", mxr->host, mxr->preference);
 
             /* Anything below 300 would be good here :> */
             res = rumble_send_email(master, mxr->host, filename, item->sender, item->recipient);
 
             /* get the best result from all servers we've tried */
             delivered = (res->replyCode < delivered) ? res->replyCode : delivered;
-            rumble_debug("mailman", "MTA <%s> returned code %d (%s)", res->replyServer, delivered, res->replyMessage);
+            rumble_debug(NULL, "mailman", "MTA <%s> returned code %d (%s)", res->replyServer, delivered, res->replyMessage);
             rumble_flush_dictionary(res->flags);
             free(res->flags);
             free(res->replyMessage);
@@ -335,11 +335,11 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
     if (delivered >= 500) {
 
         /* critical failure, giving up. */
-        rumble_debug("mailman", "Critical failure, giving up for now.", 0);
+        rumble_debug(NULL, "mailman", "Critical failure, giving up for now.", 0);
     } else if (delivered >= 400) {
 
         /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
-        rumble_debug("mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
+        rumble_debug(NULL, "mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
         sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
         statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
         if (master->_core.mail->dbType == RADB_MYSQL) {
@@ -347,10 +347,10 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
         }
 
         radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
-        rumble_debug("mailman", "Mail %s queued", item->fid);
+        rumble_debug(NULL, "mailman", "Mail %s queued", item->fid);
         memset(tmp, 0, 256);
     } else {
-        rumble_debug("mailman", "Mail %s delivered.", item->fid);
+        rumble_debug(NULL, "mailman", "Mail %s delivered.", item->fid);
     }
 
     if (mx) comm_mxFree(mx);    /* Clean up DNS records. */
@@ -394,7 +394,7 @@ void *rumble_worker_process(void *m) {
         /* Check for rampant loops */
         item->loops++;
         if (item->loops > 5) {
-            rumble_debug("mailman", "Message %s is looping, dumping it!\n", item->fid);
+            rumble_debug(NULL, "mailman", "Message %s is looping, dumping it!\n", item->fid);
             if (item->recipient) rumble_free_address(item->recipient);
             if (item->sender) rumble_free_address(item->recipient);
             if (item->fid) free((char *) item->fid);
@@ -405,7 +405,7 @@ void *rumble_worker_process(void *m) {
 
         /* Local delivery? */
         if (rumble_domain_exists(item->recipient->domain)) {
-            rumble_debug("mailman", "Have mail for %s (local domain), looking for user %s@%s", item->recipient->domain,
+            rumble_debug(NULL, "mailman", "Have mail for %s (local domain), looking for user %s@%s", item->recipient->domain,
                          item->recipient->user, item->recipient->domain);
             user = rumble_account_data(0, item->recipient->user, item->recipient->domain);
             if (user) {
@@ -430,7 +430,7 @@ void *rumble_worker_process(void *m) {
                         /*~~~~~~~~~~~~~~~~~~~*/
 
                         knowType = 1;
-                        rumble_debug("mailman", "Delivering message %s to mailbox %s @ %s...", item->fid, user->user, user->domain->name);
+                        rumble_debug(NULL, "mailman", "Delivering message %s to mailbox %s @ %s...", item->fid, user->user, user->domain->name);
 
                         /* Start by making a copy of the letter */
                         fsize = rumble_copy_mail(master, item->fid, user->user, user->domain->name, (char **) &item->fid);
@@ -447,7 +447,7 @@ void *rumble_worker_process(void *m) {
                         sprintf(ofilename, "%s/%s", path, item->fid);
                         sprintf(nfilename, "%s/%s.msg", path, item->fid);
 #ifdef RUMBLE_DEBUG_STORAGE
-                        rumble_debug("mailman", "Moving %s to %s", ofilename, nfilename);
+                        rumble_debug(NULL, "mailman", "Moving %s to %s", ofilename, nfilename);
 #endif
                         if (rename(ofilename, nfilename)) {
                             perror("Couldn't move file");
@@ -465,7 +465,7 @@ void *rumble_worker_process(void *m) {
                         knowType = 1;
 
                         /* mail alias */
-                        rumble_debug("mailman", "%s@%s is an alias, looking up arguments", user->user, user->domain->name);
+                        rumble_debug(NULL, "mailman", "%s@%s is an alias, looking up arguments", user->user, user->domain->name);
                         if (strlen(user->arg)) {
 
                             /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
@@ -491,7 +491,7 @@ void *rumble_worker_process(void *m) {
 #else
                                         snprintf(xemail, 255, "<%s>", email);
 #endif
-                                        rumble_debug("mailman", "Delivering message %s to alias %s...", item->fid, xemail);
+                                        rumble_debug(NULL, "mailman", "Delivering message %s to alias %s...", item->fid, xemail);
                                         radb_run_inject(master->_core.mail,
                                                         "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%s,%s,%s,%s,%s)",
                                                         loops, item->fid, item->sender->raw, xemail, item->flags);
@@ -503,7 +503,7 @@ void *rumble_worker_process(void *m) {
 
                             free(email);
                         } else {
-                            rumble_debug("mailman", "No arguments supplied for alias account!");
+                            rumble_debug(NULL, "mailman", "No arguments supplied for alias account!");
                         }
 
                         /* done here! */
@@ -521,20 +521,22 @@ void *rumble_worker_process(void *m) {
                     if (user->type & RUMBLE_MTYPE_FEED) {
 
                         /*~~~~~~~~~~~~~~~~~~~~~~~*/
-                        int     x = 0;
                         char    tempfile[L_tmpnam];
                         char    buffer[2001];
-                        char    argument[2048];
+                        char    xarg[2001];
+                        char    xuser[129];
+                        char    xdomain[129];
                         char *filename;
                         const char* path;
                         FILE* fp;
+                        FILE *out, *in;
                         /*~~~~~~~~~~~~~~~~~~~~~~~*/
                         knowType = 1;
                         path = rumble_config_str(master, "storagefolder");
                         filename = (char *) calloc(1, strlen(path) + 26);
                         sprintf(filename, "%s/%s", path, item->fid);
                         
-                        rumble_debug("mailman", "Feeding email to program <%s>", user->arg);
+                        rumble_debug(NULL, "mailman", "Feeding email to program <%s>", user->arg);
                         
                         memset(tempfile, 0, L_tmpnam);
                         tmpnam(tempfile);
@@ -559,17 +561,44 @@ void *rumble_worker_process(void *m) {
                             while (strlen(buffer) > 2) {
                                 i = strlen(buffer);
                                 //printf("%s", buffer);
-                                memset(argument, 0, 2048);
+                                memset(xarg, 0, 2001);
+                                memset(xuser,0, 129);
+                                memset(xdomain,0,129);
                                 if (buffer[i-1] == '\n') buffer[i-1] = 0;
                                 if (buffer[i-2] == '\r') buffer[i-2] = 0;
-                                if (sscanf(buffer, "R-FORWARD=%256c", argument)) {
-                                    rumble_debug("mailman", "Forwarding letter to %s\n", argument);
+                                if (sscanf(buffer, "R-FORWARD %256c", xarg)) {
+                                    rumble_debug(NULL, "mailman", "Forwarding letter to %s\n", xarg);
                                     radb_run_inject(master->_core.mail,
                                         "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%u,%s,%s,%s,%s)",
-                                        1, item->fid, item->sender->raw, argument, item->flags);
+                                        1, item->fid, item->sender->raw, xarg, item->flags);
                                 }
-                                if (sscanf(buffer, "R-REPLY=%256c", argument)) {
-                                    rumble_debug("mailman", "Replying with message file <%s>\n", argument);
+                                if (sscanf(buffer, "R-REPLY %256c", xarg)) {
+                                    char* fid = 0;
+                                    size_t length = 0;
+                                    rumble_debug(NULL, "mailman", "Replying with message file <%s>\n", xarg);
+                                    length = rumble_mail_from_file(master, xarg, &fid);
+                                    if (length) {
+                                        radb_run_inject(master->_core.mail,
+                                           "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%u,%s,%s,%s,%s)",
+                                            1, fid, item->recipient->raw, item->sender->raw, item->flags);
+                                    }
+                                }
+                                if (sscanf(buffer, "R-SEND <%128[^@ ]@%128[^>]> %256c", xuser, xdomain, xarg) == 3) {
+                                    char* fid = 0;
+                                    char recipient[260];
+                                    size_t length = 0;
+                                    rumble_debug(NULL, "mailman", "Sending message <%s> to <%s@%s>\n", xarg, xuser, xdomain);
+                                    sprintf(recipient, "<%s@%s>", xuser, xdomain);
+                                    length = rumble_mail_from_file(master, xarg, &fid);
+                                    if (length) {
+                                        radb_run_inject(master->_core.mail,
+                                           "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%u,%s,%s,%s,%s)",
+                                            1, fid, item->recipient->raw, recipient, item->flags);
+                                    }
+                                }
+                                if (sscanf(buffer, "R-DELETE %256c", xarg)) {
+                                    rumble_debug(NULL, "mailman", "Deleting file <%s>\n", xarg);
+                                    unlink(xarg);
                                 }
                                 if (!fgets(buffer, 2000, fp)) break;
                             }

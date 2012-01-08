@@ -45,18 +45,18 @@ void rumble_modules_load(masterHandle *master) {
     const char          *services[] = { "mailman", "smtp", "pop3", "imap4", 0 };
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    rumble_debug("core", "Preparing to load modules");
+    rumble_debug(NULL, "core", "Preparing to load modules");
     for (x = 0; services[x]; x++) {
         svc = comm_serviceHandle(services[x]);
         if (svc) {
-            rumble_debug("core", "Flushing hook structs for %s", services[x]);
+            rumble_debug(NULL, "core", "Flushing hook structs for %s", services[x]);
             svc->cue_hooks = cvector_init();
             svc->init_hooks = cvector_init();
             svc->exit_hooks = cvector_init();
         }
     }
 
-    rumble_debug("core", "Loading modules");
+    rumble_debug(NULL, "core", "Loading modules");
     for (line = master->_core.conf->first; line != NULL; line = line->next) {
         el = (rumbleKeyValuePair *) line->object;
         if (!strcmp(el->key, "loadmodule"))
@@ -70,12 +70,12 @@ void rumble_modules_load(masterHandle *master) {
             if (!handle) {
                 error = error ? error : "(no such file?)";
                 fprintf(stderr, "\nError loading %s: %s\n", el->value, error);
-                rumble_debug("core", "Error loading %s: %s", el->value, error);
+                rumble_debug(NULL, "core", "Error loading %s: %s", el->value, error);
                 exit(1);
             }
 
             if (error) {
-                rumble_debug("core", "Warning: %s\n", error);
+                rumble_debug(NULL, "core", "Warning: %s\n", error);
             }
 
             modinfo = (rumble_module_info *) calloc(1, sizeof(rumble_module_info));
@@ -88,7 +88,7 @@ void rumble_modules_load(masterHandle *master) {
             modinfo->config = (rumbleModConfig) dlsym(handle, "rumble_module_config");
             error = (init == 0 || mcheck == 0) ? "no errors" : 0;
             if (error != NULL) {
-                rumble_debug("core", "Warning: %s does not contain required module functions.\n", el->value);
+                rumble_debug(NULL, "core", "Warning: %s does not contain required module functions.\n", el->value);
             }
 
             if (init && mcheck) {
@@ -99,11 +99,11 @@ void rumble_modules_load(masterHandle *master) {
                 x = EXIT_SUCCESS;
                 if (ver > RUMBLE_VERSION || ver < RUMBLE_VERSION_REQUIRED) {
                     if (ver > RUMBLE_VERSION) {
-                        rumble_debug("module",
+                        rumble_debug(NULL, "module",
                                      "Error: %s was compiled with a newer version of librumble (v%#X) than this server executable (v%#X).\nPlease recompile the module using the latest sources to avoid crashes or bugs.\n",
                                  el->value, ver, RUMBLE_VERSION);
                     } else {
-                        rumble_debug("module",
+                        rumble_debug(NULL, "module",
                                      "Error: %s was compiled with an older version of librumble (v%#X).\nPlease recompile the module using the latest sources (v%#X) to avoid crashes or bugs.\n",
                                  el->value, ver, RUMBLE_VERSION);
                     }
@@ -113,14 +113,14 @@ void rumble_modules_load(masterHandle *master) {
                 }
 
                 if (x != EXIT_SUCCESS) {
-                    rumble_debug("module", "Error: %s failed to load!", el->value);
+                    rumble_debug(NULL, "module", "Error: %s failed to load!", el->value);
                     dlclose(handle);
                 }
 
                 if (x == EXIT_SUCCESS) {
-                    if (modinfo->title) rumble_debug("module", "Loaded extension: %-30s", modinfo->title);
-                    else rumble_debug("module", "Loaded %48s", el->value);
-                } else rumble_debug("module", "%s exited prematurely!", el->value);
+                    if (modinfo->title) rumble_debug(NULL, "module", "Loaded extension: %-30s", modinfo->title);
+                    else rumble_debug(NULL, "module", "Loaded %48s", el->value);
+                } else rumble_debug(NULL, "module", "%s exited prematurely!", el->value);
             }
 
             /*
@@ -154,10 +154,10 @@ void rumble_modules_load(masterHandle *master) {
             for (x = 0; x < RUMBLE_LSTATES; x++) {
                 L = (lua_State *) master->lua.states[x].state;
                 if (luaL_loadfile(L, el->value)) {
-                    rumble_debug("lua", "Couldn't load script: %s", lua_tostring(L, -1));
+                    rumble_debug(NULL, "lua", "Couldn't load script: %s", lua_tostring(L, -1));
                     break;
                 } else if (lua_pcall(L, 0, LUA_MULTRET, 0)) {
-                    rumble_debug("lua", "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
+                    rumble_debug(NULL, "lua", "Failed to run <%s>: %s\n", el->value, lua_tostring(L, -1));
                     break;
                 }
             }
