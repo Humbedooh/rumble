@@ -529,7 +529,6 @@ void *rumble_worker_process(void *m) {
                         char *filename;
                         const char* path;
                         FILE* fp;
-                        FILE *out, *in;
                         /*~~~~~~~~~~~~~~~~~~~~~~~*/
                         knowType = 1;
                         path = rumble_config_str(master, "storagefolder");
@@ -543,7 +542,7 @@ void *rumble_worker_process(void *m) {
                 #ifdef RUMBLE_MSC
                         sprintf(buffer, "< \"%s\" > \"%s\"", filename, tempfile);
                         printf("Executing: %s\n", buffer);
-                        x = execl(sa_exec, buffer, 0);
+                        execl(user->arg, buffer, 0);
 
                         /*
                         * ShellExecuteA( NULL, "open", sa_exec,buffer, "",SW_SHOW);

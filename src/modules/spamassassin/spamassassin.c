@@ -8,7 +8,7 @@ int             sa_spamscore, sa_modifyifspam, sa_modifyifham, sa_deleteifspam, 
 char            sa_host[512];
 char            sa_exec[512];
 masterHandle    *myMaster;
-
+ 
 rumblemodule_config_struct  myConfig[] =
 {
     { "SpamScore", 2, "At which score should emails be considered spam?", RCS_NUMBER, &sa_spamscore },
