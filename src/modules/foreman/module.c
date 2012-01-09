@@ -43,7 +43,7 @@ ssize_t accept_hook(sessionHandle *session, const char *junk) {
     /* If this thread is getting old, tell it to die once it's idling. */
     uint32_t        workload = (session->_tflags & 0xFFF00000) >> 20;   /* 0xABC00000 >> 0x00000ABC */
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+    
     if (workload > FOREMAN_MAX_JOBS) session->_tflags |= RUMBLE_THREAD_DIE;
 
     /* Find out what service we're dealing with here. */

@@ -180,7 +180,7 @@ When a letter is received, Rumble will then run the program and send the letter 
     printf("<tr><th>Account</th><th>Type</th><th>Actions</th></tr>");
     local t = Mailman.listAccounts(domain);
     for k,v in pairs(t) do
-        printf("<tr><td><a href='/mailbox:%u'>%s@%s</a></td><td>%s</td><td> <a href=\"/accounts:%s?u=%u\"><img title='Edit account' src='/icons/action_edit.png' align='absmiddle'/></a> <a href=\"/accounts:%s?d=%u\"><img title='Delete account' src='/icons/action_delete.png' align='absmiddle'/></a></td></tr>", v.id,v.name,domain,v.type,domain,v.id,domain,v.id,v.type,domain,v.id);
+        printf("<tr><td><a href='/accounts:%s?u=%u'>%s@%s</a></td><td>%s</td><td> <a href=\"/accounts:%s?u=%u\"><img title='Edit account' src='/icons/action_edit.png' align='absmiddle'/></a> <a href=\"/accounts:%s?d=%u\"><img title='Delete account' src='/icons/action_delete.png' align='absmiddle'/></a></td></tr>", domain,v.id,v.name,domain,v.type,domain,v.id,domain,v.id,v.type,domain,v.id);
     end
     if (#t == 0) then
         printf("<tr><td colspan='3'><i>%s does not have any mail accounts.</i></td></tr>", domain);

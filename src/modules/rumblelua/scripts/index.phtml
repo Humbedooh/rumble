@@ -58,7 +58,7 @@ local seconds = math.fmod(session.info.uptime, 60);
 local tacc, trej = 0,0;
 
 printf(string.format("%u day(s), %02u:%02u:%02u", days,  hours,minutes,seconds));
-?>
+?>, running as: <i><?=Rumble.readConfig("runas")?></i>
 </p>
 <table width="700" class="elements" border="0" cellpadding="2" cellspacing="1">
   <tr>
