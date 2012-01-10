@@ -475,7 +475,7 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
         }
     }
 
-    rumble_rw_stop_write(bag->lock);
+    rumble_rw_stop_write(folder->lock);
     rumble_debug(NULL, "mailman", "Deleted %u letters.", f);
 }
 

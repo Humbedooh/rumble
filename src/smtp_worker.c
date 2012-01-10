@@ -295,6 +295,7 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
     mxRecord                    *mxr;
     char                        *filename;
     char                        tmp[512];
+    char                        serverReply[2048];
     const char                  *statement;
     uint32_t                    delivered = 500;
     rumble_sendmail_response    *res;
@@ -305,8 +306,9 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
                  item->recipient->domain, host);
     mx = comm_mxLookup(host);
     if (!mx or!mx->size) {
-        rumble_debug(NULL, "mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", host);
-        delivered = 450;
+        rumble_debug(NULL, "mailman", "Couldn't look up domain %s, faking a SMTP 500 error.", host);
+        delivered = 500;
+        sprintf(serverReply, "Reason: No such host; %s", host);
     } else if (mx->size) {
         filename = (char *) calloc(1, 256);
         if (!filename) merror();
@@ -321,6 +323,7 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
             /* get the best result from all servers we've tried */
             delivered = (res->replyCode < delivered) ? res->replyCode : delivered;
             rumble_debug(NULL, "mailman", "MTA <%s> returned code %d (%s)", res->replyServer, delivered, res->replyMessage);
+            sprintf(serverReply, "<%s> said: [%d] %s", res->replyServer, res->replyCode, res->replyMessage);
             rumble_flush_dictionary(res->flags);
             free(res->flags);
             free(res->replyMessage);
@@ -333,9 +336,24 @@ void rumble_deliver_foreign(mqueue *item, masterHandle *master, const char *host
     }
 
     if (delivered >= 500) {
-
+        char* fid, *newfilename;
+        const char* sf;
+        FILE* fp;
         /* critical failure, giving up. */
-        rumble_debug(NULL, "mailman", "Critical failure, giving up for now.", 0);
+        rumble_debug(NULL, "mailman", "Critical failure, letting sender know");
+        fid = rumble_create_filename();
+        sf = rumble_config_str(master, "storagefolder");
+        newfilename = (char *) calloc(1, strlen(sf) + 26);
+        sprintf(newfilename, "%s/%s", sf, fid);
+        fp = fopen(newfilename, "wb");
+        if (fp) {
+            fprintf(fp, "To: %s\r\nFrom: Mailer Daemon <mailman@localhost>\r\nSubject: Delivery failed\r\n\r\nThe message sent to %s failed to be delivered\r\n%s\r\n", item->sender->raw, item->recipient->raw, serverReply);
+            radb_run_inject(master->_core.mail,
+                "INSERT INTO queue (id,loops, fid, sender, recipient, flags) VALUES (NULL,%u,%s,%s,%s,%s)",
+                1, fid, "Mailer Daemon <mailman@localhost>", item->sender->raw, item->flags);
+            fclose(fp);
+        }
+        
     } else if (delivered >= 400) {
 
         /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
@@ -396,7 +414,7 @@ void *rumble_worker_process(void *m) {
         if (item->loops > 5) {
             rumble_debug(NULL, "mailman", "Message %s is looping, dumping it!\n", item->fid);
             if (item->recipient) rumble_free_address(item->recipient);
-            if (item->sender) rumble_free_address(item->recipient);
+            if (item->sender) rumble_free_address(item->sender);
             if (item->fid) free((char *) item->fid);
             if (item->flags) free((char *) item->flags);
             free(item);

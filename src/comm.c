@@ -226,6 +226,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     if (!buffer) merror();
     va_start(vl, d);
     vsprintf(buffer, d, vl);
+    if (send(session->client->socket, "", 0, 0) == -1) return -1; // Check if we can send at all (avoid GnuTLS crash)
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
     session->client->bsent += strlen(buffer);
@@ -297,13 +298,14 @@ char *rumble_comm_read(sessionHandle *session) {
     for (p = 0; p < 1024; p++) {
         f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
         if (f > 0) {
+            if (send(session->client->socket, "", 0, 0) == -1) return NULL;
             if (session->client->recv) rc = (session->client->recv) (session->client->tls, &b, 1, 0);
             else rc = recv(session->client->socket, &b, 1, 0);
             if (rc <= 0) {
                 free(ret);
                 return (NULL);
             }
-
+            //printf("%c\n", b);
             ret[p] = b;
             if (b == '\n') break;
         } else {
@@ -362,6 +364,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += strlen(message);
     session->client->bsent += strlen(message);
+    if (send(session->client->socket, "", 0, 0) == -1) return -1; // Check if we can send at all (avoid GnuTLS crash)
     if (session->client->send) return ((session->client->send) (session->client->tls, message, strlen(message), 0));
     return (send(session->client->socket, message, (int) strlen(message), 0));
 }

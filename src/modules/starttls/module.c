@@ -60,7 +60,7 @@ ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const cha
     case RUMBLE_THREAD_POP3:    rcsend(session, "OK, starting TLS\r\n"); break;
     default:                    return (RUMBLE_RETURN_IGNORE);
     }
-
+	printf("Negotiating TLS\n");
     pcred = (gnutls_certificate_credentials_t *) master->_core.tls_credentials;
     ret = gnutls_init(&psess, GNUTLS_SERVER);
     ret = gnutls_priority_set_direct(psess, "EXPORT", NULL);
@@ -135,18 +135,20 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
     gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #   endif
+	printf("global init\n");
     if (gnutls_global_init()) {
-        fprintf(stderr, "<TLS> Failed!\r\n");
+        printf("<TLS> Failed!\r\n");
         return (EXIT_FAILURE);
     }
 
     m->_core.tls_credentials = (gnutls_certificate_credentials_t *) calloc(1, sizeof(gnutls_certificate_credentials_t));
     pcred = (gnutls_certificate_credentials_t *) m->_core.tls_credentials;
+	printf("alloc creds\n");
     if (gnutls_certificate_allocate_credentials(pcred)) {
         fprintf(stderr, "<TLS> Failed!\r\n");
         return (EXIT_FAILURE);
     }
-
+	printf("Setting certs\n");
     gnutls_certificate_set_x509_key_file(*pcred, "config/server.cert", "config/server.key", GNUTLS_X509_FMT_PEM);
     generate_dh_params();
     generate_rsa_params();

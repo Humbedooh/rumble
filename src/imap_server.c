@@ -145,7 +145,7 @@ void *rumble_imap_init(void *T) {
          */
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
         disconnect(session.client->socket);
-
+        printf("Cleaning up\n");
         /* Start cleanup */
         free(parameters);
         free(cmd);
@@ -941,7 +941,6 @@ ssize_t rumble_server_imap_close(masterHandle *master, sessionHandle *session, c
     mailman_folder  *folder;
     accountSession  *imap = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
     if (!imap->account) return (RUMBLE_RETURN_IGNORE);
     folder = imap->folder;
     if (folder && imap->account && (session->flags & rumble_mailman_HAS_SELECT)) {
@@ -1366,8 +1365,8 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
                 mailman_update_folder(folder, imap->bag->uid, 0);
                 cc = 0;
 #ifdef RUMBLE_MSC
-                rcprintf(session, "* %u EXISTS\r\n", exists);   /* Testing connection :> */
-                if (!rc) break; /* disconnected?? */
+                rc = rcprintf(session, "* %u EXISTS\r\n", exists);   /* Testing connection :> */
+                if (rc <= 0) break; /* disconnected?? */
 #endif
             }
 
@@ -1382,19 +1381,21 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
 
             rumble_rw_stop_read(imap->bag->lock);
             if (oexists != exists) {
-                rcprintf(session, "* %u EXISTS\r\n", exists);
+                rc = rcprintf(session, "* %u EXISTS\r\n", exists);
+                if (rc == -1) break;
                 oexists = exists;
             }
 
             if (recent != orecent) {
-                rcprintf(session, "* %u RECENT\r\n", exists);
+                rc = rcprintf(session, "* %u RECENT\r\n", exists);
+                if (rc == -1) break;
                 orecent = recent;
             }
 
             exists = 0;
             recent = 0;
             first = 0;
-            sleep(3);
+            sleep(5);
         }
     }
 
@@ -1413,6 +1414,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
  =======================================================================================================================
  */
 ssize_t rumble_server_imap_logout(masterHandle *master, sessionHandle *session, const char *parameters, const char *extra_data) {
+    printf("Logging out\n");
     return (RUMBLE_RETURN_FAILURE);
 }
 
