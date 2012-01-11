@@ -6,8 +6,8 @@
 #include "rumble.h"
 #include "comm.h"
 #ifndef RUMBLE_WINSOCK
-#include <arpa/nameser.h>
-#include <resolv.h>
+#   include <arpa/nameser.h>
+#   include <resolv.h>
 #endif
 
 /*
@@ -50,10 +50,9 @@ dvector *comm_mxLookup(const char *domain) {
         if (prec) DnsRecordListFree(prec, DNS_TYPE_MX);
     }
 
-#else 
+#else
 
- 
-    /*~~~~~~~~~~~~~~~~*/ 
+    /*~~~~~~~~~~~~~~~~*/
     /* UNIX (IBM) MX resolver */
     u_char  nsbuf[4096];
     /*~~~~~~~~~~~~~~~~*/

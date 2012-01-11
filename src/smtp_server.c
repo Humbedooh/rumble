@@ -318,7 +318,8 @@ ssize_t rumble_server_smtp_rcpt(masterHandle *master, sessionHandle *session, co
                 return (rc);
             }
 
-            rumble_debug(NULL, "smtp", "Message from %s can be delivered to <%s@%s>.", session->client->addr, recipient->user, recipient->domain);
+            rumble_debug(NULL, "smtp", "Message from %s can be delivered to <%s@%s>.", session->client->addr, recipient->user,
+                         recipient->domain);
             session->flags |= RUMBLE_SMTP_HAS_RCPT;
             return (250);
         }
@@ -477,12 +478,12 @@ ssize_t rumble_server_smtp_data(masterHandle *master, sessionHandle *session, co
     sprintf(filename, "%s/%s", sf, fid);
     fp = fopen(filename, "wb");
 #ifdef RUMBLE_DEBUG_STORAGE
-    rumble_debug(NULL, "smtp", "Writing to file %s...\n", filename);
+    rumble_debug(master, "smtp", "Writing to file %s...\n", filename);
 #endif
     if (!fp)
     {
 #ifdef RUMBLE_DEBUG_STORAGE
-        perror("Couldn't open file for writing");
+        rumble_debug(master, "smtp", "Error: Couldn't open file <%s> for writing", filename);
 #endif
         free(fid);
         free(filename);
@@ -688,7 +689,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         pass = buffer + 2 + strlen(user);
         sprintf(digest, "<%s>", user);
         addr = rumble_parse_mail_address(digest);
-        rumble_debug(NULL, "smtp", "%s trying to auth login with [%s]", session->client->addr, user);
+        rumble_debug(NULL, "smtp", "%s trying to auth plain with [%s]", session->client->addr, user);
         if (addr) OK = rumble_account_data_auth(0, addr->user, addr->domain, pass);
         free(buffer);
         rumble_free_address(addr);

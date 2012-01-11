@@ -26,16 +26,16 @@ void *get_in_addr(struct sockaddr *sa) {
  */
 socketHandle comm_init(masterHandle *m, const char *port) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int                 sockfd; /* our socket! yaaay. */
     struct addrinfo     hints;
     int                 yes = 1;
-    const char*         bindTo = 0;
+    const char          *bindTo = 0;
 #ifdef RUMBLE_WINSOCK
     struct sockaddr_in  x;
     WSADATA             wsaData;
 #endif
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = rumble_config_int(m, "forceipv4") ? AF_INET : AF_UNSPEC;  /* Force IPv4 or use default? */
@@ -58,11 +58,10 @@ socketHandle comm_init(masterHandle *m, const char *port) {
 
     x.sin_family = hints.ai_family;
     x.sin_port = htons(atoi(port));
-    if ( rhdict(m->_core.conf, "bindtoaddress") ) bindTo = rrdict(m->_core.conf, "bindtoaddress");
+    if (rhdict(m->_core.conf, "bindtoaddress")) bindTo = rrdict(m->_core.conf, "bindtoaddress");
     if (bindTo && strcmp(bindTo, "0.0.0.0")) {
         x.sin_addr.s_addr = inet_addr(bindTo);
-    }
-    else x.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+    } else x.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
     if (bind(sockfd, (struct sockaddr *) &x, sizeof(x)) == SOCKET_ERROR) {
         disconnect(sockfd);
         fprintf(stderr, "Server: failed to bind: %d\n", WSAGetLastError());
@@ -80,13 +79,13 @@ socketHandle comm_init(masterHandle *m, const char *port) {
     struct addrinfo *servinfo,
                     *p;
     /*~~~~~~~~~~~~~~~~~~~~~~*/
-    if ( rhdict(m->_core.conf, "bindtoaddress")) bindTo = rrdict(m->_core.conf, "bindtoaddress");
+
+    if (rhdict(m->_core.conf, "bindtoaddress")) bindTo = rrdict(m->_core.conf, "bindtoaddress");
     if ((rv = getaddrinfo(bindTo, port, &hints, &servinfo)) != 0) {
         rumble_debug(NULL, "comm.c", "ERROR: getaddrinfo: %s\n", gai_strerror(rv));
         return (0);
     }
 
-    
     /* Loop through all the results and bind to the first we can */
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {
@@ -154,16 +153,16 @@ socketHandle comm_open(masterHandle *m, const char *host, unsigned short port) {
     }
 
 #else
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
     int             rv;
     char            portc[10];
     struct addrinfo *servinfo,
                     *p;
-    const char *bindTo = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    const char      *bindTo = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     sprintf(portc, "%u", port);
-    if ( rhdict(m->_core.conf, "outgoingbindtoaddress")) bindTo = rrdict(m->_core.conf, "outgoingbindtoaddress");
+    if (rhdict(m->_core.conf, "outgoingbindtoaddress")) bindTo = rrdict(m->_core.conf, "outgoingbindtoaddress");
     if ((rv = getaddrinfo(bindTo, portc, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return (0);
@@ -226,7 +225,7 @@ ssize_t rumble_comm_printf(sessionHandle *session, const char *d, ...) {
     if (!buffer) merror();
     va_start(vl, d);
     vsprintf(buffer, d, vl);
-    if (send(session->client->socket, "", 0, 0) == -1) return -1; // Check if we can send at all (avoid GnuTLS crash)
+    if (send(session->client->socket, "", 0, 0) == -1) return (-1); /* Check if we can send at all (avoid GnuTLS crash) */
     if (session->client->tls != NULL) len = (session->client->send) (session->client->tls, buffer, strlen(buffer), 0);
     else len = send(session->client->socket, buffer, (int) strlen(buffer), 0);
     session->client->bsent += strlen(buffer);
@@ -298,14 +297,17 @@ char *rumble_comm_read(sessionHandle *session) {
     for (p = 0; p < 1024; p++) {
         f = select(session->client->socket + 1, &session->client->fd, NULL, NULL, &t);
         if (f > 0) {
-            if (send(session->client->socket, "", 0, 0) == -1) return NULL;
+            if (send(session->client->socket, "", 0, 0) == -1) return (NULL);
             if (session->client->recv) rc = (session->client->recv) (session->client->tls, &b, 1, 0);
             else rc = recv(session->client->socket, &b, 1, 0);
             if (rc <= 0) {
                 free(ret);
                 return (NULL);
             }
-            //printf("%c\n", b);
+
+            /*
+             * printf("%c\n", b);
+             */
             ret[p] = b;
             if (b == '\n') break;
         } else {
@@ -364,7 +366,7 @@ char *rumble_comm_read_bytes(sessionHandle *session, int len) {
 ssize_t rumble_comm_send(sessionHandle *session, const char *message) {
     if (session->_svc) ((rumbleService *) session->_svc)->traffic.sent += strlen(message);
     session->client->bsent += strlen(message);
-    if (send(session->client->socket, "", 0, 0) == -1) return -1; // Check if we can send at all (avoid GnuTLS crash)
+    if (send(session->client->socket, "", 0, 0) == -1) return (-1); /* Check if we can send at all (avoid GnuTLS crash) */
     if (session->client->send) return ((session->client->send) (session->client->tls, message, strlen(message), 0));
     return (send(session->client->socket, message, (int) strlen(message), 0));
 }

@@ -88,7 +88,10 @@ void *rumble_imap_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%32s %32s %1000[^\r\n]", extra_data, cmd, parameters)) {
                 rumble_string_upper(cmd);
-                //rumble_debug(NULL, "imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
+
+                /*
+                 * rumble_debug(NULL, "imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
+                 */
                 if (!strcmp(cmd, "UID")) {
 
                     /* Set UID flag if requested */
@@ -127,7 +130,7 @@ void *rumble_imap_init(void *T) {
 
             /*
              * rcprintf(&session, "%s BAD Session timed out!\r\n", extra_data);
-             * timeout
+             * timeou
              */
         } else {
             rcsend(&session, "* BYE bye!\r\n");
@@ -146,6 +149,7 @@ void *rumble_imap_init(void *T) {
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
         disconnect(session.client->socket);
         printf("Cleaning up\n");
+
         /* Start cleanup */
         free(parameters);
         free(cmd);
@@ -220,7 +224,8 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
                 imap->bag = mailman_get_bag(imap->account->uid,
                                             strlen(imap->account->domain->path) ? imap->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
             } else {
-                rumble_debug(NULL, "imap4", "%s's request for %s@%s was denied (wrong pass?)\n", session->client->addr, addr->user, addr->domain);
+                rumble_debug(NULL, "imap4", "%s's request for %s@%s was denied (wrong pass?)\n", session->client->addr, addr->user,
+                             addr->domain);
                 rcprintf(session, "%s NO Incorrect username or password!\r\n", extra_data);
                 session->client->rejected = 1;
             }
@@ -305,7 +310,8 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                 if (pass[strlen(pass) - 1] == 4) pass[strlen(pass) - 1] = 0;    /* remove EOT character if present. */
                 addr = rumble_parse_mail_address(tmp);
                 if (addr) {
-                    rumble_debug(NULL, "imap4", "%s requested access to %s@%s via AUTHENTICATE", session->client->addr, addr->user, addr->domain);
+                    rumble_debug(NULL, "imap4", "%s requested access to %s@%s via AUTHENTICATE", session->client->addr, addr->user,
+                                 addr->domain);
                     imap->account = rumble_account_data_auth(0, addr->user, addr->domain, pass);
                     if (imap->account) {
                         rcprintf(session, "%s OK Welcome!\r\n", extra_data);
@@ -941,6 +947,7 @@ ssize_t rumble_server_imap_close(masterHandle *master, sessionHandle *session, c
     mailman_folder  *folder;
     accountSession  *imap = (accountSession *) session->_svcHandle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     if (!imap->account) return (RUMBLE_RETURN_IGNORE);
     folder = imap->folder;
     if (folder && imap->account && (session->flags & rumble_mailman_HAS_SELECT)) {
@@ -1365,7 +1372,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
                 mailman_update_folder(folder, imap->bag->uid, 0);
                 cc = 0;
 #ifdef RUMBLE_MSC
-                rc = rcprintf(session, "* %u EXISTS\r\n", exists);   /* Testing connection :> */
+                rc = rcprintf(session, "* %u EXISTS\r\n", exists);  /* Testing connection :> */
                 if (rc <= 0) break; /* disconnected?? */
 #endif
             }

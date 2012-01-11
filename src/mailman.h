@@ -34,6 +34,11 @@ void                mailman_copy_letter
                         uint32_t        UID
                     );
 mailman_bag         *mailman_get_bag(uint32_t uid, const char *path);
+int                 smtp_deliver_feed(rumble_mailbox *user, mqueue *item, masterHandle *master);
+int                 smtp_deliver_alias(rumble_mailbox *user, mqueue *item, masterHandle *master);
+int                 smtp_deliver_mbox(rumble_mailbox *user, mqueue *item, masterHandle *master);
+int                 smtp_deliver_foreign(mqueue *item, masterHandle *master, const char *host);
+int                 smtp_deliver_failure(masterHandle *master, const char *sender, const char *recipient, const char *reason);
 #   ifdef __cplusplus
 }
 #   endif

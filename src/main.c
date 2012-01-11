@@ -8,8 +8,8 @@
 #include "rumble_version.h"
 #include <signal.h>
 #ifndef RUMBLE_MSC
-#include <sys/types.h>
-#include <pwd.h> 
+#   include <sys/types.h>
+#   include <pwd.h>
 #endif
 static void         cleanup(void);
 extern masterHandle *rumble_database_master_handle;
@@ -59,8 +59,8 @@ void ControlHandler(DWORD request) {
  =======================================================================================================================
  */
 int InitService(void) {
-	ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
-	SetServiceStatus(hStatus, &ServiceStatus);
+    ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
+    SetServiceStatus(hStatus, &ServiceStatus);
     rumbleStart();
     SetServiceStatus(hStatus, &ServiceStatus);
     return (0);
@@ -294,17 +294,17 @@ static void dumpstack(void) {
  */
 int rumbleStart(void) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     masterHandle    *master = 0;
     int             rc,
                     x;
     rumbleService   *svc;
 #ifndef RUMBLE_MSC
-    struct passwd*     runAsEntry;
-    __uid_t             runAsUID = 999999;
+    struct passwd   *runAsEntry;
+    __uid_t         runAsUID = 999999;
 #endif
     const char      *runAsName;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     srand(time(NULL));
     master = (masterHandle *) malloc(sizeof(masterHandle));
@@ -335,7 +335,6 @@ int rumbleStart(void) {
 
     srand(time(0));
     rumble_config_load(master, s_args);
-    
     if (rhdict(s_args, "execpath")) rsdict(master->_core.conf, "execpath", rrdict(s_args, "execpath"));
     rumble_database_load(master, 0);
     rumble_database_update_domains();
@@ -381,9 +380,14 @@ int rumbleStart(void) {
 
     rumble_master_init(master);
     rumble_modules_load(master);
-    
-/*$3 Change into running as RunAs user after creating sockets and setting up the server */
-    #ifndef RUMBLE_MSC
+
+/*$3
+ =======================================================================================================================
+    Change into running as RunAs user after creating sockets and setting up the server
+ =======================================================================================================================
+ */
+
+#ifndef RUMBLE_MSC
     runAsName = rhdict(master->_core.conf, "runas") ? rrdict(master->_core.conf, "runas") : "";
     if (strlen(runAsName)) {
         if (!strcmp(runAsName, "root")) runAsUID = 0;
@@ -393,23 +397,26 @@ int rumbleStart(void) {
                 runAsUID = runAsEntry->pw_uid;
             }
         }
+
         if (runAsUID != 999999) {
             rumble_debug(NULL, "core", "Running as user: %s", runAsName);
             if (setuid(runAsUID)) {
                 rumble_debug(NULL, "core", "Error: Could not set process UID to %u!", runAsEntry->pw_uid);
                 exit(EXIT_FAILURE);
             }
-        }
-        else {
+        } else {
             rumble_debug(NULL, "core", "I couldn't find the user to run as: %s", runAsName);
             exit(EXIT_FAILURE);
         }
-    }
-    else rumble_debug(NULL, "core", "no run-as directive set, running as root(?)");
-    #endif
-/* $3 End RunAs directive */
-    
-    
+    } else rumble_debug(NULL, "core", "no run-as directive set, running as root(?)");
+#endif
+
+    /*$3
+     ===================================================================================================================
+        End RunAs directive
+     ===================================================================================================================
+     */
+
     if (rhdict(s_args, "--service")) {
         rumble_debug(NULL, "startup", "--service enabled, going stealth.");
         shutUp = 1;
@@ -417,10 +424,10 @@ int rumbleStart(void) {
 
     rumble_debug(NULL, "startup", "Rumble is up and running, listening for incoming calls!");
 #ifdef RUMBLE_MSC
-	if (rhdict(s_args, "--service")) {
-		cleanup();
-		return 0;
-	}
+    if (rhdict(s_args, "--service")) {
+        cleanup();
+        return (0);
+    }
 #endif
     while (1) {
         cleanup();
@@ -503,7 +510,6 @@ int main(int argc, char **argv) {
         printf("Error: Couldn't open rumble_status.log for writing.\r\nEither rumble is already running, or I don't have access to write to this folder.\r\n");
         exit(0);
     }
-    
 
     fprintf(sysLog, "---------------------------------------------------\r\n");
     fprintf(sysLog, "New instance of Rumble started, clearing log file.\r\n");
@@ -577,6 +583,7 @@ void cleanup(void) {
 
             obj = obj->prev;
         }
+
         fflush(sysLog);
     }
 

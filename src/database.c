@@ -166,7 +166,8 @@ void rumble_database_load_mysql(masterHandle *master, FILE *runlog) {
         }
     } else {
         if (rc == -1) {
-            rumble_debug(NULL, "db", "Couldn't ascertain the existance of the database described in rumble.conf. Please check your MySQL server!");
+            rumble_debug(NULL, "db",
+                         "Couldn't ascertain the existance of the database described in rumble.conf. Please check your MySQL server!");
             exit(0);
         } else {
             printf("[OK]\r\n");

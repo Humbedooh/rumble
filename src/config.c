@@ -50,13 +50,13 @@ static int rumble_compare_value(dvector *config, const char *key, const char *op
  */
 void rumble_config_load(masterHandle *master, dvector *args) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-    char                *paths[4] = { "config", "/var/rumble/config", "/etc/rumble/config", "/rumble/config"};
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    char                *paths[4] = { "config", "/var/rumble/config", "/etc/rumble/config", "/rumble/config" };
     char                *cfgfile;
     const char          *cfgpath;
     FILE                *config;
     rumbleKeyValuePair  *el;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     master->_core.conf = dvector_init();
     cfgfile = (char *) calloc(1, 1024);
@@ -225,14 +225,14 @@ uint32_t rumble_config_int(masterHandle *master, const char *key) {
  */
 dvector *rumble_readconfig(const char *filename) {
 
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     char                *paths[3] = { "config", "/var/rumble/config", "/rumble/config" };
     char                cfgfile[1024];
     FILE                *config;
     rumbleKeyValuePair  *el;
     dvector             *configFile;
     int                 x = 0;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     configFile = dvector_init();
     for (x = 0; x < 3; x++) {

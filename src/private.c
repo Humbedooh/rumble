@@ -264,13 +264,21 @@ void rumble_rw_stop_write(rumble_readerwriter *rrw)
     pthread_mutex_unlock(&rrw->mutex);
 }
 
+/*
+ =======================================================================================================================
+ =======================================================================================================================
+ */
+size_t rumble_mail_from_file(masterHandle *master, const char *oldfile, char **fid) {
 
-size_t              rumble_mail_from_file(masterHandle *master, const char *oldfile, char **fid) {
-    size_t length = 0;
-    FILE *in, *out;
-    char buffer[2048];
-    const char* path;
-    char* newfile = calloc(1,256);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+    size_t      length = 0;
+    FILE        *in,
+                *out;
+    char        buffer[2048];
+    const char  *path;
+    char        *newfile = calloc(1, 256);
+    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
     *fid = rumble_create_filename();
     path = rumble_config_str(master, "storagefolder");
     sprintf(newfile, "%s/%s", path, *fid);
@@ -289,9 +297,9 @@ size_t              rumble_mail_from_file(masterHandle *master, const char *oldf
     } else {
         while (!feof(in)) {
 
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
             size_t  rc = fread(buffer, 1, 2048, in);
-            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+            /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
             if (rc < 0) break;
             if (!fwrite(buffer, rc, 1, out)) break;
@@ -303,5 +311,6 @@ size_t              rumble_mail_from_file(masterHandle *master, const char *oldf
         fclose(out);
         fclose(in);
     }
-    return length;
+
+    return (length);
 }

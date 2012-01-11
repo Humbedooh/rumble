@@ -128,7 +128,8 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
                     free(entry);
                 } else {
                     return (RUMBLE_RETURN_FAILURE);
-                    rumble_debug((masterHandle*) session->_master, "smtp", "<blacklist> %s is listed in the fast list as a spam host.", session->client->addr);
+                    rumble_debug((masterHandle *) session->_master, "smtp", "<blacklist> %s is listed in the fast list as a spam host.",
+                                 session->client->addr);
                 }
             }
         }
@@ -156,7 +157,7 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
         if (strstr(addr, badhost))
         {
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
-            rumble_debug((masterHandle*) session->_master, "smtp", "<blacklist> %s was blacklisted as a bad host name, aborting\n", addr);
+            rumble_debug((masterHandle *) session->_master, "smtp", "<blacklist> %s was blacklisted as a bad host name, aborting\n", addr);
 #endif
             if (blacklist_logfile) {
 

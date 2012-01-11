@@ -254,12 +254,12 @@ class   radbo
 public:
     radbo(radbMaster *db);
     radbo(void);
-    ~                   radbo(void);
-    inline int          query(void);
-    inline void         cleanup(void);
-    inline int          inject(...);
-     radbResult   *fetch_row(void);
-    radbObject          *dbo;
+    ~           radbo(void);
+    inline int  query(void);
+    inline void cleanup(void);
+    inline int  inject(...);
+    radbResult  *fetch_row(void);
+    radbObject  *dbo;
 };
 class   radb
 {
@@ -268,17 +268,17 @@ class   radb
  -----------------------------------------------------------------------------------------------------------------------
  */
 public:
-    ~               radb(void);
+    ~       radb(void);
 #      ifdef _SQLITE3_H_
-     void         init_sqlite(const char *filename);
+    void    init_sqlite(const char *filename);
 #      endif
 #      ifdef MYSQL_CLIENT
-    void          init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
+    void    init_mysql(unsigned threads, const char *host, const char *user, const char *pass, const char *db, unsigned port);
 #      endif
-     int      run(const char *statement);
-     int      run_inject(const char *statement, ...);
-     radbo    *prepare(const char *statement, ...);
-     void     disconnect(void);
+    int     run(const char *statement);
+    int     run_inject(const char *statement, ...);
+    radbo   *prepare(const char *statement, ...);
+    void    disconnect(void);
 
 /*
  -----------------------------------------------------------------------------------------------------------------------

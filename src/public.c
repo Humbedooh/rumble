@@ -559,7 +559,7 @@ size_t rumble_file_exists(const char *filename)
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_vdebug(masterHandle* m, const char *svc, const char *msg, va_list args) {
+void rumble_vdebug(masterHandle *m, const char *svc, const char *msg, va_list args) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
     time_t          rawtime;
@@ -568,8 +568,9 @@ void rumble_vdebug(masterHandle* m, const char *svc, const char *msg, va_list ar
                     txt[130];
     char            *dstring;
     dvector_element *obj;
-    dvector* debug;
+    dvector         *debug;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
+
     debug = m ? m->debug.logvector : debugLog;
     if (debug) {
         dstring = (char *) debug->last->object;
@@ -595,12 +596,13 @@ void rumble_vdebug(masterHandle* m, const char *svc, const char *msg, va_list ar
  =======================================================================================================================
  =======================================================================================================================
  */
-void rumble_debug(masterHandle* m, const char *svc, const char *msg, ...) {
+void rumble_debug(masterHandle *m, const char *svc, const char *msg, ...) {
 
-    /*~~~~~~~*/
+    /*~~~~~~~~~~~*/
     va_list vl;
-    dvector* debug;
-    /*~~~~~~~*/
+    dvector *debug;
+    /*~~~~~~~~~~~*/
+
     debug = m ? m->debug.logvector : debugLog;
     if (debug) {
         va_start(vl, msg);
@@ -653,7 +655,6 @@ void rumble_release_state(lua_State *X) {
     masterHandle    *master = public_master_handle;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
-    
     pthread_mutex_lock(&master->lua.mutex);
     for (x = 0; x < RUMBLE_LSTATES; x++) {
         if (master->lua.states[x].state == X) {

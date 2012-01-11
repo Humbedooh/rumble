@@ -3,12 +3,11 @@
 #include "../../comm.h"
 
 /* include <Ws2tcpip.h> */
-dvector         *sa_config;
-int             sa_spamscore, sa_modifyifspam, sa_modifyifham, sa_deleteifspam, sa_port, sa_usedaemon, sa_enabled;
-char            sa_host[512];
-char            sa_exec[512];
-masterHandle    *myMaster;
- 
+dvector                     *sa_config;
+int                         sa_spamscore, sa_modifyifspam, sa_modifyifham, sa_deleteifspam, sa_port, sa_usedaemon, sa_enabled;
+char                        sa_host[512];
+char                        sa_exec[512];
+masterHandle                *myMaster;
 rumblemodule_config_struct  myConfig[] =
 {
     { "SpamScore", 2, "At which score should emails be considered spam?", RCS_NUMBER, &sa_spamscore },

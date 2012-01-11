@@ -543,9 +543,10 @@ typedef struct
         } states[RUMBLE_LSTATES];
         pthread_mutex_t mutex;
     } lua;
-    struct {
-        FILE* logfile;
-        dvector* logvector;
+    struct
+    {
+        FILE    *logfile;
+        dvector *logvector;
     } debug;
 } masterHandle;
 typedef struct
@@ -737,12 +738,12 @@ void                        rumble_release_state(lua_State *X);
 lua_State                   *rumble_acquire_state(void);
 size_t                      rumble_file_exists(const char *filename);
 void                        rumble_test(void);
-char                        *rumble_sha256(const char *d); /* SHA-256 digest (64 byte hex string) */
+char                        *rumble_sha256(const char *d);  /* SHA-256 digest (64 byte hex string) */
 char                        *rumble_decode_base64(const char *src);
 char                        *rumble_encode_base64(const char *src, size_t len);
 int                         rumble_unbase64(unsigned char *dest, const unsigned char *src, size_t srclen);
-void                        rumble_string_lower(char *d);           /* Converts <d> into lowercase. */
-void                        rumble_string_upper(char *d);           /* Converts <d> into uppercase. */
+void                        rumble_string_lower(char *d);   /* Converts <d> into lowercase. */
+void                        rumble_string_upper(char *d);   /* Converts <d> into uppercase. */
 rumble_args                 *rumble_read_words(const char *d);
 rumble_args                 *rumble_splitstring(const char *d, char delimiter);
 void                        rumble_args_free(rumble_args *d);
@@ -777,8 +778,8 @@ rumble_sendmail_response    *rumble_send_email
                                 address         *sender,
                                 address         *recipient
                             );
-void                        rumble_debug(masterHandle*m, const char *svc, const char *msg, ...);
-void                        rumble_vdebug(masterHandle* m, const char *svc, const char *msg, va_list args);
+void                        rumble_debug(masterHandle *m, const char *svc, const char *msg, ...);
+void                        rumble_vdebug(masterHandle *m, const char *svc, const char *msg, va_list args);
 dvector                     *rumble_readconfig(const char *filename);
 void                        comm_addEntry(rumbleService *svc, uint32_t bytes, char rejected);
 
@@ -788,7 +789,7 @@ void                        comm_addEntry(rumbleService *svc, uint32_t bytes, ch
  =======================================================================================================================
  */
 
-uint32_t        rumble_domain_exists(const char *domain);   /* ! Checks if the domain is a local domain */
+uint32_t        rumble_domain_exists(const char *domain);           /* ! Checks if the domain is a local domain */
 uint32_t        rumble_account_exists_raw(const char *user, const char *domain);
 rumble_domain   *rumble_domain_copy(const char *domain);
 cvector         *rumble_domains_list(void);
