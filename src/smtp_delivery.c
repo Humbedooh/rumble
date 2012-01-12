@@ -177,7 +177,7 @@ int smtp_deliver_mbox(rumble_mailbox *user, mqueue *item, masterHandle *master) 
     /* mail box */
     char        *ofilename,
                 *nfilename;
-    const char  *path;
+    const char  *defaultPath, *domainStoragePath;
     size_t      fsize;
     /*~~~~~~~~~~~~~~~~~~~*/
 
@@ -192,11 +192,13 @@ int smtp_deliver_mbox(rumble_mailbox *user, mqueue *item, masterHandle *master) 
     }
 
     /* move file to user's inbox */
-    path = rumble_config_str(master, "storagefolder");
-    ofilename = (char *) calloc(1, strlen(path) + 26);
-    nfilename = (char *) calloc(1, strlen(path) + 26);
-    sprintf(ofilename, "%s/%s", path, item->fid);
-    sprintf(nfilename, "%s/%s.msg", path, item->fid);
+    defaultPath = rumble_config_str(master, "storagefolder");
+    domainStoragePath = strlen(user->domain->path) ? user->domain->path : defaultPath;
+    
+    ofilename = (char *) calloc(1, strlen(defaultPath) + 26);
+    nfilename = (char *) calloc(1, strlen(domainStoragePath) + 26);
+    sprintf(ofilename, "%s/%s", defaultPath, item->fid);
+    sprintf(nfilename, "%s/%s.msg", domainStoragePath, item->fid);
 #ifdef RUMBLE_DEBUG_STORAGE
     rumble_debug(master, "mailman", "Moving %s to %s", ofilename, nfilename);
 #endif

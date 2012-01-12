@@ -501,6 +501,7 @@ FILE *mailman_open_letter(mailman_bag *bag, mailman_folder *folder, uint64_t id)
     if (!letter) return (0);
     memset(filename, 0, 256);
     sprintf(filename, "%s/%s.msg", bag->path, letter->filename);
+    printf("Opening %s\n", filename);
     return (fopen(filename, "r"));
 }
 
@@ -593,7 +594,7 @@ mailman_bag *mailman_get_bag(uint32_t uid, const char *path) {
 
     if (rbag) rumble_debug(NULL, "mailman", "Using already opened bag");
     if (!rbag) {
-        rumble_debug(NULL, "mailman", "Making new bag struct");
+        rumble_debug(NULL, "mailman", "Making new bag struct with %s as path", path);
         rbag = mailman_new_bag(uid, path);
         cvector_add(rumble_database_master_handle->mailboxes.bags, rbag);
     }

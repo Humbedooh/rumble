@@ -331,7 +331,7 @@ static int rumble_lua_deleteaccount(lua_State *L) {
 
         sprintf(stmt, "DELETE FROM accounts WHERE id = %u", acc->uid);
         radb_run(rumble_database_master_handle->_core.db, stmt);
-        bag = mailman_get_bag(acc->uid, acc->domain->path);
+        bag = mailman_get_bag(acc->uid, strlen(acc->domain->path) ? acc->domain->path : rrdict(rumble_database_master_handle->_core.conf, "storagefolder"));
         rumble_debug(NULL, "Lua", "Deleted account: <%s@%s>", acc->user, acc->domain->name);
         if (bag) {
 
@@ -1239,7 +1239,9 @@ static int rumble_lua_createdomain(lua_State *L) {
     /*~~~~~~~~~~~~~~~~*/
     const char  *domain,
                 *path;
+    char xPath[512];
     uint32_t    flags;
+    int bad = 0;
     /*~~~~~~~~~~~~~~~~*/
 
     /*$2
@@ -1251,15 +1253,31 @@ static int rumble_lua_createdomain(lua_State *L) {
     luaL_checktype(L, 1, LUA_TSTRING);
     domain = lua_tostring(L, 1);
     path = lua_tostring(L, 2);
+    if (!path || !strlen(path)) {
+        sprintf(xPath, "%s/%s", rrdict(rumble_database_master_handle->_core.conf, "storagefolder"), domain);
+        rumble_debug(rumble_database_master_handle, "Lua", "Creating directory %s", xPath);
+#ifdef RUMBLE_MSC
+        bad = _mkdir(xPath);
+#else
+        bad = mkdir(xPath, S_IRWXU | S_IRGRP | S_IWGRP);
+#endif
+        path = xPath;
+    }
     flags = luaL_optint(L, 3, 0);
     lua_settop(L, 0);
-    if (!rumble_domain_exists(domain)) {
-        radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (id,domain,storagepath,flags) VALUES (NULL,%s,%s,%u)",
-                        domain, path, flags);
-        rumble_database_update_domains();
-        lua_pushboolean(L, 1);
-        rumble_debug(NULL, "Lua", "Created new domain: %s", domain);
-    } else lua_pushboolean(L, 0);
+    if (!bad) {
+        if (!rumble_domain_exists(domain)) {
+            radb_run_inject(rumble_database_master_handle->_core.db, "INSERT INTO domains (id,domain,storagepath,flags) VALUES (NULL,%s,%s,%u)",
+                            domain, path, flags);
+            rumble_database_update_domains();
+            lua_pushboolean(L, 1);
+            rumble_debug(NULL, "Lua", "Created new domain: %s", domain);
+        } else lua_pushboolean(L, 0);
+    }
+    else {
+        printf("mkdir returned code %u!\n", bad);
+        lua_pushboolean(L, 0);
+    }
     return (1);
 }
 
@@ -2041,7 +2059,7 @@ signed int rumble_lua_callback(lua_State *state, void *hook, void *session) {
 
     lua_atpanic(L, rumble_lua_panic);
     lua_rawgeti(L, LUA_REGISTRYINDEX, ((hookHandle *) hook)->lua_callback);
-
+    
     /*$2
      -------------------------------------------------------------------------------------------------------------------
         Make a table for the session object and add the default session functions.
