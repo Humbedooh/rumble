@@ -1368,7 +1368,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
             cc++;
             if (cc == 10) {
 
-                /* Check the DB for new messages every 40 seconds. */
+                /* Check the DB for new messages every 50 seconds. */
                 mailman_update_folder(folder, imap->bag->uid, 0);
                 cc = 0;
 #ifdef RUMBLE_MSC

@@ -44,8 +44,12 @@ if ( session.section and session.credentials.admin ) then
 				svctrl = session.section:upper() .. " is already running!";
 			end
 		elseif (http.form.stop) then
-			Rumble.stopService(svc);
-			svctrl = session.section:upper() .. " stopped!";
+			if (svc == "mailman") then
+				svctrl = session.section:upper() .. " cannot be stopped.";
+			else
+				Rumble.stopService(svc);
+				svctrl = session.section:upper() .. " stopped!";
+			end
 		end
 	else
 		svctrl = "No such service: " .. svc:upper();	

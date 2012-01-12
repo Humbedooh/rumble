@@ -131,8 +131,11 @@ void *rumble_worker_process(void *m) {
                     *s;
     clientHandle    c;
     d_iterator      diter;
+    int maxAttempts = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    maxAttempts = atoi(rrdict(master->_core.conf, "deliveryattempts"));
+    maxAttempts = maxAttempts ? maxAttempts : 5;
     sess->client = &c;
     sess->_svc = svc;
     if (!sess) merror();
@@ -151,10 +154,10 @@ void *rumble_worker_process(void *m) {
 
         /* Check for rampant loops */
         item->loops++;
-        if (item->loops > 5) {
+        if (item->loops > maxAttempts) {
             rumble_debug(NULL, "mailman", "Message %s is looping, dumping it!\n", item->fid);
             if (strcmp(item->sender->user, "mailman") || strcmp(item->sender->domain, "localhost")) {
-                smtp_deliver_failure(master, item->sender->raw, item->recipient->raw, "Reason: Mail could not be delivered and is now looping.\r\nCode: 450; Mailbox unavailable or full.");
+                smtp_deliver_failure(master, item->sender->raw, item->recipient->raw, "Reason: Message seems to be looping.");
             }
             if (item->recipient) rumble_free_address(item->recipient);
             if (item->sender) rumble_free_address(item->sender);

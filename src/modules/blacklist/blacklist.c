@@ -219,6 +219,7 @@ ssize_t rumble_blacklist(sessionHandle *session, const char *junk) {
 
                     if (fp) {
                         mtime = rumble_mtime();
+                        rumble_debug(myMaster, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n", mtime, session->client->addr, addr, dnshost);
                         fprintf(fp, "<blacklist>[%s] %s: %s is blacklisted by DNSBL %s.\r\n", mtime, session->client->addr, addr, dnshost);
                         fclose(fp);
                         free(mtime);

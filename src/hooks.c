@@ -180,7 +180,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
                 printf("<debug :: hooks> Hook %p claimed failure, aborting connection!\n", (void *) hookFunc);
 #endif
-                rumble_debug(NULL, "module", "Module \"%s\" aborted the session with %s!", hook->module, session->client->addr);
+                rumble_debug(NULL, "module", "%s aborted the session with %s!", hook->module, session->client->addr);
                 return (RUMBLE_RETURN_FAILURE);
             }
 
@@ -189,7 +189,7 @@ ssize_t rumble_server_execute_hooks(sessionHandle *session, cvector *hooks, uint
 #if RUMBLE_DEBUG & RUMBLE_DEBUG_HOOKS
                 printf("<debug :: hooks> Hook %p took over, skipping to next command.\n", (void *) hookFunc);
 #endif
-                rumble_debug(NULL, "module", "Module \"%s\" denied a request from %s", hook->module, session->client->addr);
+                rumble_debug(NULL, "module", "%s denied a request from %s", hook->module, session->client->addr);
                 return (RUMBLE_RETURN_IGNORE);
             }
         }
@@ -319,12 +319,12 @@ ssize_t rumble_service_execute_hooks(cvector *hooks, sessionHandle *session, uin
             }
 
             if (rc == RUMBLE_RETURN_FAILURE) {
-                rumble_debug(NULL, "hook", "Module %s returned failure on \"%s\"", hook->module, line ? line : "(null)");
+                rumble_debug(NULL, "module", "%s returned failure on \"%s\"", hook->module, line ? line : "(null)");
                 return (RUMBLE_RETURN_FAILURE);
             }
 
             if (rc == RUMBLE_RETURN_IGNORE) {
-                rumble_debug(NULL, "hook", "Module %s returned ignore on \"%s\"", hook->module, line ? line : "(null)");
+                rumble_debug(NULL, "module", "%s returned ignore on \"%s\"", hook->module, line ? line : "(null)");
                 return (RUMBLE_RETURN_IGNORE);
             }
         }

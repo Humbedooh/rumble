@@ -225,14 +225,22 @@ int smtp_deliver_foreign(mqueue *item, masterHandle *master, const char *host) {
     char                        *filename;
     char                        tmp[512];
     char                        serverReply[2048];
-    const char                  *statement;
+    char                        statement[1024];
     uint32_t                    delivered = 500;
     rumble_sendmail_response    *res;
     d_iterator                  iter;
     const char*ignmx;
     dvector* badmx;
+    int maxAttempts = 5;
+    int retryInterval = 360;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
+    maxAttempts = atoi(rrdict(master->_core.conf, "deliveryattempts"));
+    maxAttempts = maxAttempts ? maxAttempts : 5;
+    
+    retryInterval = atoi(rrdict(master->_core.conf, "retryinterval"));
+    retryInterval = retryInterval ? retryInterval : 360;
+    
     ignmx = rrdict(master->_core.conf, "ignoremx");
     badmx = dvector_init();
     if (strlen(ignmx)) rumble_scan_words(badmx, ignmx);
@@ -241,9 +249,9 @@ int smtp_deliver_foreign(mqueue *item, masterHandle *master, const char *host) {
                  item->recipient->domain, host);
     mx = comm_mxLookup(host);
     if (!mx or!mx->size) {
-        rumble_debug(master, "mailman", "Couldn't look up domain %s, faking a SMTP 500 error.", host);
-        delivered = 500;
-        sprintf(serverReply, "Reason: No such host; %s", host);
+        rumble_debug(master, "mailman", "Couldn't look up domain %s, faking a SMTP 450 error.", host);
+        delivered = 450;
+        sprintf(serverReply, "Reason: Unable to resolve hostname '%s'", host);
     } else if (mx->size) {
         filename = (char *) calloc(1, 256);
         if (!filename) merror();
@@ -272,18 +280,22 @@ int smtp_deliver_foreign(mqueue *item, masterHandle *master, const char *host) {
 
     if (delivered >= 500) smtp_deliver_failure(master, item->sender->raw, item->recipient->raw, serverReply);
     else if (delivered >= 400) {
-
-        /* temp failure, push mail back into queue (schedule next try in 30 minutes). */
-        rumble_debug(master, "mailman", "MTA reported temporary error(%u), queuing mail for later", delivered);
-        sprintf(tmp, "<%s=%s@%s>", item->sender->tag, item->sender->user, item->sender->domain);
-        statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,strftime('%%s', 'now', '+10 minutes'),%u,%s,%s,%s,%s)";
-        if (master->_core.mail->dbType == RADB_MYSQL) {
-            statement = "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,NOW( ) + INTERVAL 10 MINUTE,%u,%s,%s,%s,%s)";
+        // If we have tried 5 times without succeess, it's time to end this.
+        if (item->loops >= maxAttempts) {
+            smtp_deliver_failure(master, item->sender->raw, item->recipient->raw, serverReply);
         }
+        else {
+            /* temp failure, push mail back into queue (schedule next try in 6 minutes). */
+            rumble_debug(master, "mailman", "MTA reported temporary error(%u), queuing mail for later (+%u secs)", delivered, retryInterval);
+            sprintf(statement, "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,strftime('%%%%s', 'now', '+%u seconds'),%%u,%%s,%%s,%%s,%%s)", retryInterval);
+            if (master->_core.mail->dbType == RADB_MYSQL) {
+                sprintf(statement, "INSERT INTO queue (id,time, loops, fid, sender, recipient, flags) VALUES (NULL,NOW( ) + INTERVAL %u SECOND,%%u,%%s,%%s,%%s,%%s)", retryInterval);
+            }
 
-        radb_run_inject(master->_core.mail, statement, item->loops, item->fid, tmp, item->recipient->raw, item->flags);
-        rumble_debug(master, "mailman", "Mail %s queued", item->fid);
-        memset(tmp, 0, 256);
+            radb_run_inject(master->_core.mail, statement, item->loops, item->fid, item->sender->raw, item->recipient->raw, item->flags);
+            rumble_debug(master, "mailman", "Mail %s queued", item->fid);
+            memset(tmp, 0, 256);
+        }
     } else {
         rumble_debug(master, "mailman", "Mail %s delivered.", item->fid);
     }
@@ -322,7 +334,7 @@ int smtp_deliver_failure(masterHandle *master, const char *sender, const char *r
 To: %s\r\nFrom: Mailer Daemon <mailman@localhost>\r\n\
 Subject: Delivery failed\r\n\
 \r\n\
-The message sent to %s failed to be delivered\r\n\
+The email you sent to %s failed to be delivered.\r\n\
 %s\r\n\r\n\
 With regards,\r\n\
 Mailer Daemon at %s on Rumble Mail Server v/%u.%u.%u\r\n",
