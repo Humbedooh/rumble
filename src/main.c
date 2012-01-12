@@ -6,12 +6,10 @@
 #include "comm.h"
 #include "private.h"
 #include "rumble_version.h"
-#include <signal.h>
 #ifndef RUMBLE_MSC
 #   include <sys/types.h>
 #   include <pwd.h>
 #endif
-static void         cleanup(void);
 extern masterHandle *rumble_database_master_handle;
 extern masterHandle *public_master_handle;
 extern masterHandle *comm_master_handle;
@@ -21,272 +19,6 @@ extern dvector          *debugLog;
 extern char             shutUp;
 static dvector          *s_args;
 char                    *executable;
-#ifdef RUMBLE_MSC
-SERVICE_STATUS          ServiceStatus;
-SERVICE_STATUS_HANDLE   hStatus;
-SERVICE_TABLE_ENTRYA    ServiceTable[2];
-void                    ServiceMain(int argc, char **argv);
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void ControlHandler(DWORD request) {
-    switch (request)
-    {
-    case SERVICE_CONTROL_STOP:
-        ServiceStatus.dwWin32ExitCode = 0;
-        ServiceStatus.dwCurrentState = SERVICE_STOPPED;
-        SetServiceStatus(hStatus, &ServiceStatus);
-        return;
-
-    case SERVICE_CONTROL_SHUTDOWN:
-        ServiceStatus.dwWin32ExitCode = 0;
-        ServiceStatus.dwCurrentState = SERVICE_STOPPED;
-        SetServiceStatus(hStatus, &ServiceStatus);
-        return;
-
-    default:
-        ServiceStatus.dwCurrentState = SERVICE_RUNNING;
-        break;
-    }
-
-    SetServiceStatus(hStatus, &ServiceStatus);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-int InitService(void) {
-    ServiceStatus.dwCurrentState = SERVICE_START_PENDING;
-    SetServiceStatus(hStatus, &ServiceStatus);
-    rumbleStart();
-    SetServiceStatus(hStatus, &ServiceStatus);
-    return (0);
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void ServiceMain(int argc, char **argv) {
-
-    /*~~~~~~*/
-    int error;
-    /*~~~~~~*/
-
-    shutUp = 1;
-    rumble_debug(NULL, "startup", "Running as a Windows Service");
-    ServiceStatus.dwServiceType = SERVICE_WIN32;
-    ServiceStatus.dwCurrentState = SERVICE_RUNNING;
-    ServiceStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
-    ServiceStatus.dwWin32ExitCode = 0;
-    ServiceStatus.dwServiceSpecificExitCode = 0;
-    ServiceStatus.dwCheckPoint = 0;
-    ServiceStatus.dwWaitHint = 0;
-    hStatus = RegisterServiceCtrlHandlerA("Rumble Mail Server", (LPHANDLER_FUNCTION) ControlHandler);
-    if (hStatus == (SERVICE_STATUS_HANDLE) 0) {
-
-        /* Registering Control Handler failed */
-        rumble_debug(NULL, "startup", "ERROR: Couldn't register as a Windows service");
-        return;
-    }
-
-    rumble_debug(NULL, "startup", "Successfully registered as service, running main processes");
-
-    /* Initialize Service */
-    error = InitService();
-    rumble_debug(NULL, "startup", "Returned from main process");
-    if (error) {
-        rumble_debug(NULL, "startup", "ERROR: rumbleStart() returned badly, shutting down.");
-
-        /* Initialization failed */
-        ServiceStatus.dwCurrentState = SERVICE_STOPPED;
-        ServiceStatus.dwWin32ExitCode = -1;
-        SetServiceStatus(hStatus, &ServiceStatus);
-        return;
-    }
-
-    rumble_debug(NULL, "startup", "Sending SERVICE_RUNNING status to Windows Services");
-
-    /* We report the running status to SCM. */
-    ServiceStatus.dwCurrentState = SERVICE_RUNNING;
-    SetServiceStatus(hStatus, &ServiceStatus);
-
-    /* The worker loop of a service */
-    while (ServiceStatus.dwCurrentState == SERVICE_RUNNING) {
-        Sleep(60);
-        cleanup();
-    }
-
-    rumble_debug(NULL, "startup", "EXIT: Program halted by services, shutting down.");
-    exit(EXIT_SUCCESS);
-    return;
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-static void signal_windows(int sig) {
-    rumble_debug(NULL, "core", "Caught signal %d from system!\n", sig);
-    if (sig == SIGBREAK || sig == SIGINT) {
-        printf("User stopped the program.\n");
-    }
-
-    exit(SIGINT);
-}
-
-#else
-#   include <execinfo.h>
-#   include <errno.h>
-#   include <ucontext.h>
-#   include <unistd.h>
-#   include <limits.h>
-#   include <sys/types.h>
-
-/*
- -----------------------------------------------------------------------------------------------------------------------
-    This structure mirrors the one found in /usr/include/asm/ucontext.h
- -----------------------------------------------------------------------------------------------------------------------
- */
-typedef struct _sig_ucontext
-{
-    unsigned long       uc_flags;
-    struct ucontext     *uc_link;
-    stack_t             uc_stack;
-    struct sigcontext   uc_mcontext;
-    sigset_t            uc_sigmask;
-} sig_ucontext_t;
-static void         signal_handler(int sig, siginfo_t *info, void *ucontext);
-void                init_signals(void);
-struct sigaction    sigact;
-uint32_t            lastClick = 0;
-int                 alreadyDead = 0;
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-static void signal_handler(int sig, siginfo_t *info, void *ucontext) {
-    if (sig == SIGQUIT || sig == SIGHUP) {
-        printf("User ended the program - bye bye!\r\n");
-        cleanup();
-    } else if (sig == SIGPIPE) {
-        printf("Client disconnected\n");
-    } else if (sig == SIGKILL) {
-        printf("Rumble got killed :(\r\n");
-        cleanup();
-    } else if (sig == SIGTERM) {
-        printf("Rumble got killed :(\r\n");
-        cleanup();
-    } else if (sig == SIGINT) {
-        if (time(0) - lastClick < 2) {
-            cleanup();
-            exit(0);
-        }
-
-        printf("Ctrl+C detected. Press it again to exit rumble.\r\n");
-        lastClick = time(0);
-    } else {
-        if (!alreadyDead) {
-
-            /*~~~~~~~~~~~~~~~~~~~*/
-            void        *array[50];
-            char        **messages;
-            int         size,
-                        i;
-            ucontext_t  *context;
-            /*~~~~~~~~~~~~~~~~~~~*/
-
-            alreadyDead++;
-            context = (ucontext_t *) ucontext;
-            rumble_debug(NULL, "debug", "Caught signal %d (%s), address is %p\n", sig, strsignal(sig), info->si_addr);
-            rumble_debug(NULL, "debug", "PID=%d \n", getpid());
-            rumble_debug(NULL, "debug", "signo=%d/%s\n", sig, strsignal(sig));
-            rumble_debug(NULL, "debug", "code=%d (not always applicable)\n", info->si_code);
-            rumble_debug(NULL, "debug", "\nContext: 0x%08lx\n", (unsigned long) ucontext);
-            rumble_debug(NULL, "debug", "Register stuff:\n    gs: 0x%08x   fs: 0x%08x   es: 0x%08x   ds: 0x%08x\n"
-                         "   edi: 0x%08x  esi: 0x%08x  ebp: 0x%08x  esp: 0x%08x\n""   ebx: 0x%08x  edx: 0x%08x  ecx: 0x%08x  eax: 0x%08x\n"
-                     "  trap:   %8u  err: 0x%08x  cs: 0x%08x\n", context->uc_mcontext.gregs[23], context->uc_mcontext.gregs[22],
-                         context->uc_mcontext.gregs[24], context->uc_mcontext.gregs[25], context->uc_mcontext.gregs[7],
-                         context->uc_mcontext.gregs[6], context->uc_mcontext.gregs[5], context->uc_mcontext.gregs[4],
-                         context->uc_mcontext.gregs[3], context->uc_mcontext.gregs[2], context->uc_mcontext.gregs[1],
-                         context->uc_mcontext.gregs[0], context->uc_mcontext.gregs[15], context->uc_mcontext.gregs[16],
-                         context->uc_mcontext.gregs[18]);
-            size = backtrace(array, 50);
-            messages = backtrace_symbols(array, size);
-
-            /* skip first stack frame (points here) */
-            for (i = 1; i < size && messages != NULL; ++i) {
-                rumble_debug(NULL, "debug", "[backtrace]: (%d) %s\n", i, messages[i]);
-            }
-
-            cleanup();
-        } else exit(0);
-    }
-}
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-void init_signals(void) {
-    sigact.sa_sigaction = signal_handler;
-    sigemptyset(&sigact.sa_mask);
-    sigact.sa_flags = SA_RESTART | SA_SIGINFO;
-    sigaction(SIGKILL, &sigact, 0);
-    sigaction(SIGINT, &sigact, 0);
-
-    /*
-     * sigaddset(&sigact.sa_mask, SIGSEGV);
-     */
-    sigaction(SIGSEGV, &sigact, 0);
-    sigaction(SIGSTKFLT, &sigact, 0);
-
-    /*
-     * sigaddset(&sigact.sa_mask, SIGBUS);
-     */
-    sigaction(SIGHUP, &sigact, 0);
-
-    /*
-     * sigaddset(&sigact.sa_mask, SIGQUIT);
-     */
-    sigaction(SIGQUIT, &sigact, 0);
-
-    /*
-     * sigaddset(&sigact.sa_mask, SIGHUP);
-     */
-    sigaction(SIGPIPE, &sigact, 0);
-
-    /*
-     * sigaddset(&sigact.sa_mask, SIGKILL);
-     * sigaddset(&sigact.sa_mask, SIGTERM);
-     */
-    sigaction(SIGKILL, &sigact, (struct sigaction *) NULL);
-}
-
-#   ifdef DUMPSTACK
-
-/*
- =======================================================================================================================
- =======================================================================================================================
- */
-static void dumpstack(void) {
-
-    /*~~~~~~~~~~~~~*/
-    char    gdb[160];
-    /*~~~~~~~~~~~~~*/
-
-    sprintf(gdb, "echo 'where\ndetach' | gdb --quiet %s %d > %s_dump.log", executable, getpid(), executable);
-
-    /* Change the dbx to gdb */
-    system(gdb);
-    return;
-}
-#   endif
-#endif
 
 /*
  =======================================================================================================================
@@ -510,26 +242,12 @@ int main(int argc, char **argv) {
         printf("Error: Couldn't open rumble_status.log for writing.\r\nEither rumble is already running, or I don't have access to write to this folder.\r\n");
         exit(0);
     }
-
-    fprintf(sysLog, "---------------------------------------------------\r\n");
-    fprintf(sysLog, "New instance of Rumble started, clearing log file.\r\n");
-    fprintf(sysLog, "---------------------------------------------------\r\n");
     if (strlen(r_path)) {
         rumble_debug(NULL, "startup", "Entering directory: %s", r_path);
         rsdict(s_args, "execpath", r_path);
     }
 
-#ifndef RUMBLE_MSC
-    init_signals();
-#else
-    signal(SIGINT, &signal_windows);
-    signal(SIGBREAK, &signal_windows);
-    signal(SIGSEGV, &signal_windows);
-    signal(SIGTERM, &signal_windows);
-    signal(SIGABRT, &signal_windows);
-    signal(SIGILL, &signal_windows);
-    atexit(&cleanup);
-#endif
+    attach_debug();
     if (rhdict(s_args, "--service")) {
         shutUp = 1;
 
@@ -544,14 +262,7 @@ int main(int argc, char **argv) {
         fclose(stdout);
         rumbleStart();
 #else
-        ServiceTable[0].lpServiceName = "Rumble Mail Server";
-        ServiceTable[0].lpServiceProc = (LPSERVICE_MAIN_FUNCTIONA) ServiceMain;
-        ServiceTable[1].lpServiceName = NULL;
-        ServiceTable[1].lpServiceProc = NULL;
-
-        /* Start the control dispatcher thread for our service */
-        StartServiceCtrlDispatcherA(ServiceTable);
-        while (1) sleep(3600);
+        windows_service_start();
 #endif
         return (0);
     } else {
@@ -567,7 +278,6 @@ int main(int argc, char **argv) {
 void cleanup(void) {
 
     /*~~~~~~~~~~~~~~~~~~~*/
-    /* Do stuff later... */
     dvector_element *obj;
     const char      *entry;
     /*~~~~~~~~~~~~~~~~~~~*/
@@ -586,8 +296,4 @@ void cleanup(void) {
 
         fflush(sysLog);
     }
-
-    /*
-     * fclose(sysLog);
-     */
 }

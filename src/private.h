@@ -28,6 +28,9 @@ char                base64_encode_value(char value_in);
 int                 base64_encode_block(const char *plaintext_in, size_t length_in, char *code_out, base64_encodestate *state_in);
 int                 base64_encode_blockend(char *code_out, base64_encodestate *state_in);
 int                 rumbleStart(void);
+void attach_debug(void);
+void cleanup(void);
+void windows_service_start(void);
 #   ifdef __cplusplus
 }
 #   endif
