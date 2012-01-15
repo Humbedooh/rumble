@@ -93,7 +93,7 @@ void rumble_master_init(masterHandle *master) {
         rumble_service_add_capability(svc, "TOP");
         rumble_service_add_capability(svc, "UIDL");
         rumble_service_add_capability(svc, "PIPELINING");
-        rumble_service_add_capability(svc, "IMPLEMENTATION Rumble Mail Server");
+      //  rumble_service_add_capability(svc, "IMPLEMENTATION Rumble Mail Server");
     }
 
     /*$4

@@ -64,6 +64,7 @@ int rumbleStart(void) {
         master->lua.states[x].state = 0;
         master->lua.states[x].working = 0;
     }
+	
 
     srand(time(0));
     rumble_config_load(master, s_args);
@@ -235,7 +236,6 @@ int main(int argc, char **argv) {
         /*~~~~~~~~~~~~~~~~~~*/
 
         sprintf(tmpfile, "%s/rumble_status.log", r_path);
-        printf("opening %s\n", tmpfile);
         sysLog = fopen(tmpfile, "w");
     } else sysLog = fopen("rumble_status.log", "w");
     if (!sysLog) {

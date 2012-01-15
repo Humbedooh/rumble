@@ -86,9 +86,8 @@ void *rumble_pop3_init(void *T) {
             if (sscanf(line, "%8[^\t \r\n]%*[ \t]%1000[^\r\n]", cmd, arg)) {
                 rumble_string_upper(cmd);
 
-                /*
-                 * rumble_debug(NULL, "pop3", "%s said: %s %s", session.client->addr, cmd, arg);
-                 */
+              //  rumble_debug(NULL, "pop3", "%s said: %s %s", session.client->addr, cmd, arg);
+                
                 if (!strcmp(cmd, "QUIT")) {
                     rc = RUMBLE_RETURN_FAILURE;
                     free(line);
@@ -306,10 +305,9 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
         rcsend(session, "-ERR Temporary error\r\n");
         return (RUMBLE_RETURN_IGNORE);
     }
-
+    mailman_update_folder(folder, pops->account->uid, 0);
     n = 0;
     s = 0;
-    printf("summing up\n");
     for (j = 0; j < folder->size; j++) {
         letter = &folder->letters[j];
         if (!letter->inuse) continue;
@@ -319,7 +317,7 @@ ssize_t rumble_server_pop3_stat(masterHandle *master, sessionHandle *session, co
 
     rumble_rw_stop_read(pops->bag->lock);
     rcprintf(session, "+OK %u %u\r\n", n, s);
-    printf("stat done\n");
+    printf("stat done, found %u letters, %u bytes total\n", n, s);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -341,14 +339,16 @@ ssize_t rumble_server_pop3_uidl(masterHandle *master, sessionHandle *session, co
     rcsend(session, "+OK\r\n");
     rumble_rw_start_read(pops->bag->lock);
     folder = mailman_get_folder(pops->bag, "INBOX");
-    i = 0;
-    for (j = 0; j < folder->size; j++) {
-        letter = &folder->letters[j];
-        if (!letter->inuse) continue;
-        i++;
-        if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %s\r\n", i, letter->id);
+    if (folder) {
+        i = 0;
+        for (j = 0; j < folder->size; j++) {
+            letter = &folder->letters[j];
+            if (!letter->inuse) continue;
+            i++;
+            if (!(letter->flags & RUMBLE_LETTER_DELETED)) rcprintf(session, "%u %lu\r\n", i, letter->id);
+        }
     }
-
+    else printf("No INBOX folder??\n");
     rumble_rw_stop_read(pops->bag->lock);
     rcsend(session, ".\r\n");
     return (RUMBLE_RETURN_IGNORE);

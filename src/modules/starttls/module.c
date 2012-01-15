@@ -57,7 +57,7 @@ ssize_t rumble_tls_start(masterHandle *master, sessionHandle *session, const cha
     {
     case RUMBLE_THREAD_SMTP:    rcsend(session, "220 OK, starting TLS\r\n"); break;
     case RUMBLE_THREAD_IMAP:    rcprintf(session, "%s OK Begin TLS negotiation now\r\n", extra); break;
-    case RUMBLE_THREAD_POP3:    rcsend(session, "OK, starting TLS\r\n"); break;
+    case RUMBLE_THREAD_POP3:    rcsend(session, "+OK, starting TLS\r\n"); break;
     default:                    return (RUMBLE_RETURN_IGNORE);
     }
 
@@ -210,8 +210,8 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
 
     svc = comm_serviceHandleExtern((masterHandle *) master, "pop3");
     if (svc) {
-        rumble_service_add_command(svc, "STARTTLS", rumble_tls_start);
-        rumble_service_add_capability(svc, "STARTTLS");
+        rumble_service_add_command(svc, "STLS", rumble_tls_start);
+        rumble_service_add_capability(svc, "STLS");
     }
 
     svc = comm_serviceHandleExtern((masterHandle *) master, "imap4");
