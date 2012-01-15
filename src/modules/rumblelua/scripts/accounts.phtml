@@ -64,113 +64,119 @@ end
 
 ?><style type="text/css">
 .create_mailbox_tab {
-	background-color: #8AAFCE;
-!important;
-	border: 1px dotted #333 !important;
+/*	background-color: #8AAFCE;*/
+	background-image: url(../tabs_default.png);
+	height: 23px;
+	width: 118px;
+	font-size:11px;
+	font-weight: bold;
+	text-align:center;
+}
+.create_mailbox_tab a {
+	color:#FFFFCC;
+	text-decoration:none;
 }
 .create_mailbox_tab:hover {
-	background-color: #AFBCD3;!important;
-	border: 1px dotted #333;!important;
+	background-image: url(../tabs_hover.png);
 }
 .create_mailbox_tab_selected {
-	background-color: #E8EABF;
-!important;
-	border: 1px dotted #333;
-!important;
+	background-image: url(../tabs_selected.png);
+	height: 23px;
+	width: 118px;
+	font-size:11px;
+	font-weight: bold;
+		text-align:center;
 }
+.create_mailbox_tab_selected a {
+	color:#FFFFCC;
+	text-decoration:none;
+}
+
 </style>
 
 <h2>Accounts @ <?=domain?></h2>
-<table class="" style="margin:0px auto;" border='0' cellpadding='5' cellspacing='0'>
-<tr class="elements">
-<th>
-Create a new account:</th>
-<tr><td>
+<p align="center">
+<h4><?=(http.form.u and "Edit") or "Create a new"?> account:</h4>
 <form id="crform" name="form1" method="post" action="">
 <input type="hidden" name="type" value="mbox"/>
 <input type="hidden" name="update" value="<?=http.form.update?>"/>
 <input type="hidden" name="u" value="<?=http.form.u?>"/>
-<table width="700" border="0" cellpadding="1" cellspacing="0">
+<table border="0" cellpadding="1" cellspacing="0" width="600px" style="margin: 0px auto;">
   <tr>
     <td width="146" class="create_mailbox_tab" id="cr_mbox"><img src="..//icons/email.png" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mbox');">Email account</a></td>
     <td width="125" class="create_mailbox_tab" id="cr_alias"><img src="../icons/email_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('alias');">Email alias</a></td>
     <td width="138" class="create_mailbox_tab" id="cr_mod"><img src="../icons/plugin_go.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('mod');">Feed to module</a></td>
     <td colspan="2" class="create_mailbox_tab" id="cr_feed"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('feed');">Feed to program</a></td>
     <td colspan="2" class="create_mailbox_tab" id="cr_relay"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('relay');">Relay</a></td>
-
   </tr>
+  </table>
+  <table border="0" cellpadding="1" cellspacing="0" width="600px" style="background:#D0CEB3; border: 1px solid #000; padding: 10px;margin: 0px auto;">
   <tr>
-    <td colspan="6" class="create_mailbox_tab_selected">
+    <td colspan="6">
     <div style="display:none;" id="cr_desc_mbox">Enter the desired username and password below to create a standard mailbox.<br />
-The new mailbox will be ready for use instantly.</div>
+      The new mailbox will be ready for use instantly.</div>
     <div style="display:none;" id="cr_desc_alias">An alias is an email account that forwards all messages to a different account.<br />
-A popular choice is to create a <i>catch-all</i> account that forwards all emails sent to your domain. <br />
-You can create a catch-all alias by setting the username to "<strong>*</strong>".
+      A popular choice is to create a <i>catch-all</i> account that forwards all emails sent to your domain. <br />
+      You can create a catch-all alias by setting the username to "<strong>*</strong>".
     </div>
     <div style="display:none;" id="cr_desc_mod">
-    If you have installed a module that reads and processes letters, you can create an email address for it here.<br />
- All mail sent to this address will then be passed on to the module.<br />
-This type of account is often used for mailing lists or CRM business.
+      If you have installed a module that reads and processes letters, you can create an email address for it here.<br />
+      All mail sent to this address will then be passed on to the module.<br />
+      This type of account is often used for mailing lists or CRM business.
     </div>
     <div style="display:none;" id="cr_desc_feed">
-    This type of account will automatically feed any incoming mail to the program you specify.<br />
-When a letter is received, Rumble will then run the program and send the letter through STDIN.
+      This type of account will automatically feed any incoming mail to the program you specify.<br />
+      When a letter is received, Rumble will then run the program and send the letter through STDIN.
     </div>
-    <div style="display:none;" id="cr_desc_relay">
-    Albeit an outdated technique, this type of account will force the server to relay messages to another domain through your own domain. This is sometimes used to obfuscate mail paths or prevent spam.
-    </div>
-    &nbsp;
-    </td>
+    <div style="display:none; width:600px;" id="cr_desc_relay">
+      Albeit an outdated technique, this type of account will force the server to relay messages to another domain through your own domain. This is sometimes used to obfuscate mail paths or prevent spam.
+    </div>&nbsp;    </td>
   </tr>
   <tr>
-    <td class="create_mailbox_tab_selected">Account name:</td>
-    <td colspan="5" class="create_mailbox_tab_selected">
-      <label for="user"></label>
-      <input name="user" type="text" id="user" maxlength="92" autocomplete="off"/> @ <?=domain?>
-    </td>
+    <td>Account name:</td>
+    <td colspan="5">
+      <input name="user" type="text" id="user" maxlength="92" autocomplete="off"/> @ <?=domain?>    </td>
   </tr>
   <tr  style="display:none;"id="cr_field_mbox">
-    <td class="create_mailbox_tab_selected">(new) Password:</td>
-    <td class="create_mailbox_tab_selected" colspan="5"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
+    <td>(new) Password:</td>
+    <td colspan="5"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
     </tr>
   <tr  style="display:none;"id="cr_field_alias">
-    <td class="create_mailbox_tab_selected">Forwarding address(es):</td>
-    <td class="create_mailbox_tab_selected" colspan="4"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
-    <td width="121" class="create_mailbox_tab_selected">&nbsp;</td>
+    <td>Forwarding address(es):</td>
+    <td colspan="4"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
+    <td width="121">&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_mod">
-    <td class="create_mailbox_tab_selected">Module to feed:</td>
-    <td class="create_mailbox_tab_selected" colspan="3"><select name="module">
-            <?
+    <td>Module to feed:</td>
+    <td colspan="3"><select name="module">
+      <?
 			for k,mod in pairs(Rumble.listModules()) do
 				printf("<option value=\"%s\">%s</option>", mod.file, mod.title);
 			end
 			?> 
-            </select>&nbsp;</td>
-    <td width="118" class="create_mailbox_tab_selected">&nbsp;</td>
-    <td class="create_mailbox_tab_selected">&nbsp;</td>
+    </select>      &nbsp;</td>
+    <td width="118">&nbsp;</td>
+    <td>&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_feed">
-    <td class="create_mailbox_tab_selected">Program to feed:</td>
-    <td class="create_mailbox_tab_selected" colspan="4"><input name="feed" type="text" id="user4" size="48" maxlength="92" /></td>
-    <td class="create_mailbox_tab_selected">&nbsp;</td>
+    <td>Program to feed:</td>
+    <td colspan="4"><input name="feed" type="text" id="user4" size="48" maxlength="92" /></td>
+    <td>&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_relay">
-    <td class="create_mailbox_tab_selected">Relay host:</td>
-    <td class="create_mailbox_tab_selected" colspan="4"><input name="relay" type="text" id="relay" size="48" maxlength="92" /></td>
-    <td class="create_mailbox_tab_selected">&nbsp;</td>
+    <td>Relay host:</td>
+    <td colspan="4"><input name="relay" type="text" id="relay" size="48" maxlength="92" /></td>
+    <td>&nbsp;</td>
   </tr>
   <tr>
-    <td colspan="6" class="create_mailbox_tab_selected"><input type="submit" name="Save account" id="Save account" value="Save account" />
-      <input type="reset" name="Save account2" id="Save account2" value="Reset" 
+    <td colspan="6"><input type="submit" name="Save account" id="Save account" value="Save account" />      <input type="reset" name="Save account2" id="Save account2" value="Reset" 
       onclick="this.form.u.value=''; this.form.update.value='0';"
       /></td>
 
   </tr>
 </table>
 </form>
-</td></tr>
-</table>
+</p>
 <p>&nbsp;</p>
 
 <?

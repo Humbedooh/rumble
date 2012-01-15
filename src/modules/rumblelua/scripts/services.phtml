@@ -69,22 +69,22 @@ my.stuff.ratio =  math.floor((my.svcinfo.rejected / ((my.svcinfo.sessions > 0 an
 <tr><th colspan="2">Traffic</th><th colspan="2">Workers</th><th colspan="2">Sessions</tr>
 <tr>
   <td><b>Sent:</b></td>
-  <td align="right"><?=my.stuff.sent?>
+  <td align="right"><?=my.stuff.sent?> 
 bytes</td><td><strong>Busy workers:</strong></td><td align="right"><?=my.stuff.busy?> </td>
 <td><b>Sessions handled:</b></td>
 <td align="right"><?=my.stuff.jobs?></td></tr>
-<tr><td><b>Received:</b></td><td align="right"><?=my.stuff.recv?>
+<tr><td><b>Received:</b></td><td align="right"><?=my.stuff.recv?> 
 bytes</td><td><strong>Idle workers:</strong></td><td align="right"><?=my.stuff.idle?> </td>
-<td><strong>Sessions accepted:</strong></td>
-<td align="right"> <?=my.stuff.accepted?></td></tr>
-<tr><td><b>Total:</b></td><td align="right"><?=my.stuff.total?>
+<td><strong>Rejections:</strong></td>
+<td align="right"><?=my.stuff.rejected?></td></tr>
+<tr><td><b>Total:</b></td><td align="right"><?=my.stuff.total?> 
 bytes</td><td><strong>Total workers:</strong></td><td align="right"><?=my.stuff.workers?> </td>
-<td><strong>Sessions rejected:</strong></td>
-  <td align="right"><?=my.stuff.rejected?></td></tr>
+<td><strong>Rejection ratio:</strong></td>
+  <td align="right"><?=my.stuff.ratio?>
+%%</td></tr>
 <tr ><td>&nbsp;</td><td align="right">&nbsp;</td>
-<td><strong>Jobs per worker:</strong></td><td align="right"><?=string.format("%.2f",my.stuff.per)?> </td><td><strong>Rejection ratio:</strong></td>
-<td align="right"><?=my.stuff.ratio?>
-  %%</td></tr>
+<td><strong>Jobs per worker:</strong></td><td align="right"><?=string.format("%.2f",my.stuff.per)?> </td><td>&nbsp;</td>
+<td align="right">&nbsp;</td></tr>
 </table>
 
 <br />
