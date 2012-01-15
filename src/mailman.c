@@ -455,9 +455,9 @@ void mailman_commit(mailman_bag *bag, mailman_folder *folder, char expungeOnly) 
         letter = &folder->letters[i];
         if (letter->inuse) {
 
-            /*
-             * printf("Letter %lu has flags <%08X>, looking for <%08X>\n", letter->id, letter->flags, RUMBLE_LETTER_DELETED);
-             */
+            
+            printf("Letter %lu has flags <%08X>, looking for <%08X>\n", letter->id, letter->flags, RUMBLE_LETTER_DELETED);
+            
             if ((expungeOnly && (letter->flags & RUMBLE_LETTER_EXPUNGE)) || (!expungeOnly && (letter->flags & RUMBLE_LETTER_DELETED))) {
                 printf("Deleting letter no. %lu\n", letter->id);
                 radb_run_inject(rumble_database_master_handle->_core.mail, "DELETE FROM mbox WHERE id = %l", letter->id);

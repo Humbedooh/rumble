@@ -242,7 +242,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
                 session->flags |= RUMBLE_POP3_HAS_AUTH;
                 pops->bag = mailman_get_bag(pops->account->uid,
                                             strlen(pops->account->domain->path) ? pops->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
-                pops->folder = 0;   /* 0 = INBOX */
+                pops->folder = mailman_get_folder(pops->bag, "INBOX");
                 return (104);
             }
         }
@@ -373,8 +373,9 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
     if (!(session->flags & RUMBLE_POP3_HAS_AUTH)) return (105); /* Not authed?! :( */
     i = atoi(parameters);
     found = 0;
-    rumble_rw_start_write(pops->bag->lock);
+    printf("DELE called for letter %u\n", i);
     folder = mailman_get_folder(pops->bag, "INBOX");
+    rumble_rw_start_write(pops->bag->lock);
     j = 0;
     for (k = 0; k < folder->size; k++) {
         letter = &folder->letters[k];
@@ -382,6 +383,7 @@ ssize_t rumble_server_pop3_dele(masterHandle *master, sessionHandle *session, co
         j++;
         if (j == i) {
             letter->flags |= RUMBLE_LETTER_EXPUNGE; /* Used to be _DELETED, but that was baaad. */
+            printf("pop3: Marked letter #%lu as deleted\n", letter->id);
             found = 1;
             break;
         }
