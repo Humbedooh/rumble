@@ -45,6 +45,7 @@ void *rumble_pop3_init(void *T) {
     pops = (accountSession *) session._svcHandle;
     pops->account = 0;
     pops->bag = 0;
+    pops->folder = 0;
     session._tflags = RUMBLE_THREAD_POP3;   /* Identify the thread/session as POP3 */
     myName = rrdict(master->_core.conf, "servername");
     myName = myName ? myName : "??";
@@ -59,6 +60,9 @@ void *rumble_pop3_init(void *T) {
         session.sender = 0;
         session._svc = svc;
         session.client->rejected = 0;
+        pops->account = 0;
+        pops->bag = 0;
+        pops->folder = 0;
 #if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
         rumble_debug(NULL, "pop3", "Accepted connection from %s on POP3", session.client->addr);
 #endif
@@ -132,6 +136,7 @@ void *rumble_pop3_init(void *T) {
         mailman_commit(pops->bag, pops->folder, 1); /* Delete letters marked "expunged" to prevent IMAP mixup */
         rumble_free_account(pops->account);
         mailman_close_bag(pops->bag);
+        
 
         /* Update the thread stats */
         pthread_mutex_lock(&(svc->mutex));

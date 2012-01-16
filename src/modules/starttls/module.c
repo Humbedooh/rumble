@@ -125,17 +125,13 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "TLS module";
     modinfo->description = "Enables TLS/SSL transport for rumble.";
     modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
-#   ifndef RUMBLE_MSC
     gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-#   endif
-
     /*
      * gnutls_global_mutex_set (pthread_mutex_init, pthread_mutex_destroy(), pthread_mutex_lock, pthread_mutex_unlock);
      */
-#   ifndef RUMBLE_MSC
     gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
     gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM, 0);
-#   endif
+
     printf("global init\n");
     if (gnutls_global_init()) {
         printf("<TLS> Failed!\r\n");
