@@ -88,10 +88,10 @@ void *rumble_imap_init(void *T) {
             rc = 105;   /* default return code is "500 unknown command thing" */
             if (sscanf(line, "%32s %32s %1000[^\r\n]", extra_data, cmd, parameters)) {
                 rumble_string_upper(cmd);
-
-                /*
-                 * rumble_debug(NULL, "imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
-                 */
+#if (RUMBLE_DEBUG & RUMBLE_DEBUG_COMM)
+                rumble_debug(NULL, "imap4", "Client <%p> said: %s %s", &session, cmd, parameters);
+#endif
+                
                 if (!strcmp(cmd, "UID")) {
 
                     /* Set UID flag if requested */
@@ -807,8 +807,8 @@ ssize_t rumble_server_imap_status(masterHandle *master, sessionHandle *session, 
     for (i = 0; i < folder->size; i++) {
         letter = &folder->letters[i];
         if (letter) {
-            if ((letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT)) unseen++;
-            if (letter->flags == RUMBLE_LETTER_RECENT) recent++;
+            if (!(letter->flags & RUMBLE_LETTER_READ) || (letter->flags == RUMBLE_LETTER_RECENT)) unseen++;
+            if (letter->flags & RUMBLE_LETTER_RECENT) recent++;
             messages++;
         }
     }
@@ -1217,6 +1217,7 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
     flag |= strstr(parameters, "\\Flagged") ? RUMBLE_LETTER_FLAGGED : 0;
     flag |= strstr(parameters, "\\Draft") ? RUMBLE_LETTER_DRAFT : 0;
     flag |= strstr(parameters, "\\Answered") ? RUMBLE_LETTER_ANSWERED : 0;
+    flag |= strstr(parameters, "\\Recent") ? RUMBLE_LETTER_RECENT : 0;
 
     /*
      * Process the letters ;
@@ -1236,7 +1237,7 @@ ssize_t rumble_server_imap_store(masterHandle *master, sessionHandle *session, c
     }
 
     rumble_args_free(parts);
-    rcprintf(session, "%s OK STORE completed\r\n", extra_data);
+    rcprintf(session, "%s OK STORE completed.\r\n", extra_data);
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -1343,7 +1344,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
         letter = &folder->letters[i];
         if (!letter->inuse) continue;
         oexists++;
-        if (!ofirst && ((letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT))) ofirst = oexists;
+        if (!ofirst && (!(letter->flags & RUMBLE_LETTER_READ) || (letter->flags == RUMBLE_LETTER_RECENT))) ofirst = oexists;
         if (letter->flags == RUMBLE_LETTER_RECENT) orecent++;
     }
 
@@ -1382,7 +1383,7 @@ ssize_t rumble_server_imap_idle(masterHandle *master, sessionHandle *session, co
                 letter = &folder->letters[i];
                 if (!letter->inuse) continue;
                 exists++;
-                if (!first && ((letter->flags & RUMBLE_LETTER_UNREAD) || (letter->flags == RUMBLE_LETTER_RECENT))) first = exists;
+                if (!first && (!(letter->flags & RUMBLE_LETTER_READ) || (letter->flags == RUMBLE_LETTER_RECENT))) first = exists;
                 if (letter->flags == RUMBLE_LETTER_RECENT) recent++;
             }
 
