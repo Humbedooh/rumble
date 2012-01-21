@@ -9,6 +9,7 @@
 #ifndef RUMBLE_MSC
 #   include <sys/types.h>
 #   include <pwd.h>
+#include <grp.h>
 #endif
 extern masterHandle *rumble_database_master_handle;
 extern masterHandle *public_master_handle;
@@ -31,12 +32,7 @@ int rumbleStart(void) {
     int             rc,
                     x;
     rumbleService   *svc;
-#ifndef RUMBLE_MSC
-    struct passwd   *runAsEntry;
-    __uid_t         runAsUID = 999999;
-#endif
-    const char      *runAsName;
-    /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+
 
     srand(time(NULL));
     master = (masterHandle *) malloc(sizeof(masterHandle));
@@ -121,27 +117,7 @@ int rumbleStart(void) {
  */
 
 #ifndef RUMBLE_MSC
-    runAsName = rhdict(master->_core.conf, "runas") ? rrdict(master->_core.conf, "runas") : "";
-    if (strlen(runAsName)) {
-        if (!strcmp(runAsName, "root")) runAsUID = 0;
-        else {
-            runAsEntry = getpwnam(runAsName);
-            if (runAsEntry && runAsEntry->pw_uid) {
-                runAsUID = runAsEntry->pw_uid;
-            }
-        }
-
-        if (runAsUID != 999999) {
-            rumble_debug(NULL, "core", "Running as user: %s", runAsName);
-            if (setuid(runAsUID)) {
-                rumble_debug(NULL, "core", "Error: Could not set process UID to %u!", runAsEntry->pw_uid);
-                exit(EXIT_FAILURE);
-            }
-        } else {
-            rumble_debug(NULL, "core", "I couldn't find the user to run as: %s", runAsName);
-            exit(EXIT_FAILURE);
-        }
-    } else rumble_debug(NULL, "core", "no run-as directive set, running as root(?)");
+    rumble_setup_runas(master);
 #endif
 
     /*$3

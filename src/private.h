@@ -10,6 +10,7 @@
 extern "C"
 {
 #   endif
+void rumble_setup_runas(masterHandle* master);
 void                rumble_config_load(masterHandle *master, dvector *args);
 void                rumble_master_init(masterHandle *master);
 void                rumble_modules_load(masterHandle *master);
