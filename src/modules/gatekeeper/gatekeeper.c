@@ -106,7 +106,7 @@ ssize_t rumble_gatekeeper_auth(sessionHandle *session, const char *OK) {
     // Login went bad, let's write that down!
     else {
         int found = 0;
-        rumble_debug(myMaster, "module", "bad login attempt, writing it down");
+        
         cforeach((gatekeeper_login_attempt*), entry, gatekeeper_login_list, iter) {
             if (!strcmp(entry->ip, session->client->addr)) {
                 entry->tries++;
@@ -114,6 +114,7 @@ ssize_t rumble_gatekeeper_auth(sessionHandle *session, const char *OK) {
                 if (entry->tries >= Gatekeeper_max_login_attempts) {
                     entry->quarantined = 1;
                     rcprintf(session, "Too many login attempts (>%u) detected, quarantined for %u seconds!\r\n", Gatekeeper_max_login_attempts, Gatekeeper_quarantine_period);
+                    rumble_debug(myMaster, "module", "Too many failed login attempts from %s, quarantining.", session->client->addr);
                     return RUMBLE_RETURN_FAILURE;
                 }
                 found = 1;
