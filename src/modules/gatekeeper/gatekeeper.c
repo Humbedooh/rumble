@@ -12,7 +12,7 @@ rumblemodule_config_struct  myConfig[] =
     { "loginattempts", 2, "Maximum of concurrent login attempts per IP", RCS_NUMBER, &Gatekeeper_max_login_attempts },
     { "threadsperip", 3, "Maximum of concurrent threads per IP", RCS_NUMBER, &Gatekeeper_max_concurrent_threads_per_ip },
     { "quarantine", 3, "Number of seconds to quarantine an IP for too many attempts", RCS_NUMBER, &Gatekeeper_quarantine_period },
-    { "enabled", 1, "Enable mod_greylist?", RCS_BOOLEAN, &Gatekeeper_enabled },
+    { "enabled", 1, "Enable gatekeeper?", RCS_BOOLEAN, &Gatekeeper_enabled },
     { 0, 0, 0, 0 }
 };
 cvector                     *gatekeeper_login_list, *gatekeeper_connection_list;
@@ -111,10 +111,12 @@ ssize_t rumble_gatekeeper_auth(sessionHandle *session, const char *OK) {
             if (!strcmp(entry->ip, session->client->addr)) {
                 entry->tries++;
                 entry->lastAttempt = time(0);
-                if (entry->tries >= Gatekeeper_max_login_attempts) entry->quarantined = 1;
+                if (entry->tries >= Gatekeeper_max_login_attempts) {
+                    entry->quarantined = 1;
+                    rcprintf(session, "Too many login attempts (>%u) detected, quarantined for %u seconds!\r\n", Gatekeeper_max_login_attempts, Gatekeeper_quarantine_period);
+                    return RUMBLE_RETURN_FAILURE;
+                }
                 found = 1;
-                rcprintf(session, "Too many login attempts detected, quarantined for %u seconds!\r\n", Gatekeeper_quarantine_period);
-                return RUMBLE_RETURN_FAILURE;
             }
         }
         if (!found) {
