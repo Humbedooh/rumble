@@ -706,6 +706,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         return (250);
     } else {
         session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);
+        if (rc == RUMBLE_RETURN_FAILURE) return rc;
         return (530);
     }
 }

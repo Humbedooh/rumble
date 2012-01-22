@@ -207,6 +207,7 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
                     digest[1024];
     address         *addr;
     accountSession  *imap = (accountSession *) session->_svcHandle;
+    ssize_t rc = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     mailman_close_bag(imap->bag);
@@ -239,6 +240,7 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
 
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_IMAP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_IMAP_AUTH, (const char*) imap->account);
+    if (rc == RUMBLE_RETURN_FAILURE) return rc;
     return (RUMBLE_RETURN_IGNORE);
 }
 
@@ -293,6 +295,7 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
                     *buffer;
     address         *addr = 0;
     int             x = 0;
+    ssize_t rc = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     mailman_close_bag(imap->bag);
@@ -339,6 +342,10 @@ ssize_t rumble_server_imap_authenticate(masterHandle *master, sessionHandle *ses
         }
     }
 
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_IMAP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_IMAP_AUTH, (const char*) imap->account);
+    if (rc == RUMBLE_RETURN_FAILURE) return rc;
+    
     return (RUMBLE_RETURN_IGNORE);
 }
 

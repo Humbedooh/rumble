@@ -1,6 +1,3 @@
-/*$I0 */
-
-/* File: greylist.c Author: Humbedooh A simple grey-listing module for rumble. Created on Jan */
 #include "../../rumble.h"
 #include <string.h>
 dvector                     *configuration;
@@ -18,19 +15,20 @@ rumblemodule_config_struct  myConfig[] =
     { "enabled", 1, "Enable mod_greylist?", RCS_BOOLEAN, &Gatekeeper_enabled },
     { 0, 0, 0, 0 }
 };
-cvector                     *rumble_gateList;
+cvector                     *gatekeeper_login_list, *gatekeeper_connection_list;
 typedef struct
 {
-    char    ip[15];
+    char    ip[66];
     int     connections;
-} gatekeeper_connections;
+} gatekeeper_connection;
 
 typedef struct {
-    char ip[15];
+    char ip[66];
     int tries;
     time_t lastAttempt;
     char quarantined;
 } gatekeeper_login_attempt;
+
 
 /*
  =======================================================================================================================
@@ -39,40 +37,95 @@ typedef struct {
 ssize_t rumble_gatekeeper_accept(sessionHandle *session, const char *junk) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
-    address         *recipient;
-    char            *block,
-                    *tmp,
-                    *str;
-    time_t          n,
-                    now;
+    gatekeeper_login_attempt* lentry;
+    gatekeeper_connection* centry;
+    time_t          now;
     c_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!Gatekeeper_enabled) return (RUMBLE_RETURN_OKAY);
 
-    /* First, check if the client has been given permission to skip this check by any other modu */
-    if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
-
+    
+    
+    // First, check the guys quarantined through bad login attempts
+    cforeach((gatekeeper_login_attempt*), lentry, gatekeeper_login_list, iter) {
+        if (!strcmp(lentry->ip, session->client->addr)) {
+            if (lentry->quarantined == 1) {
+                now = time(0);
+                if ((now - lentry->lastAttempt) > Gatekeeper_quarantine_period) {
+                    lentry->quarantined = 0;
+                    lentry->tries = 0;
+                    break;
+                }
+                else {
+                    rcprintf(session, "Too many bad logins! Quarantined for %u seconds.\r\n", Gatekeeper_quarantine_period);
+                    return RUMBLE_RETURN_FAILURE;
+                }
+            }
+        }
+    }
+    
+    // Then, let's check if the IP is using too many threads
+    
+    
     return (RUMBLE_RETURN_OKAY);
+}
+
+
+ssize_t rumble_gatekeeper_close(sessionHandle *session, const char *junk) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+    gatekeeper_connection* centry;
+    c_iterator      iter;
+    /*~~~~~~~~~~~~~~~~~~~~~~~*/
+
+    if (!Gatekeeper_enabled) return (RUMBLE_RETURN_OKAY);
+    return RUMBLE_RETURN_OKAY;
 }
 
 
 ssize_t rumble_gatekeeper_auth(sessionHandle *session, const char *OK) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
-    
-    char            *block,
-                    *tmp,
-                    *str;
-    time_t          n,
-                    now;
+    gatekeeper_login_attempt* entry;
+    time_t          now;
     c_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!Gatekeeper_enabled) return (RUMBLE_RETURN_OKAY);
-
-    /* First, check if the client has been given permission to skip this check by any other modu */
-    if (session->flags & RUMBLE_SMTP_FREEPASS) return (RUMBLE_RETURN_OKAY);
+    // Was the login OK? If so, let's delete any counters we have
+    if (OK) {
+        cforeach((gatekeeper_login_attempt*), entry, gatekeeper_login_list, iter) {
+            if (!strcmp(entry->ip, session->client->addr)) {
+                cvector_delete(&iter);
+                free(entry);
+                break;
+            }
+        }
+    }
+    // Login went bad, let's write that down!
+    else {
+        int found = 0;
+        rumble_debug(myMaster, "module", "bad login attempt, writing it down");
+        cforeach((gatekeeper_login_attempt*), entry, gatekeeper_login_list, iter) {
+            if (!strcmp(entry->ip, session->client->addr)) {
+                entry->tries++;
+                entry->lastAttempt = time(0);
+                if (entry->tries >= Gatekeeper_max_login_attempts) entry->quarantined = 1;
+                found = 1;
+                rcprintf(session, "Too many login attempts detected, quarantined for %u seconds!\r\n", Gatekeeper_quarantine_period);
+                return RUMBLE_RETURN_FAILURE;
+            }
+        }
+        if (!found) {
+            entry = (gatekeeper_login_attempt*) malloc(sizeof(gatekeeper_login_attempt));
+            entry->tries = 1;
+            entry->lastAttempt = time(0);
+            entry->quarantined = 0;
+            strcpy(entry->ip, session->client->addr);
+            cvector_add(gatekeeper_login_list, entry);
+        }
+    }
 
     return (RUMBLE_RETURN_OKAY);
 }
@@ -84,15 +137,17 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     modinfo->title = "Gatekeeper module";
     modinfo->description = "This module controls how many login attempts and concurrent connections each client is allowed.";
     modinfo->author = "Humbedooh [humbedooh@users.sf.net]";
-    rumble_gateList = cvector_init();
     printf("Reading config...\r\n");
     configuration = rumble_readconfig("gatekeeper.conf");
     printf("done!\r\n");
-    Gatekeeper_max_login_attempts = atoi(rrdict(configuration, "ThreadsPerAccount"));
-    Gatekeeper_max_concurrent_threads_per_ip = atoi(rrdict(configuration, "ThreadsPerIP"));
-    Gatekeeper_quarantine_period = atoi(rrdict(configuration, "Quarantine"));
+    Gatekeeper_max_login_attempts = atoi(rrdict(configuration, "loginattempts"));
+    Gatekeeper_max_concurrent_threads_per_ip = atoi(rrdict(configuration, "threadsperip"));
+    Gatekeeper_quarantine_period = atoi(rrdict(configuration, "quarantine"));
     Gatekeeper_enabled = atoi(rrdict(configuration, "enabled"));
     myMaster = (masterHandle *) master;
+    
+    gatekeeper_login_list = cvector_init();
+    gatekeeper_connection_list = cvector_init();
 
     
     // Hook onto any new incoming connections on SMTP, IMAP and POP3

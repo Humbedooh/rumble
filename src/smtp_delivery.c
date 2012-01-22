@@ -1,4 +1,3 @@
-/*$I0 */
 #include "rumble.h"
 #include "sqlite3.h"
 #include "servers.h"
