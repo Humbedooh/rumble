@@ -695,6 +695,9 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         rumble_free_address(addr);
         addr = 0;
     }
+    
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_AUTH, (const char*) OK);
 
     if (OK) {
         session->flags |= RUMBLE_SMTP_CAN_RELAY;

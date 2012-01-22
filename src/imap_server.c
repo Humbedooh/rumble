@@ -143,9 +143,8 @@ void *rumble_imap_init(void *T) {
          ---------------------------------------------------------------------------------------------------------------
          */
 
-        /*
-         * rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
-         */
+        rumble_server_schedule_hooks(master, sessptr, RUMBLE_HOOK_CLOSE + RUMBLE_HOOK_IMAP);
+        
         comm_addEntry(svc, session.client->brecv + session.client->bsent, session.client->rejected);
         disconnect(session.client->socket);
         printf("Cleaning up\n");
@@ -238,6 +237,8 @@ ssize_t rumble_server_imap_login(masterHandle *master, sessionHandle *session, c
         session->client->rejected = 1;
     }
 
+    rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_IMAP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_IMAP_AUTH, (const char*) imap->account);
     return (RUMBLE_RETURN_IGNORE);
 }
 
