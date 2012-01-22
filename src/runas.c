@@ -19,6 +19,30 @@ void rumble_setup_runas(masterHandle* master) {
     runAsGroup = rhdict(master->_core.conf, "runasgroup") ? rrdict(master->_core.conf, "runasgroup") : "";
     
     
+    /* Group credentials */
+    if (strlen(runAsGroup)) {
+        
+        if (!strcmp(runAsGroup, "root")) runAsGUID = 0;
+        else {
+            runAsGroupEntry = getgrnam(runAsGroup);
+            if (runAsGroupEntry && runAsGroupEntry->gr_gid) {
+                runAsGUID = runAsGroupEntry->gr_gid;
+            }
+        }
+        
+        if (runAsGUID != 999999) {
+            rumble_debug(NULL, "core", "Running as group: %s", runAsGroup);
+            
+            if (setregid(runAsGUID, runAsGUID)) {
+                rumble_debug(NULL, "core", "Error: Could not set process GID to %u!", runAsGroupEntry->gr_gid);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            rumble_debug(NULL, "core", "I couldn't find the group to run as: %s", runAsGroup);
+            exit(EXIT_FAILURE);
+        }        
+    }
+    
     /* User credentials */
     if (strlen(runAsUser)) {
         
@@ -44,28 +68,6 @@ void rumble_setup_runas(masterHandle* master) {
         
     } else rumble_debug(NULL, "core", "no run-as directive set, running as root(?)");
     
-    /* Group credentials */
-    if (strlen(runAsGroup)) {
-        
-        if (!strcmp(runAsGroup, "root")) runAsGUID = 0;
-        else {
-            runAsGroupEntry = getgrnam(runAsGroup);
-            if (runAsGroupEntry && runAsGroupEntry->gr_gid) {
-                runAsGUID = runAsGroupEntry->gr_gid;
-            }
-        }
-        
-        if (runAsGUID != 999999) {
-            rumble_debug(NULL, "core", "Running as group: %s", runAsGroup);
-            
-            if (setregid(runAsGUID, runAsGUID)) {
-                rumble_debug(NULL, "core", "Error: Could not set process GID to %u!", runAsGroupEntry->gr_gid);
-                exit(EXIT_FAILURE);
-            }
-        } else {
-            rumble_debug(NULL, "core", "I couldn't find the group to run as: %s", runAsGroup);
-            exit(EXIT_FAILURE);
-        }        
-    }
+    
 #endif
 }
