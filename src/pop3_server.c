@@ -447,8 +447,9 @@ ssize_t rumble_server_pop3_retr(masterHandle *master, sessionHandle *session, co
         rcprintf(session, "-ERR Couldn't open letter no. %d.\r\n", i);
 
         /* Might as well delete the letter if it doesn't exist :( */
-        rumble_rw_start_write(pops->bag->lock);
+        
         folder = mailman_get_folder(pops->bag, "INBOX");
+        rumble_rw_start_write(pops->bag->lock);
         j = 0;
         for (k = 0; k < folder->size; k++) {
             letter = &folder->letters[k];
