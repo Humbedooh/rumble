@@ -223,6 +223,7 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
                     *tmp;
     int             n = 0;
     accountSession  *pops = (accountSession *) session->_svcHandle;
+    ssize_t rc = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!strlen(parameters)) return (107);
@@ -241,6 +242,9 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
                 rumble_free_account(pops->account);
                 free(pops->account);
                 pops->account = 0;
+                rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_POP3 + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_POP3_PASS, (const char*) pops->account);
+                if (rc == RUMBLE_RETURN_FAILURE) return rc;
                 return (106);
             } else {
                 rumble_debug(NULL, "pop3", "%s's request for %s@%s was granted\n", session->client->addr, usr, dmn);
@@ -248,6 +252,9 @@ ssize_t rumble_server_pop3_pass(masterHandle *master, sessionHandle *session, co
                 pops->bag = mailman_get_bag(pops->account->uid,
                                             strlen(pops->account->domain->path) ? pops->account->domain->path : rrdict(master->_core.conf, "storagefolder"));
                 pops->folder = mailman_get_folder(pops->bag, "INBOX");
+                rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
+                                       RUMBLE_HOOK_POP3 + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_POP3_PASS, (const char*) pops->account);
+                if (rc == RUMBLE_RETURN_FAILURE) return rc;
                 return (104);
             }
         }

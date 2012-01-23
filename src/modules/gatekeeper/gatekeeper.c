@@ -1,10 +1,12 @@
 #include "../../rumble.h"
+#include "../../private.h"
 #include <string.h>
 dvector                     *configuration;
 int             Gatekeeper_max_login_attempts =                   3;  // Maximum of concurrent login attempts per account before quarantine
 int             Gatekeeper_max_concurrent_threads_per_ip =       25;  // Maximum of concurrent threads per IP
 int             Gatekeeper_quarantine_period =                  300;  // Number of seconds to quarantine an IP for too many attempts
 int             Gatekeeper_enabled =                              1;  // Enable gatekeper mod?
+rumble_readerwriter* Gatekeeper_lock = 0;
 masterHandle    *myMaster =                                       0;
 
 rumblemodule_config_struct  myConfig[] =
@@ -41,6 +43,7 @@ ssize_t rumble_gatekeeper_accept(sessionHandle *session, const char *junk) {
     gatekeeper_connection* centry;
     time_t          now;
     c_iterator      iter;
+    int found = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
     if (!Gatekeeper_enabled) return (RUMBLE_RETURN_OKAY);
@@ -65,9 +68,31 @@ ssize_t rumble_gatekeeper_accept(sessionHandle *session, const char *junk) {
         }
     }
     
+    // Then check the number of connections
+    
+    
     // Then, let's check if the IP is using too many threads
+    rumble_rw_start_write(Gatekeeper_lock);
+    cforeach((gatekeeper_connection*), centry, gatekeeper_connection_list, iter) {
+        if (!memcmp(centry->ip, session->client->addr, 46)) {
+            centry->connections++;
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        centry = (gatekeeper_connection*) calloc(1, sizeof(gatekeeper_connection));
+        strcpy(centry->ip, session->client->addr);
+        centry->connections = 1;
+        cvector_add(gatekeeper_connection_list, centry);
+    }
+    rumble_rw_stop_write(Gatekeeper_lock);
     
-    
+    if (centry->connections > Gatekeeper_max_concurrent_threads_per_ip) {
+        rcprintf(session, "Too many connections (%u) open to this IP!\r\n", centry->connections);
+        rumble_debug(myMaster, "gatekeeper", "Client <%s> exceeded the maximum number of open connections (%u)", centry->ip, centry->connections);
+        return RUMBLE_RETURN_FAILURE;
+    }
     return (RUMBLE_RETURN_OKAY);
 }
 
@@ -78,8 +103,20 @@ ssize_t rumble_gatekeeper_close(sessionHandle *session, const char *junk) {
     gatekeeper_connection* centry;
     c_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
-
     if (!Gatekeeper_enabled) return (RUMBLE_RETURN_OKAY);
+    
+    rumble_rw_start_write(Gatekeeper_lock);
+    cforeach((gatekeeper_connection*), centry, gatekeeper_connection_list, iter) {
+        if (!memcmp(centry->ip, session->client->addr, 46)) {
+            centry->connections--;
+            if (centry->connections == 0) {
+                cvector_delete(&iter);
+                free(centry);
+            }
+        }
+    }
+    rumble_rw_stop_write(Gatekeeper_lock);
+    
     return RUMBLE_RETURN_OKAY;
 }
 
@@ -88,7 +125,6 @@ ssize_t rumble_gatekeeper_auth(sessionHandle *session, const char *OK) {
 
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
     gatekeeper_login_attempt* entry;
-    time_t          now;
     c_iterator      iter;
     /*~~~~~~~~~~~~~~~~~~~~~~~*/
 
@@ -151,6 +187,7 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     
     gatekeeper_login_list = cvector_init();
     gatekeeper_connection_list = cvector_init();
+    Gatekeeper_lock = rumble_rw_init();
 
     
     // Hook onto any new incoming connections on SMTP, IMAP and POP3
@@ -158,9 +195,15 @@ rumblemodule rumble_module_init(void *master, rumble_module_info *modinfo) {
     rumble_hook_function(master, RUMBLE_HOOK_IMAP + RUMBLE_HOOK_ACCEPT, rumble_gatekeeper_accept);
     rumble_hook_function(master, RUMBLE_HOOK_POP3 + RUMBLE_HOOK_ACCEPT, rumble_gatekeeper_accept);
     
-    /* Hook the module to the LOGIN command on the SMTP and IMAP server. */
+    // Hook onto any new closing connections on SMTP, IMAP and POP3
+    rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_CLOSE, rumble_gatekeeper_close);
+    rumble_hook_function(master, RUMBLE_HOOK_IMAP + RUMBLE_HOOK_CLOSE, rumble_gatekeeper_close);
+    rumble_hook_function(master, RUMBLE_HOOK_POP3 + RUMBLE_HOOK_CLOSE, rumble_gatekeeper_close);
+    
+    /* Hook the module to the LOGIN command on the SMTP, POP3 and IMAP server. */
     rumble_hook_function(master, RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_SMTP_AUTH, rumble_gatekeeper_auth);
     rumble_hook_function(master, RUMBLE_HOOK_IMAP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_IMAP_AUTH, rumble_gatekeeper_auth);
+    rumble_hook_function(master, RUMBLE_HOOK_POP3 + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_AFTER + RUMBLE_CUE_POP3_PASS, rumble_gatekeeper_auth);
     return (EXIT_SUCCESS);  /* Tell rumble that the module loaded okay. */
 }
 

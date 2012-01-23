@@ -92,11 +92,19 @@ end
 	text-decoration:none;
 }
 
+.useraccount {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	background-color: #D3D3C0;
+	border: 1px solid #333;
+	margin: auto;
+	width: 600px;
+}
 </style>
 
 <h2>Accounts @ <?=domain?></h2>
 <p align="center">
-<h4><?=(http.form.u and "Edit") or "Create a new"?> account:</h4>
+<h4 align="center"><?=(http.form.u and "Edit") or "Create a new"?> account:</h4>
 <form id="crform" name="form1" method="post" action="">
 <input type="hidden" name="type" value="mbox"/>
 <input type="hidden" name="update" value="<?=http.form.update?>"/>
@@ -110,7 +118,7 @@ end
     <td colspan="2" class="create_mailbox_tab" id="cr_relay"><img src="../icons/computer_add.png" alt="" width="16" height="16" align="absmiddle" /> <a href="#" onclick="changeForm('relay');">Relay</a></td>
   </tr>
   </table>
-  <table border="0" cellpadding="1" cellspacing="0" width="600px" style="background:#D0CEB3; border: 1px solid #000; padding: 10px;margin: 0px auto;">
+  <table border="0" cellpadding="1" cellspacing="0" width="600px" class="useraccount">
   <tr>
     <td colspan="6">
     <div style="display:none;" id="cr_desc_mbox">Enter the desired username and password below to create a standard mailbox.<br />
@@ -133,21 +141,21 @@ end
     </div>&nbsp;    </td>
   </tr>
   <tr>
-    <td>Account name:</td>
+    <td width="149"><strong>Account name:</strong></td>
     <td colspan="5">
       <input name="user" type="text" id="user" maxlength="92" autocomplete="off"/> @ <?=domain?>    </td>
   </tr>
   <tr  style="display:none;"id="cr_field_mbox">
-    <td>(new) Password:</td>
+    <td><strong>(new) Password:</strong></td>
     <td colspan="5"><input name="password"  autocomplete="off"type="password" id="user2" maxlength="48" /></td>
     </tr>
   <tr  style="display:none;"id="cr_field_alias">
-    <td>Forwarding address(es):</td>
+    <td><strong>Forwarding address(es):</strong></td>
     <td colspan="4"><input name="alias"  autocomplete="off" type="text" id="user3" size="48" maxlength="92" /></td>
     <td width="121">&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_mod">
-    <td>Module to feed:</td>
+    <td><strong>Module to feed:</strong></td>
     <td colspan="3"><select name="module">
       <?
 			for k,mod in pairs(Rumble.listModules()) do
@@ -155,21 +163,21 @@ end
 			end
 			?> 
     </select>      &nbsp;</td>
-    <td width="118">&nbsp;</td>
+    <td width="284">&nbsp;</td>
     <td>&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_feed">
-    <td>Program to feed:</td>
+    <td><strong>Program to feed:</strong></td>
     <td colspan="4"><input name="feed" type="text" id="user4" size="48" maxlength="92" /></td>
     <td>&nbsp;</td>
   </tr>
   <tr  style="display:none;"id="cr_field_relay">
-    <td>Relay host:</td>
+    <td><strong>Relay host:</strong></td>
     <td colspan="4"><input name="relay" type="text" id="relay" size="48" maxlength="92" /></td>
     <td>&nbsp;</td>
   </tr>
   <tr>
-    <td colspan="6"><input type="submit" name="Save account" id="Save account" value="Save account" />      <input type="reset" name="Save account2" id="Save account2" value="Reset" 
+    <td height="47" colspan="6" align="center"><input type="submit" name="Save account" id="Save account" value="Save account" />      <input type="reset" name="Save account2" id="Save account2" value="Reset" 
       onclick="this.form.u.value=''; this.form.update.value='0';"
       /></td>
 
@@ -179,21 +187,19 @@ end
 </p>
 <p>&nbsp;</p>
 
+<table style="width: 600px;" border='0' cellpadding='5' cellspacing='1' class="elements">
+<tr><th width="45">UID</th><th width="295">Account</th><th width="89">Type</th><th width="124">Actions</th></tr>
 <?
 
-
-    printf("<table class=\"elements\" border='0' cellpadding='5' cellspacing='1'>");
-    printf("<tr><th>Account</th><th>Type</th><th>Actions</th></tr>");
     local t = Mailman.listAccounts(domain);
     for k,v in pairs(t) do
-        printf("<tr><td><a href='/accounts:%s?u=%u'>%s@%s</a></td><td>%s</td><td> <a href=\"/accounts:%s?u=%u\"><img title='Edit account' src='/icons/action_edit.png' align='absmiddle'/></a> <a href=\"/accounts:%s?d=%u\"><img title='Delete account' src='/icons/action_delete.png' align='absmiddle'/></a></td></tr>", domain,v.id,v.name,domain,v.type,domain,v.id,domain,v.id,v.type,domain,v.id);
+        printf("<tr><td>%s</td><td><a href='/accounts:%s?u=%u'>%s@%s</a></td><td>%s</td><td> <a href=\"/accounts:%s?u=%u\"><img title='Edit account' src='/icons/report_edit.png' align='absmiddle'/></a> <a href=\"/accounts:%s?d=%u\"><img title='Delete account' src='/icons/delete.png' align='absmiddle'/></a></td></tr>", v.id or nil, domain,v.id,v.name,domain,v.type,domain,v.id,domain,v.id,v.type,domain,v.id);
     end
     if (#t == 0) then
         printf("<tr><td colspan='3'><i>%s does not have any mail accounts.</i></td></tr>", domain);
     end
-    printf("</table>");
     ?>
-	
+</table>	
    
    <script type="application/javascript">
 function changeForm(what) {

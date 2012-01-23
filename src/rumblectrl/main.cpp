@@ -17,6 +17,11 @@
 #include<fstream>
 #include<exception>
 #include<string>
+#ifdef _WIN32
+#include <windows.h>
+#include <direct.h>
+#endif
+#include <sys/stat.h>
 using namespace std;
 
 typedef unsigned int uint;
@@ -223,7 +228,7 @@ string SHA256(const char* input)
 #define A_UDEL  7
 #define A_UEDIT 8
 
-char *domain = 0, email = 0, password = 0, uName[512], uDomain[512], uPass[512], uType[512], uArgs[512];
+char *domain = 0, email = 0, password = 0, uName[512], uDomain[512], uPass[512], uType[512], uArgs[512], uPath[512];
 int needHelp = 0;
 /*
  * 
@@ -240,6 +245,7 @@ int main(int argc, char** argv) {
     memset(uPass, 0, 512);
     memset(uType, 0, 512);
     memset(uArgs, 0, 512);
+	memset(uPath, 0, 512);
     for (i = 0; i < argc; i++) {
         if (!strcmp(argv[i], "--help")) needHelp = 1;
         if (!strcmp(argv[i], "-h")) needHelp = 1;
@@ -256,6 +262,7 @@ int main(int argc, char** argv) {
         if (strstr(argv[i], "--pass=")) sscanf(argv[i], "--pass=%250c", uPass);
         if (strstr(argv[i], "--type=")) sscanf(argv[i], "--type=%250c", uType);
         if (strstr(argv[i], "--args=")) sscanf(argv[i], "--args=%250c", uArgs);
+		if (strstr(argv[i], "--path=")) sscanf(argv[i], "--path=%250c", uPath);
         
     }
     
@@ -271,7 +278,14 @@ int main(int argc, char** argv) {
                         printf("Error: Domain %s already exists\n", uDomain);
                         exit(EXIT_FAILURE);
                         }
-                    db->run_inject("INSERT INTO `domains` (id, domain, storagepath, flags) VALUES (NULL, %s, \"\", 0)", uDomain);
+                    db->run_inject("INSERT INTO `domains` (id, domain, storagepath, flags) VALUES (NULL, %s, %s, 0)", uDomain, uPath);
+					if (strlen(uPath)) {
+					#ifdef _WIN32
+							_mkdir(uPath);
+					#else
+							mkdir(uPath, S_IRWXU | S_IRGRP | S_IWGRP);
+					#endif
+					}
                 }
                 
                 break;
@@ -345,7 +359,7 @@ int main(int argc, char** argv) {
 Usage: rumblectrl [action [parameters]]\r\n\
 Available actions:\r\n\
  Domain actions:\r\n\
-  --add --domain=<domain>                     : Adds <domain> to the server\r\n\
+  --add --domain=<domain> --path=<path>       : Adds <domain> to the server\r\n\
   --delete --domain=<domain>                  : Deletes <domain> from the server\r\n\
   --list                                      : Lists available domains\r\n\
  Account actions:\r\n\

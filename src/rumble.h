@@ -3,7 +3,7 @@
     This file is part of the Rumble Mail Server package.
  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
  */
-
+//#define FORCE_OLD_PTHREAD
 #ifndef RUMBLE_H
 #   include "rumble_version.h"
 #   define _HUGE   - 1
@@ -94,8 +94,8 @@
 #         undef R_ARCH
 #         define R_ARCH  64
 #      endif
-#      if (WINVER < _WIN32_WINNT_VISTA || defined(FORCE_OLD_PTHREAD))
-#         include <pthread.h>
+#      if (WINVER < _WIN32_WINNT_VISTA || (!defined(_WIN64) && defined(FORCE_OLD_PTHREAD)))
+#         include "pthread.h"
 #      else
 #         include "winpthreads.h"
 
@@ -228,6 +228,7 @@ extern "C"
 #   define RUMBLE_CUE_POP3_RETR    0x00080000
 #   define RUMBLE_CUE_POP3_LIST    0x00100000
 #   define RUMBLE_CUE_POP3_DELE    0x00200000
+#   define RUMBLE_CUE_POP3_PASS    0x01000000
 #   define RUMBLE_CUE_MASK         0x0FFF0000
 
 /*$3

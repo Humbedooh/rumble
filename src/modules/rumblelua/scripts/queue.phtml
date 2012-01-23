@@ -1,0 +1,45 @@
+
+<h2><img src="../icons/server.png" alt="server" width="128" height="136" hspace="5" align="left">Mail queue:</h2>
+<p>This list contains the emails that are waiting to be processed.</p>
+<br/><br/><br/><br/><br/><br/>
+
+<?
+if (not session.credentials.admin) then
+	echo("<div class='notification'>You need admin priveledges to access this page!</div>");
+	return;
+end
+?>
+<code>
+<?
+
+local colors = {
+	core = 282,
+	smtp = 278,
+	pop3 = 228,
+	imap4 = 228,
+	startup = 882,
+	db = 828,
+	module = 852,
+	mailman = 284
+};
+local queue = Mailman.getQueue();
+if queue then
+	?> <ol><?
+	local i = 0;
+	for k, v in pairs(queue) do
+		i = i + 1;
+		local sender = (v.sender or "Unknown"):gsub("<([^@]+)@([^>]+)>.*", "&lt;<a href='mailto:%1@%2'>%1@%2</a>&gt;");
+		local recipient = (v.recipient or "Unknown"):gsub("<([^@]+)@([^>]+)>.*", "&lt;<a href='mailto:%1@%2'>%1@%2</a>&gt;");
+		printf("<li>To: %s, From: %s, Received: %s, Loops: %u<br/>",recipient, sender, os.date("%y/%m/%d %H:%M:%S", v.time or 0), v.loops or 0);
+	end
+    ?></ol><?
+	if (i == 0) then
+	?>There are no emails waiting to be processed.<?
+	end
+else
+	printf("Could not open queue!");
+end
+?>
+</code>
+</p>
+

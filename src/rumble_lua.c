@@ -960,6 +960,51 @@ static int rumble_lua_getheaders(lua_State *L) {
     return (1);
 }
 
+
+static int rumble_lua_getqueue(lua_State *L) {
+
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+    radbObject  *dbo = 0;
+    radbResult  *dbr;
+    int         n = 0;
+    /*~~~~~~~~~~~~~~~~~~~~~~*/
+
+    dbo = radb_prepare(rumble_database_master_handle->_core.mail,
+                           "SELECT id, fid, time, sender, recipient, loops FROM queue WHERE id > 0");
+    lua_settop(L, 0);
+    if (!dbo) return (0);
+    lua_newtable(L);
+
+    while ((dbr = radb_fetch_row(dbo))) {
+        n++;
+        lua_pushinteger(L, n);
+        lua_newtable(L);
+        lua_pushstring(L, "id");
+        lua_pushinteger(L, dbr->column[0].data.uint64);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "file");
+        lua_pushstring(L, dbr->column[1].data.string);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "time");
+        lua_pushinteger(L, dbr->column[2].data.uint32);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "sender");
+        lua_pushstring(L, dbr->column[3].data.string);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "recipient");
+        lua_pushstring(L, dbr->column[4].data.string);
+        lua_rawset(L, -3);
+        lua_pushstring(L, "loops");
+        lua_pushinteger(L, dbr->column[5].data.uint32);
+        lua_rawset(L, -3);
+        
+        lua_rawset(L, -3);
+    }
+
+    radb_cleanup(dbo);
+    return (1);
+}
+
 /*
  =======================================================================================================================
  =======================================================================================================================
@@ -2182,6 +2227,7 @@ static const luaL_reg   Mailman_methods[] =
     { "sendMail", rumble_lua_sendmail },
     { "readMail", rumble_lua_readmail },
     { "deleteMail", rumble_lua_deletemail },
+    { "getQueue", rumble_lua_getqueue },
     { 0, 0 }
 };
 static const luaL_reg   Network_methods[] = { { "getHostByName", rumble_lua_gethostbyname }, { "getMX", rumble_lua_mx }, { 0, 0 } };
