@@ -970,7 +970,7 @@ static int rumble_lua_getqueue(lua_State *L) {
     /*~~~~~~~~~~~~~~~~~~~~~~*/
 
     dbo = radb_prepare(rumble_database_master_handle->_core.mail,
-                           "SELECT id, fid, time, sender, recipient, loops FROM queue WHERE id > 0");
+                           "SELECT id, fid, time, sender, recipient, loops FROM queue WHERE id > 0 LIMIT 100");
     lua_settop(L, 0);
     if (!dbo) return (0);
     lua_newtable(L);

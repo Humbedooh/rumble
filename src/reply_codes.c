@@ -18,6 +18,7 @@ const char *rumble_smtp_reply_code(unsigned int code) {
     case 220:       return ("220 <%s> (ESMTPSA) Service ready\r\n");
     case 221:       return ("221 <%s> Service closing transmission channel\r\n");
     case 221220:    return ("221 2.2.0 Service closing transmission channel\r\n");
+    case 235:       return ("235 Authentication successful\r\n");
     case 250:       return ("250 Requested mail action okay, completed\r\n");
     case 250200:    return ("250 2.0.0 Requested mail action okay, completed\r\n");
     case 251:       return ("251 User not local; will forward to <forward-path>\r\n");

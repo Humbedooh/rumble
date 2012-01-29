@@ -391,20 +391,22 @@ ssize_t rumble_server_smtp_helo(masterHandle *master, sessionHandle *session, co
 
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
     int     rc;
-    char    *tmp = (char *) malloc(128);
+    int     strictHelo;
+    char    tmp[130];
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_HELO, parameters);
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
-    rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
-    if (rc < 3) {
-        free(tmp);
-        printf("Bad HELO: %s\n", parameters);
-        return (504552);    /* simple test for FQDN */
+    strictHelo = atoi(rrdict(master->_core.conf, "enforcefqdn"));
+    printf("EnforceFQDN is %u\n", strictHelo);
+    if (strictHelo) {
+        rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
+        if (rc < 3) {
+            printf("Bad HELO: %s\n", parameters);
+            return (504552);    /* simple test for FQDN */
+        }
     }
-
-    free(tmp);
     session->flags |= RUMBLE_SMTP_HAS_HELO;
     rsdict(session->dict, "helo", parameters);
     return (250);
@@ -421,16 +423,20 @@ ssize_t rumble_server_smtp_ehlo(masterHandle *master, sessionHandle *session, co
     char        *tmp = (char *) malloc(128);
     char        *el;
     c_iterator  iter;
+    int strictHelo = 0;
     /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 
     rc = rumble_service_schedule_hooks((rumbleService *) session->_svc, session,
                                        RUMBLE_HOOK_SMTP + RUMBLE_HOOK_COMMAND + RUMBLE_HOOK_BEFORE + RUMBLE_CUE_SMTP_HELO, parameters);
     if (rc != RUMBLE_RETURN_OKAY) return (rc);
-    rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
-    if (rc < 3) {
-        free(tmp);
-        printf("Bad EHLO: %s\n", parameters);
-        return (504552);    /* simple test for FQDN */
+    strictHelo = atoi(rrdict(master->_core.conf, "enforcefqdn"));
+    if (strictHelo) {
+        rc = sscanf(parameters, "%128[%[a-zA-Z0-9%-].%1[a-zA-Z0-9%-]%1[a-zA-Z0-9.%-]", tmp, tmp, tmp);
+        if (rc < 3) {
+            free(tmp);
+            printf("Bad HELO: %s\n", parameters);
+            return (504552);    /* simple test for FQDN */
+        }
     }
 
     free(tmp);
@@ -703,7 +709,7 @@ ssize_t rumble_server_smtp_auth(masterHandle *master, sessionHandle *session, co
         session->flags |= RUMBLE_SMTP_CAN_RELAY;
         rumble_free_account(OK);
         free(OK);
-        return (250);
+        return (235);
     } else {
         session->flags -= (session->flags & RUMBLE_SMTP_CAN_RELAY);
         if (rc == RUMBLE_RETURN_FAILURE) return rc;
